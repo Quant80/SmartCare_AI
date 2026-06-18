@@ -5120,7 +5120,7 @@ function getSavedTheme(){
     const t = localStorage.getItem(THEME_STORAGE_KEY);
     if(t==='dark' || t==='light') return t;
   }catch(e){}
-  return 'light';
+  return 'dark';
 }
 
 function syncThemeControls(mode){
