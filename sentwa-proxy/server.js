@@ -251,7 +251,7 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'GET' && (req.url === '/' || req.url === '/app')) {
     try {
-      const appPath = path.join(__dirname, '..', 'SmartCareAI_v15_final (2).html');
+      const appPath = path.join(__dirname, '..', 'SmartCareAI_v1.html');
       const html = fs.readFileSync(appPath, 'utf8');
       res.writeHead(200, {
         'Content-Type': 'text/html; charset=utf-8',
