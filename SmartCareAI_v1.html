@@ -10813,8 +10813,17 @@ function closeCameraModal() {
 
 function startPatientCamera() {
   if (patientCameraInProgress) return;
+  // Reuse the existing live stream instead of requesting getUserMedia again —
+  // avoids re-triggering the browser's camera permission prompt on every retake/reopen.
+  if (patientCameraStream && patientCameraStream.active) {
+    const video = document.getElementById('patient-camera-video');
+    video.srcObject = patientCameraStream;
+    document.getElementById('camera-no-access').style.display = 'none';
+    document.getElementById('camera-status').textContent = '✓ Camera ready';
+    return;
+  }
   patientCameraInProgress = true;
-  
+
   const constraints = {
     video: {
       width: { ideal: 1280 },
@@ -10892,7 +10901,7 @@ function capturePatientPhoto() {
   document.querySelector('.camera-video-container').style.display = 'none';
   document.getElementById('camera-canvas-preview').style.display = 'block';
 
-  stopPatientCamera();
+  // Keep the stream alive (just hidden) so Retake can resume instantly without re-asking for permission.
   document.getElementById('camera-status').textContent = '✓ Photo captured (centered chest-up portrait)';
   document.getElementById('save-photo-btn').style.display = 'inline-block';
 }
@@ -10917,13 +10926,12 @@ function viewPatientRadiologyTab(pid) {
 }
 
 function retakePatientPhoto() {
-  stopPatientCamera();
   patientCapturedPhoto = null;
   document.querySelector('.camera-video-container').style.display = 'flex';
   document.getElementById('camera-canvas-preview').style.display = 'none';
   document.getElementById('save-photo-btn').style.display = 'none';
   document.getElementById('camera-status').textContent = '';
-  startPatientCamera();
+  startPatientCamera(); // reuses the existing stream when still active — no repeat permission prompt
 }
 
 function stopPatientCamera() {
@@ -16516,14 +16524,20 @@ function generatePatientPDF(p, reportText){
   fillRect(0,0,pw,34,[12,22,42]);
   doc.setFillColor(55,120,210); doc.roundedRect(mg,5,20,9,1.5,1.5,'F');
   sf(8,'bold',[255,255,255]); txt(pdfSanitise('SmartCare'),mg+10,11,{align:'center'});
+  if (p.profilePhoto && p.profilePhoto.startsWith('data:')) {
+    try {
+      const headerPhotoFmt = p.profilePhoto.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+      doc.addImage(p.profilePhoto, headerPhotoFmt, mg, 16, 20, 16);
+    } catch (e) {}
+  }
   sf(15,'bold',[55,120,210]); txt('SmartCare AI',mg+24,11);
   sf(8,'normal',[140,175,215]); txt('Clinical Intelligence Platform',mg+24,17);
   sf(10,'bold',[30,200,230]); txt('PATIENT CLINICAL ANALYSIS REPORT',mg+24,24);
   sf(7,'normal',[140,175,215]);
   txt(new Date().toLocaleDateString('en-ZA',{year:'numeric',month:'long',day:'numeric'}),pw-mg,10,{align:'right'});
   txt(`${p.id}${p.hospitalRecNo?' · '+p.hospitalRecNo:''}  ·  ${p.ward} Ward`,pw-mg,16,{align:'right'});
-  if(p.nationalId){ sf(6,'normal',[120,160,200]); txt('ID: '+p.nationalId,pw-mg,21,{align:'right'}); }
   fillRect(pw-mg-25,21,25,9,rRGB);
+  if(p.nationalId){ sf(6,'normal',[120,160,200]); txt('ID: '+p.nationalId,pw-mg,32.5,{align:'right'}); }
   sf(7,'bold',[255,255,255]); txt(`${p.riskLevel.toUpperCase()} RISK`,pw-mg-12.5,26.5,{align:'center'});
   hline(0,34,pw,34,[60,100,160],1);
   y=40;
