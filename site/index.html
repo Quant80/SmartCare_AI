@@ -7592,7 +7592,8 @@ function renderPatientTable(list){
       <td>
         <div style="display:flex;align-items:center;gap:6px">
           <div class="mono" style="color:var(--blue);font-size:11px">${sid}</div>
-          ${hasXrays ? `<span title="${xrayCount} X-ray${xrayCount>1?'s':''} taken" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:rgba(59,130,246,.15);border-radius:4px;font-size:12px;cursor:help;border:1px solid rgba(59,130,246,.3)">💀</span>` : ''}
+          ${p.profilePhoto ? `<img src="${p.profilePhoto}" alt="${sid} photo" onclick="event.stopPropagation();viewPatientPhotoFull('${eid}')" title="View full photo" style="width:18px;height:18px;border-radius:4px;object-fit:cover;object-position:center top;border:1px solid rgba(255,255,255,.14);cursor:pointer">` : ''}
+          ${hasXrays ? `<span onclick="event.stopPropagation();viewPatientRadiologyTab('${eid}')" title="${xrayCount} X-ray${xrayCount>1?'s':''} taken — click to view report" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:rgba(59,130,246,.15);border-radius:4px;font-size:12px;cursor:pointer;border:1px solid rgba(59,130,246,.3)">💀</span>` : ''}
         </div>
         ${p.hospitalRecNo?`<div class="hrn-badge" style="margin-top:2px">${_scEsc(p.hospitalRecNo)}</div>`:''}
         ${p.nationalId?`<div class="nid-badge" style="margin-top:2px">ID: ${_scEsc(p.nationalId)}</div>`:''}
@@ -10900,6 +10901,21 @@ function closePhotoViewer() {
   document.getElementById('photo-viewer-modal').classList.remove('active');
 }
 
+function viewPatientPhotoFull(pid) {
+  const p = patients.find(x => x.id === pid);
+  if (!p || !p.profilePhoto) return;
+  document.getElementById('full-size-patient-photo').src = p.profilePhoto;
+  document.getElementById('photo-viewer-name').textContent = p.name || '';
+  document.getElementById('photo-viewer-modal').classList.add('active');
+}
+
+function viewPatientRadiologyTab(pid) {
+  openModal(pid);
+  const modal = document.getElementById('patient-modal');
+  const tab = Array.from(modal.querySelectorAll('.tab')).find(t => (t.getAttribute('onclick') || '').includes("'tab-radiology'"));
+  if (tab) switchTab(tab, 'tab-radiology');
+}
+
 function retakePatientPhoto() {
   stopPatientCamera();
   patientCapturedPhoto = null;
@@ -13362,13 +13378,20 @@ function displayXrayReport(report, severity, scanLabel, patient, model) {
   // Patient identity block (required on X-ray report)
   if (patient) {
     const patientBlock = document.createElement('div');
-    patientBlock.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:8px 14px;margin-bottom:12px;padding:12px 14px;background:var(--bg4);border:1px solid var(--border);border-radius:9px';
-    patientBlock.innerHTML = [
-      '<div style="font-size:12px"><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.4px">Full Name</span><br><strong style="color:var(--text)">' + _scEsc(patient.name || '—') + '</strong></div>',
-      '<div style="font-size:12px"><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.4px">Age / Gender</span><br><strong style="color:var(--text)">' + _scEsc(String(patient.age ?? '—')) + ' · ' + _scEsc(patient.gender || '—') + '</strong></div>',
-      '<div style="font-size:12px"><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.4px">Patient ID</span><br><strong style="color:var(--text)">' + _scEsc(patient.id || '—') + '</strong></div>',
-      '<div style="font-size:12px"><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.4px">HRN / National ID</span><br><strong style="color:var(--text)">HRN: ' + _scEsc(patient.hospitalRecNo || '—') + ' · ID: ' + _scEsc(patient.nationalId || '—') + '</strong></div>'
-    ].join('');
+    patientBlock.style.cssText = 'display:flex;align-items:center;gap:14px;margin-bottom:12px;padding:12px 14px;background:var(--bg4);border:1px solid var(--border);border-radius:9px';
+    const photoHtml = patient.profilePhoto
+      ? '<img class="patient-photo-thumb" src="' + patient.profilePhoto + '" alt="' + _scEsc(patient.name || 'Patient') + ' photo" style="width:56px;height:56px;border-radius:8px;object-fit:cover;object-position:center top;border:1px solid rgba(255,255,255,.16);flex-shrink:0">'
+      : '';
+    const leftCol = '<div style="display:flex;flex-direction:column;gap:8px;flex:0 0 auto">' + [
+        '<div style="font-size:12px"><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.4px">Full Name</span><br><strong style="color:var(--text)">' + _scEsc(patient.name || '—') + '</strong></div>',
+        '<div style="font-size:12px"><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.4px">Patient ID</span><br><strong style="color:var(--text)">' + _scEsc(patient.id || '—') + '</strong></div>'
+      ].join('') + '</div>';
+    const rightCol = '<div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:140px">' + [
+        '<div style="font-size:12px"><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.4px">Age / Gender</span><br><strong style="color:var(--text)">' + _scEsc(String(patient.age ?? '—')) + ' · ' + _scEsc(patient.gender || '—') + '</strong></div>',
+        '<div style="font-size:12px"><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.4px">HRN / National ID</span><br><strong style="color:var(--text)">HRN: ' + _scEsc(patient.hospitalRecNo || '—') + ' · ID: ' + _scEsc(patient.nationalId || '—') + '</strong></div>'
+      ].join('') + '</div>';
+    const leftGroup = '<div style="display:flex;align-items:center;gap:6px">' + leftCol + photoHtml + '</div>';
+    patientBlock.innerHTML = leftGroup + rightCol;
     output.appendChild(patientBlock);
   } else {
     const noPatientBlock = document.createElement('div');
@@ -13673,7 +13696,13 @@ function restoreXrayScan(i) {
   img.src = s.imgSrc;
   document.getElementById('xray-preview-card').style.display = '';
   document.getElementById('xray-placeholder-card').style.display = 'none';
-  displayXrayReport(s.report, s.severity, s.scanLabel, null, s.model.replace(/🟡 |🟠 |🟢 /,'').toLowerCase());
+  let patient = null;
+  if (s.patientId) {
+    patient = (patients || []).find(p => p.id === s.patientId)
+      || (dischargedPatients || []).find(p => p.id === s.patientId)
+      || { id: s.patientId, name: s.patient !== 'Unlinked' ? s.patient : '', hospitalRecNo: s.patientHRN || '', nationalId: s.patientNationalId || '', age: s.patientAge, gender: s.patientGender || '' };
+  }
+  displayXrayReport(s.report, s.severity, s.scanLabel, patient, s.model.replace(/🟡 |🟠 |🟢 /,'').toLowerCase());
 }
 
 function copyXrayReport() {
@@ -13735,12 +13764,12 @@ async function printXrayReport() {
   const win = window.open('', '_blank');
   if (!win) return;
 
-  // Keep report layout but strip inline images; dedicated x-ray image is rendered in img-wrap.
+  // Keep report layout but strip inline images (except the patient photo); dedicated x-ray image is rendered in img-wrap.
   let report = '';
   if (reportEl) {
     const tmp = document.createElement('div');
     tmp.innerHTML = reportEl.innerHTML || '';
-    tmp.querySelectorAll('img').forEach(img => img.remove());
+    tmp.querySelectorAll('img:not(.patient-photo-thumb)').forEach(img => img.remove());
     report = tmp.innerHTML;
   }
 
@@ -13827,6 +13856,12 @@ async function exportXrayPDF() {
     txt('Age/Gender: ' + String(xPatient.age ?? '—') + ' / ' + (xPatient.gender || '—'), mg + 3, y + 14.5);
     txt('Patient ID: ' + (xPatient.id || '—'), mg + (cw / 2), y + 10);
     txt('HRN: ' + (xPatient.hospitalRecNo || '—') + ' | National ID: ' + (xPatient.nationalId || '—'), mg + (cw / 2), y + 14.5);
+    if (xPatient.profilePhoto && xPatient.profilePhoto.startsWith('data:')) {
+      try {
+        const photoFmt = xPatient.profilePhoto.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+        doc.addImage(xPatient.profilePhoto, photoFmt, mg + cw - 17, y + 1, 16, 16);
+      } catch (e) {}
+    }
     y += 22;
   }
 
