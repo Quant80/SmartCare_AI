@@ -13378,7 +13378,7 @@ function displayXrayReport(report, severity, scanLabel, patient, model) {
   // Patient identity block (required on X-ray report)
   if (patient) {
     const patientBlock = document.createElement('div');
-    patientBlock.style.cssText = 'display:flex;align-items:center;gap:14px;margin-bottom:12px;padding:12px 14px;background:var(--bg4);border:1px solid var(--border);border-radius:9px';
+    patientBlock.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px;padding:12px 14px;background:var(--bg4);border:1px solid var(--border);border-radius:9px';
     const photoHtml = patient.profilePhoto
       ? '<img class="patient-photo-thumb" src="' + patient.profilePhoto + '" alt="' + _scEsc(patient.name || 'Patient') + ' photo" style="width:56px;height:56px;border-radius:8px;object-fit:cover;object-position:center top;border:1px solid rgba(255,255,255,.16);flex-shrink:0">'
       : '';
@@ -13386,7 +13386,7 @@ function displayXrayReport(report, severity, scanLabel, patient, model) {
         '<div style="font-size:12px"><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.4px">Full Name</span><br><strong style="color:var(--text)">' + _scEsc(patient.name || '—') + '</strong></div>',
         '<div style="font-size:12px"><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.4px">Patient ID</span><br><strong style="color:var(--text)">' + _scEsc(patient.id || '—') + '</strong></div>'
       ].join('') + '</div>';
-    const rightCol = '<div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:140px">' + [
+    const rightCol = '<div style="display:flex;flex-direction:column;gap:8px;flex:0 0 auto">' + [
         '<div style="font-size:12px"><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.4px">Age / Gender</span><br><strong style="color:var(--text)">' + _scEsc(String(patient.age ?? '—')) + ' · ' + _scEsc(patient.gender || '—') + '</strong></div>',
         '<div style="font-size:12px"><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.4px">HRN / National ID</span><br><strong style="color:var(--text)">HRN: ' + _scEsc(patient.hospitalRecNo || '—') + ' · ID: ' + _scEsc(patient.nationalId || '—') + '</strong></div>'
       ].join('') + '</div>';
