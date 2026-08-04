@@ -13238,7 +13238,7 @@ You MUST:
       reportText = data?.choices?.[0]?.message?.content || data?.response || data?.message || '';
 
     } else if (model === 'claude') {
-      // Claude Vision (claude-sonnet-4)
+      // Claude Vision (claude-sonnet-5)
       const claudeContent = [
         {type:'image', source:{type:'base64', media_type: currentXrayMime, data: currentXrayBase64}},
       ];
@@ -13259,7 +13259,7 @@ You MUST describe BOTH images in FINDINGS, state interval changes, and NEVER say
           'anthropic-dangerous-direct-browser-access':'true'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-5',
           max_tokens: 4096,
           system: _visionSystemPrompt,
           messages: [{role: 'user', content: claudeContent}]
@@ -15029,7 +15029,7 @@ async function callAIModel(model, systemPrompt, userMessage, maxTokens=1000, opt
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-5',
         max_tokens: maxTokens,
         system: _safeSystemPrompt,
         messages: [{role:'user', content: _safeUserMessage}]
@@ -16291,7 +16291,7 @@ IMPORTANT RULES:
           const cResp = await fetch('https://api.anthropic.com/v1/messages', {
             method:'POST',
             headers:{'Content-Type':'application/json','x-api-key':vKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-            body: JSON.stringify({model:'claude-sonnet-4-20250514', max_tokens:3000,
+            body: JSON.stringify({model:'claude-sonnet-5', max_tokens:3000,
               system: safeVisionSystemPrompt,
               messages:[{role:'user', content:[
                 {type:'image', source:{type:'base64', media_type:imgMime, data:imgB64}},
