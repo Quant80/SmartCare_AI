@@ -13830,9 +13830,14 @@ async function exportXrayPDF() {
   const pw = 210, ph = 297, mg = 14, cw = pw - mg * 2;
   let y = mg;
   const LH = 5.5;
+  // Tracks the current page so the "avoid overlapping the X-ray image"
+  // logic below only applies on the page the image actually sits on -
+  // otherwise a page break after the image incorrectly yanks the cursor
+  // down on later pages that have no image at all.
+  let curPage = 1;
 
   // Helper functions
-  function checkY(need=10){ if(y + need > ph - 16) { doc.addPage(); y = mg; } }
+  function checkY(need=10){ if(y + need > ph - 16) { doc.addPage(); curPage++; y = mg; } }
   function txt(str, x, fy, opts){ doc.text(pdfSanitise(str), x, fy, opts||undefined); }
   function fillRect(x,fy,w,h,rgb){ doc.setFillColor(...rgb); doc.rect(x,fy,w,h,'F'); }
   function hline(x1,y1,x2,y2,rgb=[100,140,200],lw=0.4){ doc.setDrawColor(...rgb); doc.setLineWidth(lw); doc.line(x1,y1,x2,y2); }
@@ -13881,6 +13886,7 @@ async function exportXrayPDF() {
   let imgPlaced = false;
   let imgTop = y;
   let imgBottom = y;
+  let imgPage = curPage;
   const imgW = 55;
   const imgH = 55;
   const imgGap = 6;
@@ -13896,6 +13902,7 @@ async function exportXrayPDF() {
       imgPlaced = true;
       imgTop = y;
       imgBottom = y + imgH;
+      imgPage = curPage;
     }
   } catch(e) {}
 
@@ -13959,48 +13966,153 @@ async function exportXrayPDF() {
   sections.forEach((sec, secIdx) => {
     const st = secStyles[sec.title] || secStyles['RADIOLOGY FINDINGS'];
 
-    // Keep later sections below the image block to avoid header/image overlap.
-    if (imgPlaced && secIdx > 0 && y < imgBottom + 4) {
+    // Keep later sections below the image block to avoid header/image overlap
+    // - but only while still on the page the image is actually on; a page
+    // break during an earlier section must not drag later sections down.
+    if (imgPlaced && secIdx > 0 && curPage === imgPage && y < imgBottom + 4) {
       y = imgBottom + 4;
     }
 
     checkY(12);
     fillRect(mg, y, cw, 8, st.h);
     brect(mg, y, cw, 8, st.b, 0.3);
+    // Colored accent dot in place of an emoji icon - jsPDF's base fonts
+    // can't render emoji (pdfSanitise strips non-ASCII), so this is the
+    // closest visual equivalent to the on-screen/print report's icons.
+    doc.setFillColor(...st.t); doc.circle(mg + 3.2, y + 4, 1.3, 'F');
     sf(8.5, 'bold', st.t);
-    txt(sec.title, mg + 4, y + 5.5);
+    txt(sec.title, mg + 7, y + 5.5);
     y += 11;
 
-    sf(8.5, 'normal', [35, 55, 85]);
-    sec.lines.forEach((line) => {
-      const raw = line.trim();
-      if (!raw) { y += 2; return; }
+    const content = sec.lines.join('\n').trim();
+    const inImageBand = () => imgPlaced && y >= imgTop && y < imgBottom;
 
-      const isBullet = /^[\-\*\u2022]\s+/.test(raw);
-      const text = raw.replace(/^[\-\*\u2022]\s+/, '').trim();
-
-      const inImageBand = imgPlaced && y >= imgTop && y < imgBottom;
-      const baseX = inImageBand ? textXLeft + 3 : mg + 4;
-      const wrapW = inImageBand ? Math.max(38, textWLeft - 7) : (cw - 8);
-
-      const lines = doc.splitTextToSize(pdfSanitise(text), wrapW - (isBullet ? 4 : 0));
-      lines.forEach((ln, i) => {
-        if (y > ph - 20) {
-          doc.addPage();
-          y = mg;
-        }
-        if (i === 0 && isBullet) {
-          doc.setFillColor(...st.t);
-          doc.circle(baseX + 1.4, y - 1.3, 0.7, 'F');
-          sf(8.5, 'normal', [35, 55, 85]);
-          txt(ln, baseX + 4, y);
-        } else {
-          txt(ln, baseX + (isBullet ? 4 : 0), y);
-        }
-        y += LH;
+    if (sec.title === 'PRIMARY DIAGNOSIS') {
+      // Bold red headline, matching the on-screen report's treatment. The
+      // gap after the header bar above is sized for the smaller body font
+      // used elsewhere, so this larger font needs extra clearance or its
+      // ascenders crowd into the header bar.
+      const text = content.replace(/^[\-\*\u2022]\s+/gm, '').trim();
+      y += 3;
+      sf(12.5, 'bold', [220, 38, 38]);
+      doc.splitTextToSize(pdfSanitise(text), cw - 8).forEach(ln => {
+        checkY(LH + 2); txt(ln, mg + 4, y); y += LH + 1.5;
       });
-      y += 1.2;
-    });
+      y += 2;
+
+    } else if (sec.title === 'DIFFERENTIAL DIAGNOSES') {
+      // Numbered rows with a "Most Likely / Possible / Differential" colored
+      // label per item, mirroring the on-screen ranked layout.
+      const items = sec.lines.map(l => l.replace(/^[\d.)\-\*\u2022]+\s*/, '').trim()).filter(Boolean);
+      const cols = [[220, 38, 38], [180, 83, 9], [77, 106, 133], [77, 106, 133]];
+      const lbls = ['Most Likely', 'Possible', 'Differential', 'Consider'];
+      items.forEach((t, i) => {
+        const wrapped = doc.splitTextToSize(pdfSanitise(t), cw - 38);
+        checkY(wrapped.length * LH + 3);
+        sf(7.5, 'bold', cols[i] || [77, 106, 133]); txt((i + 1) + '. ' + (lbls[i] || ''), mg + 4, y);
+        sf(8.5, 'normal', [26, 45, 74]);
+        wrapped.forEach((ln, li) => { checkY(LH); txt(ln, mg + 34, y); y += LH; });
+        hline(mg + 4, y + 1, mg + cw - 4, y + 1, [240, 244, 249], 0.2);
+        y += 3;
+      });
+
+    } else if (sec.title === 'SEVERITY CLASSIFICATION') {
+      // Large bold colored headline (CRITICAL/ABNORMAL/NORMAL) + supporting lines.
+      const lines2 = sec.lines.map(l => l.trim()).filter(Boolean);
+      const mainLine = lines2[0] || '';
+      const isC = /critical/i.test(mainLine), isA = /abnormal/i.test(mainLine);
+      const col2 = isC ? [220, 38, 38] : isA ? [180, 83, 9] : [5, 150, 105];
+      checkY(15); y += 3; sf(12, 'bold', col2); txt(mainLine, mg + 4, y); y += 6.5;
+      sf(8, 'normal', [77, 106, 133]);
+      lines2.slice(1).forEach(l => {
+        doc.splitTextToSize(pdfSanitise(l), cw - 8).forEach(ln => { checkY(LH); txt(ln, mg + 4, y); y += LH; });
+      });
+      y += 2;
+
+    } else if (sec.title === 'RECOMMENDATIONS') {
+      // Color-coded cards (red/amber/green by urgency) with a left accent
+      // bar and dot, matching the on-screen checklist.
+      const items = sec.lines.map(l => l.replace(/^[\-\*\u2022\d.)]+\s*/, '').trim()).filter(Boolean);
+      items.forEach(t => {
+        const urgent = /urgent|immediate|critical|emergency|stat|now/i.test(t);
+        const monitor = /follow|monitor|watch|consider|suggest|review|recommend/i.test(t);
+        const col = urgent ? [220, 38, 38] : monitor ? [180, 83, 9] : [5, 150, 105];
+        const bg = urgent ? [255, 245, 245] : monitor ? [255, 251, 235] : [240, 253, 244];
+        const wrapped = doc.splitTextToSize(pdfSanitise(t), cw - 16);
+        const boxH = wrapped.length * LH + 5;
+        checkY(boxH + 2);
+        fillRect(mg, y - 4, cw, boxH, bg);
+        doc.setFillColor(...col); doc.rect(mg, y - 4, 1, boxH, 'F');
+        doc.setFillColor(...col); doc.circle(mg + 5, y - 4 + 4, 0.9, 'F');
+        sf(8.5, 'normal', [26, 45, 74]);
+        wrapped.forEach(ln => { txt(ln, mg + 9, y); y += LH; });
+        y += 3;
+      });
+
+    } else if (sec.title === 'IMPRESSION') {
+      // Italic text on a light lavender panel, matching the on-screen impression box.
+      const wrapped = doc.splitTextToSize(pdfSanitise(content), cw - 8);
+      const boxH = wrapped.length * LH + 6;
+      checkY(boxH + 2);
+      fillRect(mg, y - 2, cw, boxH, [250, 248, 255]);
+      sf(9, 'italic', [45, 74, 106]);
+      wrapped.forEach(ln => { checkY(LH); txt(ln, mg + 4, y + 3); y += LH; });
+      y += 5;
+
+    } else if (sec.title === 'AI CONFIDENCE') {
+      // Progress bar + percentage badge, matching the on-screen confidence meter.
+      const pctMatch = content.match(/(\d{1,3})\s*%/);
+      const wordLvl = /high/i.test(content) ? 85 : /moderate/i.test(content) ? 60 : 40;
+      const lvl = pctMatch ? Math.min(99, Math.max(20, parseInt(pctMatch[1]))) : wordLvl;
+      const col3 = lvl > 75 ? [5, 150, 105] : lvl > 55 ? [180, 83, 9] : [220, 38, 38];
+      const lbl3 = lvl > 75 ? 'High' : lvl > 55 ? 'Moderate' : 'Low';
+      checkY(14);
+      fillRect(mg + 4, y, cw - 70, 3.2, [240, 244, 249]);
+      fillRect(mg + 4, y, (cw - 70) * (lvl / 100), 3.2, col3);
+      sf(9, 'bold', col3); txt(lbl3 + ' (' + lvl + '%)', mg + cw - 4, y + 3, {align: 'right'});
+      y += 8;
+      const reasonText = content.includes('-') ? content.split('-').slice(1).join('-').trim() : content;
+      sf(8, 'normal', [77, 106, 133]);
+      doc.splitTextToSize(pdfSanitise(reasonText), cw - 8).forEach(ln => { checkY(LH); txt(ln, mg + 4, y); y += LH; });
+      y += 2;
+
+    } else {
+      // Default: FINDINGS, TECHNICAL QUALITY, DISCLAIMER, etc. - bulleted
+      // text with a subtle divider after each item, like the on-screen report.
+      sf(8.5, 'normal', [35, 55, 85]);
+      sec.lines.forEach((line) => {
+        const raw = line.trim();
+        if (!raw) { y += 2; return; }
+
+        const isBullet = /^[\-\*\u2022]\s+/.test(raw);
+        const text = raw.replace(/^[\-\*\u2022]\s+/, '').trim();
+
+        const inBand = inImageBand();
+        const baseX = inBand ? textXLeft + 3 : mg + 4;
+        const wrapW = inBand ? Math.max(38, textWLeft - 7) : (cw - 8);
+
+        const wlines = doc.splitTextToSize(pdfSanitise(text), wrapW - (isBullet ? 4 : 0));
+        wlines.forEach((ln, i) => {
+          if (y > ph - 20) {
+            doc.addPage();
+            curPage++;
+            y = mg;
+          }
+          if (i === 0 && isBullet) {
+            doc.setFillColor(...st.t);
+            doc.circle(baseX + 1.4, y - 1.3, 0.7, 'F');
+            sf(8.5, 'normal', [35, 55, 85]);
+            txt(ln, baseX + 4, y);
+          } else {
+            txt(ln, baseX + (isBullet ? 4 : 0), y);
+          }
+          y += LH;
+        });
+        if (isBullet) hline(mg + 4, y - LH + 2.6, mg + cw - 4, y - LH + 2.6, [240, 244, 249], 0.15);
+        y += 1.2;
+      });
+      y += 2;
+    }
     y += 2;
   });
 
