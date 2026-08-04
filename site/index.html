@@ -617,7 +617,7 @@ body{
 .sec-s{font-size:13px;color:var(--text3);margin-bottom:18px;letter-spacing:.01em}
 
 /* TOAST */
-.toast{position:fixed;top:14px;right:14px;background:var(--bg2);border-radius:10px;padding:12px 15px;z-index:200;max-width:310px;box-shadow:0 4px 24px rgba(30,80,160,.15);animation:slideIn .3s ease;border:1px solid var(--border)}
+.toast{position:fixed;top:14px;right:14px;background:var(--bg2);border-radius:10px;padding:12px 15px;z-index:1000000;max-width:310px;box-shadow:0 4px 24px rgba(30,80,160,.15);animation:slideIn .3s ease;border:1px solid var(--border)}
 @keyframes slideIn{from{transform:translateX(320px);opacity:0}to{transform:translateX(0);opacity:1}}
 .toast-t{font-size:13px;font-weight:600;margin-bottom:3px;display:flex;align-items:center;gap:6px}
 .toast-b{font-size:12px;color:var(--text2)}
@@ -5074,7 +5074,16 @@ Waiting for data…</pre>
               <div id="override-warning-message" style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:10px">This change affects a critical patient. Enter an auditable override reason to continue.</div>
               <div style="margin-top:8px">
                 <label class="fl" style="margin-bottom:6px">Override Reason (auditable)</label>
-                <textarea class="fi" id="override-reason-input" rows="2" placeholder="Enter the clinical reason for this update (e.g., Patient stabilized, Vital signs corrected, etc.)" style="resize:vertical;border-color:var(--amber);background:rgba(255,193,7,.04)"></textarea>
+                <select class="fi" id="override-reason-select" onchange="handleOverrideReasonSelect(this)" style="border-color:var(--amber);background:rgba(255,193,7,.04)">
+                  <option value="">Select a reason…</option>
+                  <option value="Patient clinically stabilized since last vitals check">Patient clinically stabilized since last vitals check</option>
+                  <option value="Vital signs corrected (data entry error)">Vital signs corrected (data entry error)</option>
+                  <option value="Repeat measurement taken, updating to accurate reading">Repeat measurement taken, updating to accurate reading</option>
+                  <option value="Clinician-confirmed reassessment">Clinician-confirmed reassessment</option>
+                  <option value="Discharge/status change per attending physician">Discharge/status change per attending physician</option>
+                  <option value="other">Other (specify below)</option>
+                </select>
+                <textarea class="fi" id="override-reason-input" rows="2" placeholder="Enter the clinical reason for this update (e.g., Patient stabilized, Vital signs corrected, etc.)" style="resize:vertical;border-color:var(--amber);background:rgba(255,193,7,.04);margin-top:8px;display:none"></textarea>
               </div>
             </div>
           </div>
@@ -6009,9 +6018,14 @@ const SmartCareClinicalGovernance = (() => {
     return changes;
   }
 
-  function requestOverrideIfNeeded(beforePatient, afterPatient, actionLabel) {
+  function requestOverrideIfNeeded(beforePatient, afterPatient, actionLabel, opts) {
     const assessment = assessPatient(afterPatient);
-    const riskyAction = ['discharged', 'due', 'deceased'].includes(afterPatient?.dischStatus) || beforePatient?.riskLevel === 'critical' || assessment.humanConfirmationRequired;
+    // Administrative-only edits (contact details, NOK info, spelling
+    // corrections, etc.) never touch vitals/risk level/discharge status,
+    // so they don't need the full clinical safety override - just save
+    // and log them normally, even if the patient's underlying risk is high.
+    const administrativeOnly = !!(opts && opts.administrativeOnly);
+    const riskyAction = !administrativeOnly && (['discharged', 'due', 'deceased'].includes(afterPatient?.dischStatus) || beforePatient?.riskLevel === 'critical' || assessment.humanConfirmationRequired);
     if (!riskyAction) return { required: false, assessment, reason: '' };
     const message = `${actionLabel} affects a patient with NEWS2 ${assessment.news2.score} / qSOFA ${assessment.qsofa.score}. Enter an auditable override reason to continue.`;
     // Store override data globally to be handled by UI form
@@ -6033,9 +6047,24 @@ const SmartCareClinicalGovernance = (() => {
     if (!warningEl) return;
     warningEl.style.display = 'block';
     const reasonInput = document.getElementById('override-reason-input');
+    const reasonSelect = document.getElementById('override-reason-select');
     if (reasonInput) {
-      reasonInput.value = overrideData.previousReason;
-      reasonInput.focus();
+      // This runs again on every re-attempted save while the override is
+      // still pending - only fall back to the previous reason when the
+      // user hasn't already typed/selected one, otherwise this used to
+      // silently wipe out whatever they'd just entered before it was ever
+      // read, making the override impossible to submit.
+      if (!reasonInput.value.trim()) {
+        reasonInput.value = overrideData.previousReason || '';
+      }
+      if (reasonInput.value.trim()) {
+        reasonInput.style.display = '';
+        if (reasonSelect) reasonSelect.value = 'other';
+      } else if (reasonSelect) {
+        reasonSelect.focus();
+      } else {
+        reasonInput.focus();
+      }
     }
     const msgEl = document.getElementById('override-warning-message');
     if (msgEl) msgEl.textContent = overrideData.message;
@@ -15517,6 +15546,10 @@ async function testSentWA(){
       showToast('Instance is not activated yet. In sentWA dashboard: WhatsApp -> Scan QR Code, then confirm the instance is connected/online and test again.', true, '⚠ Activate sentWA Instance');
       return;
     }
+    if(lowerDetail.includes('instance id invalidated') || lowerDetail.includes('instance invalidated')){
+      showToast('Your WhatsApp instance was disconnected on sentWA\'s side (session logged out or expired). In sentWA dashboard: WhatsApp -> Scan QR Code to re-link it, then confirm it shows as connected/online and test again.', true, '⚠ Instance Disconnected');
+      return;
+    }
     const detail = rawDetail ? ` Detail: ${rawDetail}` : '';
     showToast(`${why}${detail}`, true, '❌ sentWA Failed');
   }
@@ -22649,7 +22682,7 @@ function setEditFormLockedInputs(locked) {
   const overlay = document.getElementById('edit-patient-overlay');
   if (!overlay) return;
   overlay.querySelectorAll('input, select, textarea').forEach(el => {
-    if (el.id === 'override-reason-input') {
+    if (el.id === 'override-reason-input' || el.id === 'override-reason-select') {
       el.disabled = false;
       return;
     }
@@ -22895,7 +22928,9 @@ function closeEditPatientModal() {
   const warningBlock = document.getElementById('override-warning-block');
   if (warningBlock) warningBlock.style.display = 'none';
   const reasonInput = document.getElementById('override-reason-input');
-  if (reasonInput) reasonInput.value = '';
+  if (reasonInput) { reasonInput.value = ''; reasonInput.style.display = 'none'; }
+  const reasonSelect = document.getElementById('override-reason-select');
+  if (reasonSelect) reasonSelect.value = '';
   const lockNote = document.getElementById('lock-request-note');
   if (lockNote) lockNote.value = '';
   const lockPanel = document.getElementById('critical-edit-lock-panel');
@@ -22958,7 +22993,11 @@ function saveEditPatient(ev) {
       editor: (function(){ try{ var s=JSON.parse(sessionStorage.getItem('smartcare_session_v1')||'null'); return s&&s.name?s.name:'System'; }catch(e){ return 'System'; } })(),
       updates: []
     };
-  
+    // Only vitals, risk level, and discharge status affect NEWS2/qSOFA and
+    // clinical risk - administrative fields (contact info, NOK, spelling
+    // corrections, etc.) don't need the full safety-override gate below.
+    let clinicallyRelevantChange = false;
+
     const fname = getVal('edit-fname');
     const lname = getVal('edit-lname');
     const newName = [fname, lname].filter(Boolean).join(' ');
@@ -23003,6 +23042,7 @@ function saveEditPatient(ev) {
     const newPriority = getVal('edit-priority').toLowerCase();
     if (newPriority && newPriority !== currentEditPatient.riskLevel) {
       changes.updates.push(`Priority: "${currentEditPatient.riskLevel}" → "${newPriority}"`);
+      clinicallyRelevantChange = true;
       patients[patientIdx].riskLevel = newPriority;
       patients[patientIdx].risk = { critical:0.92, high:0.72, moderate:0.45, stable:0.18 }[newPriority] || patients[patientIdx].risk;
     }
@@ -23042,8 +23082,21 @@ function saveEditPatient(ev) {
     const newTemp = getVal('edit-temp');
     const newRR = getVal('edit-rr');
     
-    if (newHR || newO2 || newBP || newTemp || newRR) {
+    // The form always pre-fills these fields with the patient's current
+    // vitals, so they're never empty - compare against the previous value
+    // (like every other field here does) instead of just checking
+    // truthiness, otherwise every save logs a spurious "Vitals updated"
+    // and incorrectly triggers the clinical safety override below even
+    // when the user only touched an unrelated field.
+    const vitalsChanged =
+      (newHR && parseInt(newHR) !== currentEditPatient.hr) ||
+      (newO2 && parseInt(newO2) !== currentEditPatient.o2) ||
+      (newBP && newBP !== currentEditPatient.bp) ||
+      (newTemp && parseFloat(newTemp) !== currentEditPatient.temp) ||
+      (newRR && parseInt(newRR) !== currentEditPatient.rr);
+    if (vitalsChanged) {
       changes.updates.push(`Vitals updated (${vitalReason})`);
+      clinicallyRelevantChange = true;
       if (newHR) patients[patientIdx].hr = parseInt(newHR);
       if (newO2) patients[patientIdx].o2 = parseInt(newO2);
       if (newBP) patients[patientIdx].bp = newBP;
@@ -23081,6 +23134,7 @@ function saveEditPatient(ev) {
           : 'admitted';
     if (mappedStatus !== currentEditPatient.dischStatus) {
       changes.updates.push(`Status: "${currentEditPatient.dischStatus}" → "${mappedStatus}"`);
+      clinicallyRelevantChange = true;
       patients[patientIdx].dischStatus = mappedStatus;
       if (mappedStatus === 'discharged') patients[patientIdx].dischDate = 'Today';
       else if (mappedStatus === 'due') patients[patientIdx].dischDate = 'Today';
@@ -23104,7 +23158,7 @@ function saveEditPatient(ev) {
 
     patients[patientIdx].updatedAt = new Date().toISOString();
 
-    const override = SmartCareClinicalGovernance.requestOverrideIfNeeded(currentEditPatient, patients[patientIdx], 'Full patient record edit');
+    const override = SmartCareClinicalGovernance.requestOverrideIfNeeded(currentEditPatient, patients[patientIdx], 'Full patient record edit', { administrativeOnly: !clinicallyRelevantChange });
     if (override.blocked) {
       // Check if override warning block is visible and has an override reason filled
       const warningBlock = document.getElementById('override-warning-block');
@@ -23229,6 +23283,22 @@ function saveEditPatient(ev) {
 function discardEditPatient() {
   if (confirm('Discard all changes?')) {
     closeEditPatientModal();
+  }
+}
+
+function handleOverrideReasonSelect(sel) {
+  const textarea = document.getElementById('override-reason-input');
+  if (!textarea) return;
+  if (sel.value === 'other') {
+    textarea.style.display = '';
+    textarea.value = '';
+    textarea.focus();
+  } else if (sel.value) {
+    textarea.style.display = 'none';
+    textarea.value = sel.value;
+  } else {
+    textarea.style.display = 'none';
+    textarea.value = '';
   }
 }
 
