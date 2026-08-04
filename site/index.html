@@ -13261,6 +13261,8 @@ You MUST describe BOTH images in FINDINGS, state interval changes, and NEVER say
         body: JSON.stringify({
           model: 'claude-sonnet-5',
           max_tokens: 4096,
+          // See callAIModel's Claude branch for why thinking is disabled here.
+          thinking: {type: 'disabled'},
           system: _visionSystemPrompt,
           messages: [{role: 'user', content: claudeContent}]
         })
@@ -15033,6 +15035,12 @@ async function callAIModel(model, systemPrompt, userMessage, maxTokens=1000, opt
       body: JSON.stringify({
         model: 'claude-sonnet-5',
         max_tokens: maxTokens,
+        // Sonnet 5 runs adaptive thinking by default, and thinking tokens
+        // share the same max_tokens budget as the visible answer — with the
+        // modest budgets used across this app, thinking can consume the
+        // whole budget and leave no answer text. Disable it to restore the
+        // pre-Sonnet-5 behavior these call sites were tuned for.
+        thinking: {type: 'disabled'},
         system: _safeSystemPrompt,
         messages: [{role:'user', content: _safeUserMessage}]
       })
@@ -16295,7 +16303,9 @@ IMPORTANT RULES:
           const cResp = await fetch('https://api.anthropic.com/v1/messages', {
             method:'POST',
             headers:{'Content-Type':'application/json','x-api-key':vKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-            body: JSON.stringify({model:'claude-sonnet-5', max_tokens:3000,
+            body: JSON.stringify({model:'claude-sonnet-5', max_tokens:8000,
+              // See callAIModel's Claude branch for why thinking is disabled here.
+              thinking: {type: 'disabled'},
               system: safeVisionSystemPrompt,
               messages:[{role:'user', content:[
                 {type:'image', source:{type:'base64', media_type:imgMime, data:imgB64}},
@@ -16314,11 +16324,11 @@ IMPORTANT RULES:
       } catch(vErr){
         // Vision failed or returned empty — fall back to text-only call (clinicalMode: real names intact)
         console.warn('[SmartCare AI] Vision path failed, falling back to text-only:', vErr.message);
-        reply = await callAIModel(activeModel, sysPrompt, `Generate the clinical analysis report for this patient:\n${patientContext}`, 3000, {clinicalMode: true});
+        reply = await callAIModel(activeModel, sysPrompt, `Generate the clinical analysis report for this patient:\n${patientContext}`, 8000, {clinicalMode: true});
       }
     } else {
       // No X-ray — standard text-only analysis (clinicalMode: real names intact)
-      reply = await callAIModel(activeModel, sysPrompt, `Generate the clinical analysis report for this patient:\n${patientContext}`, 3000, {clinicalMode: true});
+      reply = await callAIModel(activeModel, sysPrompt, `Generate the clinical analysis report for this patient:\n${patientContext}`, 8000, {clinicalMode: true});
     }
 
     window._aiAnalysisDone = true;
@@ -16533,7 +16543,11 @@ function generatePatientPDF(p, reportText){
   if (p.profilePhoto && p.profilePhoto.startsWith('data:')) {
     try {
       const headerPhotoFmt = p.profilePhoto.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-      doc.addImage(p.profilePhoto, headerPhotoFmt, mg, 16, 20, 16);
+      // Captured photos are 3:4 portrait (see capturePatientPhoto) — match
+      // that ratio instead of stretching into a wider box, and center it
+      // under the SmartCare badge above.
+      const photoH = 16, photoW = photoH * 3 / 4;
+      doc.addImage(p.profilePhoto, headerPhotoFmt, mg + (20 - photoW) / 2, 16, photoW, photoH);
     } catch (e) {}
   }
   sf(15,'bold',[55,120,210]); txt('SmartCare AI',mg+24,11);
@@ -16657,12 +16671,23 @@ function generatePatientPDF(p, reportText){
   txt(`Generated: ${new Date().toLocaleString('en-ZA',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}`,pw-mg,y+6,{align:'right'});
   y+=13;
 
-  // Parse calc blocks first, then clean text
+  // Parse calc blocks and markdown tables first, then clean text
   const calcBlocks=[];
+  const tableBlocks=[];
   let cleanRpt=reportText
     .replace(/```calc\s*([\s\S]*?)```/gi,(m,raw)=>{
       try{const sp=JSON.parse(raw.trim());calcBlocks.push(sp);return`\n[CALC:${calcBlocks.length-1}]\n`;}
       catch(e){return'';}
+    })
+    // Extract real markdown tables (header + |---| separator + rows) into
+    // TABLE placeholders BEFORE the generic pipe cleanup below destroys
+    // their column structure (it used to just replace '|' with spaces).
+    .replace(/((?:^\|.*\|[ \t]*$\n?)+)/gm,(m)=>{
+      const lines=m.trim().split('\n').map(l=>l.trim()).filter(Boolean);
+      if(lines.length<2 || !/^\|?[\s:|-]+\|?$/.test(lines[1])) return m;
+      const parseRow=(line)=>line.replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+      tableBlocks.push({header:parseRow(lines[0]),rows:lines.slice(2).map(parseRow)});
+      return`\n[TABLE:${tableBlocks.length-1}]\n`;
     })
     .replace(/```(?:chart|insights?)[\s\S]*?```/gi,'')
     .replace(/```[\s\S]*?```/g,'')
@@ -16695,6 +16720,12 @@ function generatePatientPDF(p, reportText){
     .replace(/"e\s*/g,'>=').replace(/"d\s*/g,'<=').replace(/"=/g,'!=')
     .replace(/\n{3,}/g,'\n\n').trim();
 
+  // Tracks which visual treatment the current and following paragraphs get:
+  // 'normal' clinical prose, 'nok' (family-facing message - set apart with
+  // an accent bar + italic), or 'disclaimer' (small, muted footer note).
+  let sectionMode='normal';
+  let disclaimerRuleDrawn=false;
+
   cleanRpt.split(/\n\n+/).forEach(para=>{
     const t=para.trim(); if(!t) return;
 
@@ -16720,16 +16751,98 @@ function generatePatientPDF(p, reportText){
       return;
     }
 
-    const isH=t.length<100&&!t.endsWith('.')&&!t.endsWith(',')&&/^[A-Z]/.test(t)&&!/^\d/.test(t)&&
-      /^(Clinical|Patient|Vital|Scoring|Risk|Recommendation|NOK|Next|Discharge|Summary|Analysis|Assessment|Background|History|Management|Treatment|Medication|Monitoring|Overview)/i.test(t);
+    if(t.startsWith('[TABLE:')){
+      const idx=parseInt(t.match(/\d+/)[0]);
+      const tbl=tableBlocks[idx]; if(!tbl||!tbl.header.length) return;
+      const cols=tbl.header.length, colW=cw/cols, cellFont=7.5, lineH=4.2, padY=1.5;
+      const wrapRow=(cells)=>cells.map(c=>doc.splitTextToSize(pdfSanitise(String(c||'')),colW-4));
+      const rowHeight=(wrapped)=>Math.max(...wrapped.map(w=>w.length),1)*lineH+padY*2;
+      const drawRow=(wrapped,rowY,rowH)=>{
+        wrapped.forEach((wl,ci)=>{
+          wl.forEach((line,li)=>{ txt(line, mg+ci*colW+2, rowY+padY+3.2+li*lineH); });
+          if(ci>0) hline(mg+ci*colW,rowY,mg+ci*colW,rowY+rowH,[210,220,235],0.2);
+        });
+      };
 
-    if(isH){
+      const headerWrapped=wrapRow(tbl.header);
+      const hH=rowHeight(headerWrapped);
+      checkY(hH+2);
+      fillRect(mg,y,cw,hH,[20,34,58]);
+      sf(cellFont,'bold',[230,240,255]); drawRow(headerWrapped,y,hH);
+      y+=hH;
+
+      tbl.rows.forEach((row,ri)=>{
+        const wrapped=wrapRow(row);
+        const rH=rowHeight(wrapped);
+        checkY(rH+2);
+        if(ri%2===1) fillRect(mg,y,cw,rH,[240,244,250]);
+        brect(mg,y,cw,rH,[210,220,235],0.25);
+        sf(cellFont,'normal',[20,20,20]); drawRow(wrapped,y,rH);
+        y+=rH;
+      });
+      y+=4;
+      return;
+    }
+
+    // A "---" divider, or text that reads like the standard disclaimer,
+    // marks the report footer - draw a thin separating rule once and switch
+    // into muted disclaimer styling for what follows.
+    const looksLikeDisclaimer=/^this report was generated by/i.test(t)||/not a substitute for (direct )?clinical judg(e)?ment/i.test(t);
+    if(/^-{3,}$/.test(t)||looksLikeDisclaimer){
+      if(!disclaimerRuleDrawn){
+        y+=2; checkY(6);
+        hline(mg,y,mg+cw,y,[190,200,215],0.3);
+        y+=5;
+        disclaimerRuleDrawn=true;
+      }
+      sectionMode='disclaimer';
+      if(/^-{3,}$/.test(t)) return; // pure divider - nothing else to draw
+    }
+
+    const isHeadingLine=(s)=>s.length<100&&!s.endsWith('.')&&!s.endsWith(',')&&/^[A-Z]/.test(s)&&!/^\d/.test(s)&&
+      /^(Clinical|Patient|Vital|Scoring|Risk|Recommendation|NOK|Next|Discharge|Summary|Analysis|Assessment|Background|History|Management|Treatment|Medication|Monitoring|Overview)/i.test(s);
+
+    // Check the FIRST line only - the AI sometimes runs a heading straight
+    // into its first line of content with no blank line between them, and
+    // that used to disqualify the whole block from heading styling.
+    const lines=t.split('\n');
+    let bodyLines=lines;
+    if(sectionMode!=='disclaimer' && isHeadingLine(lines[0].trim())){
+      const headingText=lines[0].trim();
       y+=3; checkY(12);
-      sf(9,'bold',[40,90,190]); txt(t,mg,y);
+      sf(9,'bold',[40,90,190]); txt(headingText,mg,y);
       hline(mg,y+2,mg+cw,y+2,[100,145,210],0.4);
       y+=7;
+      sectionMode=/^NOK/i.test(headingText)?'nok':'normal';
+      bodyLines=lines.slice(1);
+      if(!bodyLines.length) return;
+    }
+
+    if(sectionMode==='nok'){
+      // Family-facing message - set apart from clinical prose with an
+      // accent bar and italic text, like a quoted letter.
+      bodyLines.forEach(line=>{
+        const l=line.trim(); if(!l){y+=2;return;}
+        checkY(LH+1);
+        sf(8.5,'italic',[45,65,95]);
+        const wrapped=doc.splitTextToSize(pdfSanitise(l),cw-8);
+        wrapped.forEach((wl,wi)=>{
+          checkY(LH);
+          fillRect(mg,y-3.6,1,LH,[100,145,210]);
+          txt(wl,mg+5,y); y+=LH;
+        });
+      });
+      y+=2;
+    } else if(sectionMode==='disclaimer'){
+      bodyLines.forEach(line=>{
+        const l=line.trim(); if(!l){y+=1.5;return;}
+        checkY(LH-1);
+        sf(6.5,'italic',[120,130,150]);
+        doc.splitTextToSize(pdfSanitise(l),cw).forEach(wl=>{checkY(LH-1);txt(wl,mg,y);y+=LH-2;});
+      });
+      y+=2;
     } else {
-      t.split('\n').forEach(line=>{
+      bodyLines.forEach(line=>{
         const l=line.trim(); if(!l){y+=2;return;}
         const isN=/^\d+[.)]/. test(l), isB=/^[\u2022\-\*]\s/.test(l);
         const ind=isN||isB?mg+5:mg, w=cw-(ind-mg);
