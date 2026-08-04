@@ -13270,7 +13270,9 @@ You MUST describe BOTH images in FINDINGS, state interval changes, and NEVER say
         throw new Error('Claude error: ' + (err?.error?.message || resp.statusText));
       }
       const data = await resp.json();
-      reportText = data?.content?.[0]?.text || '';
+      // claude-sonnet-5 has adaptive thinking on by default, so content[0] is
+      // often a `thinking` block, not `text` — find the text block explicitly.
+      reportText = (data?.content || []).find(b => b?.type === 'text')?.text || '';
     }
     if(!String(reportText || '').trim()){
       throw new Error('AI model returned an empty X-ray analysis response. Please try again or switch model.');
@@ -15040,7 +15042,9 @@ async function callAIModel(model, systemPrompt, userMessage, maxTokens=1000, opt
       throw new Error(`API_ERR:${resp.status}:${err?.error?.message||resp.statusText}`);
     }
     const data = await resp.json();
-    const text = data?.content?.[0]?.text;
+    // claude-sonnet-5 has adaptive thinking on by default, so content[0] is
+    // often a `thinking` block, not `text` — find the text block explicitly.
+    const text = (data?.content || []).find(b => b?.type === 'text')?.text;
     if(!text) throw new Error(`API_ERR:empty:Claude returned no content`);
     const stopReason = String(data?.stop_reason || '');
     const suffix = stopReason === 'max_tokens' ? '\n\n[Response truncated: token limit reached]' : '';
@@ -16300,7 +16304,9 @@ IMPORTANT RULES:
             })
           });
           const cData = await cResp.json();
-          reply = cData?.content?.[0]?.text || '';
+          // claude-sonnet-5 has adaptive thinking on by default, so content[0] is
+          // often a `thinking` block, not `text` — find the text block explicitly.
+          reply = (cData?.content || []).find(b => b?.type === 'text')?.text || '';
           if(!reply) throw new Error(`VISION_EMPTY:claude:${cData?.error?.message||'empty'}`);
         }
         reply = SmartCareAISafety.applyResponseGate(reply, { model: activeModel, context: 'patient-vision-report' }).text;
