@@ -4748,9 +4748,33 @@ Waiting for data…</pre>
         <label style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Allergies</label>
         <input id="edit-allergies" style="width:100%;box-sizing:border-box;padding:8px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--bg2)">
       </div>
+
+      <!-- Clinical Safety Override Warning Block (quick edit tab) -->
+      <div id="qedit-override-warning-block" style="display:none;background:linear-gradient(135deg,rgba(180,83,9,.12),rgba(217,119,6,.08));border:2px solid rgba(180,83,9,.35);border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <span style="font-size:24px;flex-shrink:0">⚠️</span>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">🛡 Clinical Safety Override Required</div>
+            <div id="qedit-override-warning-message" style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:10px">This change affects a critical patient. Enter an auditable override reason to continue.</div>
+            <div style="margin-top:8px">
+              <label class="fl" style="margin-bottom:6px">Override Reason (auditable)</label>
+              <select class="fi" id="qedit-override-reason-select" onchange="handleOverrideReasonSelect(this, 'qedit-override-reason-input')" style="border-color:var(--amber);background:rgba(255,193,7,.04)">
+                <option value="">Select a reason…</option>
+                <option value="Patient clinically stabilized since last vitals check">Patient clinically stabilized since last vitals check</option>
+                <option value="Vital signs corrected (data entry error)">Vital signs corrected (data entry error)</option>
+                <option value="Repeat measurement taken, updating to accurate reading">Repeat measurement taken, updating to accurate reading</option>
+                <option value="Clinician-confirmed reassessment">Clinician-confirmed reassessment</option>
+                <option value="other">Other (specify below)</option>
+              </select>
+              <textarea class="fi" id="qedit-override-reason-input" rows="2" placeholder="Enter the clinical reason for this update..." style="resize:vertical;border-color:var(--amber);background:rgba(255,193,7,.04);margin-top:8px;display:none"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <button onclick="savePatientEdits()" style="padding:10px 24px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--blue2),var(--blue));color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">💾 Save Changes</button>
-        <button onclick="document.querySelector('.modal-wrap')?.scrollTo(0,0);switchTab(document.querySelector('#modal-overlay .tabs .tab'),'tab-ov')" style="padding:10px 18px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text2);font-size:13px;cursor:pointer;font-family:inherit">Cancel</button>
+        <button onclick="cancelQuickEdit()" style="padding:10px 18px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg2);color:var(--text2);font-size:13px;cursor:pointer;font-family:inherit">Cancel</button>
         <span id="edit-save-msg" style="display:none;color:var(--green);font-size:13px;font-weight:600">✅ Record updated</span>
       </div>
     </div>
@@ -4768,6 +4792,30 @@ Waiting for data…</pre>
     <div class="fg"><label class="fl">Discharge Notes</label><textarea class="fi" rows="3" placeholder="Summary of treatment, follow-up instructions..." id="dconf-notes" style="resize:vertical"></textarea></div>
     <div class="fg"><label class="fl">Follow-up Required</label><select class="fsel" id="dconf-followup"><option>7 days</option><option>14 days</option><option>30 days</option><option>No follow-up needed</option></select></div>
     <div class="fg"><label class="fl">Discharge Condition</label><select class="fsel" id="dconf-condition"><option>Improved</option><option>Fully Recovered</option><option>Transferred</option><option>Against Medical Advice</option></select></div>
+
+    <!-- Clinical Safety Override Warning Block (discharge) -->
+    <div id="disch-override-warning-block" style="display:none;background:linear-gradient(135deg,rgba(180,83,9,.12),rgba(217,119,6,.08));border:2px solid rgba(180,83,9,.35);border-radius:10px;padding:14px;margin-top:14px">
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <span style="font-size:24px;flex-shrink:0">⚠️</span>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">🛡 Clinical Safety Override Required</div>
+          <div id="disch-override-warning-message" style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:10px">This patient's risk score requires an auditable override reason to discharge.</div>
+          <div style="margin-top:8px">
+            <label class="fl" style="margin-bottom:6px">Override Reason (auditable)</label>
+            <select class="fi" id="disch-override-reason-select" onchange="handleOverrideReasonSelect(this, 'disch-override-reason-input')" style="border-color:var(--amber);background:rgba(255,193,7,.04)">
+              <option value="">Select a reason…</option>
+              <option value="Patient clinically stabilized and fit for discharge">Patient clinically stabilized and fit for discharge</option>
+              <option value="Attending physician approved discharge despite risk score">Attending physician approved discharge despite risk score</option>
+              <option value="Patient/family requested discharge against medical advice">Patient/family requested discharge against medical advice</option>
+              <option value="Transferring to another facility for continued care">Transferring to another facility for continued care</option>
+              <option value="other">Other (specify below)</option>
+            </select>
+            <textarea class="fi" id="disch-override-reason-input" rows="2" placeholder="Enter the clinical reason for this discharge..." style="resize:vertical;border-color:var(--amber);background:rgba(255,193,7,.04);margin-top:8px;display:none"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div style="display:flex;gap:9px;margin-top:14px">
       <button class="btn btn-c" onclick="confirmDischarge()">✓ Confirm Discharge</button>
       <button class="btn btn-g" onclick="cancelDischarge()">Cancel</button>
@@ -6036,18 +6084,26 @@ const SmartCareClinicalGovernance = (() => {
       actionLabel: actionLabel,
       previousReason: afterPatient?.clinicalSafety?.overrideReason || ''
     };
-    // Display override warning block in the form
-    displayOverrideWarning(window._pendingOverride);
+    // Display override warning block in the form. Different callers show
+    // this in different modals (edit-patient overlay, discharge confirm,
+    // quick-edit tab) - each passes its own element IDs via opts.targetIds
+    // so the warning (and the reason the user types) actually appears
+    // where the caller's UI lives, instead of always targeting the
+    // edit-patient modal's elements regardless of which modal is open.
+    displayOverrideWarning(window._pendingOverride, opts && opts.targetIds);
     // Return blocked for now - will be resolved when user submits override reason
     return { required: true, blocked: true, assessment, reason: '' };
   }
 
-  function displayOverrideWarning(overrideData) {
-    const warningEl = document.getElementById('override-warning-block');
+  const DEFAULT_OVERRIDE_IDS = { block: 'override-warning-block', message: 'override-warning-message', select: 'override-reason-select', input: 'override-reason-input' };
+
+  function displayOverrideWarning(overrideData, targetIds) {
+    const ids = targetIds || DEFAULT_OVERRIDE_IDS;
+    const warningEl = document.getElementById(ids.block);
     if (!warningEl) return;
     warningEl.style.display = 'block';
-    const reasonInput = document.getElementById('override-reason-input');
-    const reasonSelect = document.getElementById('override-reason-select');
+    const reasonInput = document.getElementById(ids.input);
+    const reasonSelect = document.getElementById(ids.select);
     if (reasonInput) {
       // This runs again on every re-attempted save while the override is
       // still pending - only fall back to the previous reason when the
@@ -6066,7 +6122,7 @@ const SmartCareClinicalGovernance = (() => {
         reasonInput.focus();
       }
     }
-    const msgEl = document.getElementById('override-warning-message');
+    const msgEl = document.getElementById(ids.message);
     if (msgEl) msgEl.textContent = overrideData.message;
   }
 
@@ -8507,6 +8563,7 @@ function cancelWardTransfer(){
   modal.classList.remove('active');
   modal.classList.remove('expanded');
   pendingWardTransferId = null;
+  returnToBedPanelIfNeeded();
 }
 
 function confirmWardTransfer(){
@@ -8672,6 +8729,8 @@ function confirmWardTransfer(){
     openModal(p.id);
   }
 
+  sendAutoWardTransferNOKMessage(p, fromWard, toWard, toBed, { deteriorated: hasDeteriorated, improved: hasImproved });
+
   showToast(`${p.name} transferred to ${toWard} (${toBed})${escalatedRisk !== currentRisk ? ` · Status updated to ${escalatedRisk.toUpperCase()}` : ''}`, false, '↔ Ward Transfer Complete');
 }
 
@@ -8683,10 +8742,18 @@ function initDischargeFlow(pid){
   document.getElementById('disch-confirm').classList.remove('expanded');
   document.getElementById('disch-confirm').classList.add('active');
 }
+const DISCH_OVERRIDE_IDS = { block: 'disch-override-warning-block', message: 'disch-override-warning-message', select: 'disch-override-reason-select', input: 'disch-override-reason-input' };
+
 function cancelDischarge(){
   document.getElementById('disch-confirm').classList.remove('active');
   document.getElementById('disch-confirm').classList.remove('expanded');
   pendingDischargeId=null;
+  const warningBlock = document.getElementById(DISCH_OVERRIDE_IDS.block);
+  if (warningBlock) warningBlock.style.display = 'none';
+  const reasonInput = document.getElementById(DISCH_OVERRIDE_IDS.input);
+  if (reasonInput) { reasonInput.value = ''; reasonInput.style.display = 'none'; }
+  const reasonSelect = document.getElementById(DISCH_OVERRIDE_IDS.select);
+  if (reasonSelect) reasonSelect.value = '';
   returnToBedPanelIfNeeded();
 }
 function confirmDischarge(){
@@ -8698,10 +8765,23 @@ function confirmDischarge(){
     const notes=document.getElementById('dconf-notes').value.trim();
     const h=patientPriorHistory[p.id]||{};
     const proposed = { ...p, dischStatus: 'discharged', dischDate: 'Today', notes };
-    const override = SmartCareClinicalGovernance.requestOverrideIfNeeded(p, proposed, 'Patient discharge');
+    const override = SmartCareClinicalGovernance.requestOverrideIfNeeded(p, proposed, 'Patient discharge', { targetIds: DISCH_OVERRIDE_IDS });
+    let overrideReason = override.reason || '';
     if (override.blocked) {
-      showToast('Override reason is required before discharging this patient.', true, '🛡 Safety Gate');
-      return;
+      // requestOverrideIfNeeded always blocks when risky - it doesn't know
+      // about a reason the user already typed in response to a previous
+      // attempt. Check the discharge modal's own reason field directly
+      // (displayOverrideWarning preserves it across repeated calls) before
+      // truly giving up.
+      const warningBlock = document.getElementById(DISCH_OVERRIDE_IDS.block);
+      const reasonInput = document.getElementById(DISCH_OVERRIDE_IDS.input);
+      const reason = reasonInput ? reasonInput.value.trim() : '';
+      if (!warningBlock || warningBlock.style.display === 'none' || !reason) {
+        showToast('Enter an override reason below to confirm this discharge.', true, '🛡 Safety Gate');
+        return;
+      }
+      overrideReason = reason;
+      warningBlock.style.display = 'none';
     }
 
     // Build a rich discharge record
@@ -8733,14 +8813,14 @@ function confirmDischarge(){
       allergies:h.allergies||'None known',
       bloodType:h.bloodType||'Unknown',
       radiology:h.radiology||[],
-      overrideReason: override.reason || '',
+      overrideReason: overrideReason,
     });
 
-    const dischargeSafety = SmartCareClinicalGovernance.applyToPatient(proposed, { source: 'discharge', overrideReason: override.reason || '' });
+    const dischargeSafety = SmartCareClinicalGovernance.applyToPatient(proposed, { source: 'discharge', overrideReason: overrideReason });
     const afterSnapshot = SmartCareClinicalGovernance.getCriticalSnapshot(proposed);
     SmartCareLog.recordCriticalChange('PATIENT_DISCHARGED', {
       pid: p.id,
-      overrideReason: override.reason || '',
+      overrideReason: overrideReason,
       news2: dischargeSafety.news2.score,
       qsofa: dischargeSafety.qsofa.score,
       before: beforeSnapshot,
@@ -9381,6 +9461,11 @@ function initDischargeFlowFromBedPanel(pid, code){
   closeBedPanel();
   initDischargeFlow(pid);
 }
+function initWardTransferFlowFromBedPanel(pid, code){
+  setBedPanelReturnContext(pid, code);
+  closeBedPanel();
+  initWardTransferFlow(pid);
+}
 
 // Force Discharge: Override LOS requirement (clinical override, requires user confirmation)
 function initForceDischargeFlow(pid){
@@ -9542,6 +9627,7 @@ function openBedPanel(pid,code){
     <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
       <button class="btn btn-p btn-sm" onclick="openModalFromBedPanel('${_scEscJS(p.id || '')}','${safeCodeJS}')">📋 Full Patient Record</button>
       <button class="btn btn-g btn-sm" onclick="viewPatientHistoryFromBedPanel('${_scEscJS(p.id || '')}','${safeCodeJS}')">🏥 Full History</button>
+      <button class="btn btn-g btn-sm" onclick="initWardTransferFlowFromBedPanel('${_scEscJS(p.id || '')}','${safeCodeJS}')">🔄 Transfer Ward</button>
       <button class="btn btn-c btn-sm" onclick="initDischargeFlowFromBedPanel('${_scEscJS(p.id || '')}','${safeCodeJS}')">🚪 Process Discharge</button>
     </div>`;
 
@@ -11258,12 +11344,11 @@ function sendAutoAdmissionNOKMessage(p){
   if(waModal) waModal.classList.add('active');
 
   // Attempt real delivery via sentWA when available; otherwise keep in-app simulation.
-  if(typeof _sentWASend === 'function'){
-    _sentWASend(nok.phone, msg).then(ok => {
-      if(ok) showToast(`WhatsApp delivered to ${nok.name||'NOK'} via sentWA — admission update`,false,'📱 sentWA Delivered',60000);
-      else   showToast(`WhatsApp sent to ${nok.name||'NOK'} — admission update`,false,'📱 NOK Notified',60000);
-    }).catch(()=>{
-      showToast(`WhatsApp queued for ${nok.name||'NOK'} — admission update`,false,'📱 NOK Queued',60000);
+  if(typeof _sentWASendDetailed === 'function'){
+    _sentWASendDetailed(nok.phone, msg).then(result => {
+      _sentWANotifyToast(result, nok.name, 'admission update');
+    }).catch(err => {
+      _sentWANotifyToast({ok:false, reason:'network_or_cors', detail: err?.message || 'Send failed unexpectedly'}, nok.name, 'admission update');
     });
   } else {
     showToast(`WhatsApp sent to ${nok.name||'NOK'} — admission update`,false,'📱 NOK Notified',60000);
@@ -11310,9 +11395,8 @@ function sendAutoDischargeNOKMessage(p, options = {}) {
   }
   document.getElementById('wa-modal').classList.add('active');
   // Attempt real delivery via sentWA
-  _sentWASend(nok.phone, msg).then(ok => {
-    if(ok) showToast(`WhatsApp delivered to ${nok.name||'NOK'} via sentWA — discharge update`,false,'📱 sentWA Delivered',60000);
-    else   showToast(`WhatsApp sent to ${nok.name||'NOK'} — immediate discharge update`,false,'📱 NOK Notified',60000);
+  _sentWASendDetailed(nok.phone, msg).then(result => {
+    _sentWANotifyToast(result, nok.name, 'immediate discharge update');
   });
   return true;
 }
@@ -11356,9 +11440,45 @@ function sendAutoDeceasedNOKMessage(p, options = {}) {
   }
   document.getElementById('wa-modal').classList.add('active');
   // Attempt real delivery via sentWA
-  _sentWASend(nok.phone, msg).then(ok => {
-    if(ok) showToast(`WhatsApp delivered to ${nok.name||'NOK'} via sentWA — bereavement notice`,false,'📱 sentWA Delivered',60000);
-    else   showToast(`WhatsApp sent to ${nok.name||'NOK'} — bereavement notice`,false,'📱 NOK Notified',60000);
+  _sentWASendDetailed(nok.phone, msg).then(result => {
+    _sentWANotifyToast(result, nok.name, 'bereavement notice');
+  });
+  return true;
+}
+
+function sendAutoWardTransferNOKMessage(p, fromWard, toWard, toBed, opts = {}) {
+  if(!p || !p.nok || !p.nok.phone) {
+    showAgentInfoPreviewOnScreen('TransferAgent', `Transfer alert not sent for ${p?.name || 'patient'}: NOK phone is missing.`, {
+      level: 'moderate',
+      source: 'Ward transfer auto-notify'
+    });
+    return false;
+  }
+  const nok = p.nok;
+  const now = new Date().toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
+  const hospName = document.getElementById('hosp-name')?.value?.trim() || 'SmartCare Hospital';
+  const reasonNote = opts.deteriorated
+    ? ' due to a change in condition requiring closer monitoring'
+    : opts.improved
+      ? ' as their condition has improved'
+      : '';
+  const urgent = !!opts.deteriorated;
+  const msg = `*${hospName}*\n${urgent ? 'URGENT ' : ''}WARD TRANSFER UPDATE — Dear ${nok.name||'family'}, ${p.name} has been transferred from ${fromWard} to ${toWard} (Bed ${toBed})${reasonNote}. Attending doctor: ${p.doctor||'Medical Team'}. ${urgent ? 'Please keep your phone available for follow-up updates from the care team.' : 'The care team will keep you updated.'}`;
+
+  logNOKMessage(p.id, 'whatsapp', 'outbound', msg, {
+    recipient: nok.name || 'Next of Kin',
+    phone: nok.phone || '',
+    trigger: 'ward-transfer-auto',
+    urgent,
+    showOnScreen: true,
+    agentName: 'TransferAgent',
+    patientName: p.name || '',
+    priority: urgent ? 'high' : 'normal'
+  });
+
+  // Attempt real delivery via sentWA
+  _sentWASendDetailed(nok.phone, msg).then(result => {
+    _sentWANotifyToast(result, nok.name, 'ward transfer update');
   });
   return true;
 }
@@ -15453,6 +15573,26 @@ function saveSentWAConfig(){
 async function _sentWASend(phone, message){
   const result = await _sentWASendDetailed(phone, message);
   return !!result.ok;
+}
+// Shared toast for the auto-notify flows below (admission/discharge/
+// bereavement). Distinguishes "sentWA isn't configured" (expected —
+// falls back to in-app record only, no real WhatsApp exists either way)
+// from "sentWA IS configured but this send genuinely failed" (proxy
+// unreachable, instance invalidated, etc.) - the latter used to show
+// the exact same "NOK Notified" success toast as a real delivery,
+// silently hiding failed sends from the user.
+function _sentWANotifyToast(result, nokName, contextLabel){
+  const name = nokName || 'NOK';
+  if(result.ok){
+    showToast(`WhatsApp delivered to ${name} via sentWA — ${contextLabel}`, false, '📱 sentWA Delivered', 60000);
+    return;
+  }
+  if(result.reason === 'missing_credentials'){
+    showToast(`WhatsApp sent to ${name} — ${contextLabel}`, false, '📱 NOK Notified', 60000);
+    return;
+  }
+  const detail = String(result.detail || result.reason || 'unknown error');
+  showToast(`WhatsApp delivery FAILED for ${name} (${contextLabel}). ${detail}`, true, '⚠ WhatsApp Not Delivered', 60000);
 }
 async function _sentWASendDetailed(phone, message){
   const creds = _sentwaGetCreds();
@@ -22299,6 +22439,24 @@ function populateEditForm() {
   // Hide save confirmation
   const msg = document.getElementById('edit-save-msg');
   if (msg) msg.style.display = 'none';
+  // Clear any pending override state from a previous patient
+  const warningBlock = document.getElementById('qedit-override-warning-block');
+  if (warningBlock) warningBlock.style.display = 'none';
+  const reasonInput = document.getElementById('qedit-override-reason-input');
+  if (reasonInput) { reasonInput.value = ''; reasonInput.style.display = 'none'; }
+  const reasonSelect = document.getElementById('qedit-override-reason-select');
+  if (reasonSelect) reasonSelect.value = '';
+}
+
+function cancelQuickEdit() {
+  const warningBlock = document.getElementById('qedit-override-warning-block');
+  if (warningBlock) warningBlock.style.display = 'none';
+  const reasonInput = document.getElementById('qedit-override-reason-input');
+  if (reasonInput) { reasonInput.value = ''; reasonInput.style.display = 'none'; }
+  const reasonSelect = document.getElementById('qedit-override-reason-select');
+  if (reasonSelect) reasonSelect.value = '';
+  document.querySelector('.modal-wrap')?.scrollTo(0,0);
+  switchTab(document.querySelector('#modal-overlay .tabs .tab'),'tab-ov');
 }
 
 function savePatientEdits() {
@@ -22350,15 +22508,27 @@ function savePatientEdits() {
   }
 
   p.updatedAt = new Date().toISOString();
-  const override = SmartCareClinicalGovernance.requestOverrideIfNeeded(originalPatient, p, 'Patient record update');
+  const qeditTargetIds = { block: 'qedit-override-warning-block', message: 'qedit-override-warning-message', select: 'qedit-override-reason-select', input: 'qedit-override-reason-input' };
+  const override = SmartCareClinicalGovernance.requestOverrideIfNeeded(originalPatient, p, 'Patient record update', { targetIds: qeditTargetIds });
+  let overrideReason = override.reason || '';
   if (override.blocked) {
-    patients[patientIndex] = originalPatient;
-    if (hadHistory) patientPriorHistory[pid] = originalHistory;
-    else delete patientPriorHistory[pid];
-    showToast('Override reason is required for this patient-critical update.', true, '🛡 Safety Gate');
-    return;
+    // requestOverrideIfNeeded always blocks when risky - check this tab's
+    // own reason field directly (preserved across repeated calls by
+    // displayOverrideWarning) before reverting the edit.
+    const warningBlock = document.getElementById(qeditTargetIds.block);
+    const reasonInput = document.getElementById(qeditTargetIds.input);
+    const reason = reasonInput ? reasonInput.value.trim() : '';
+    if (!warningBlock || warningBlock.style.display === 'none' || !reason) {
+      patients[patientIndex] = originalPatient;
+      if (hadHistory) patientPriorHistory[pid] = originalHistory;
+      else delete patientPriorHistory[pid];
+      showToast('Enter an override reason below to save this update.', true, '🛡 Safety Gate');
+      return;
+    }
+    overrideReason = reason;
+    warningBlock.style.display = 'none';
   }
-  const safety = SmartCareClinicalGovernance.applyToPatient(p, { source: 'inline-edit', overrideReason: override.reason || '' });
+  const safety = SmartCareClinicalGovernance.applyToPatient(p, { source: 'inline-edit', overrideReason: overrideReason });
   const afterSnapshot = SmartCareClinicalGovernance.getCriticalSnapshot(p);
   const criticalChanges = SmartCareClinicalGovernance.diffSnapshots(beforeSnapshot, afterSnapshot);
 
@@ -22378,7 +22548,7 @@ function savePatientEdits() {
     diagnosis: diag,
     news2: safety.news2.score,
     qsofa: safety.qsofa.score,
-    overrideReason: override.reason || '',
+    overrideReason: overrideReason,
     changes: criticalChanges,
     before: beforeSnapshot,
     after: afterSnapshot
@@ -23286,8 +23456,8 @@ function discardEditPatient() {
   }
 }
 
-function handleOverrideReasonSelect(sel) {
-  const textarea = document.getElementById('override-reason-input');
+function handleOverrideReasonSelect(sel, targetId) {
+  const textarea = document.getElementById(targetId || 'override-reason-input');
   if (!textarea) return;
   if (sel.value === 'other') {
     textarea.style.display = '';
