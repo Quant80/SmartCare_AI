@@ -1995,6 +1995,11 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
             <div class="lp-drop-ic" style="background:#ecfeff">🧬</div>
             <div><div class="lp-drop-h">Data Scientists &amp; Researchers</div><div class="lp-drop-p">XGBoost predictions, AI model metrics, clinical data insights</div></div>
           </button>
+          <div class="lp-drop-divider"></div>
+          <button class="lp-drop-item" onclick="enterExecutivePortal()">
+            <div class="lp-drop-ic" style="background:#fdf4e3">🏛</div>
+            <div><div class="lp-drop-h">Ministry &amp; Government Officials</div><div class="lp-drop-p">National statistics by province — no patient-level access</div></div>
+          </button>
         </div>
       </div>
 
@@ -2219,6 +2224,9 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
     <h2 style="font-size:clamp(24px,4vw,40px);font-weight:900;margin-bottom:14px">Ready to transform your hospital?</h2>
     <p style="font-size:16px;color:rgba(255,255,255,.6);max-width:520px;margin:0 auto 32px;line-height:1.65">No setup required — add your API keys and go live in minutes.</p>
     <button class="lp-btn-main" onclick="enterSystem()" style="font-size:16px;padding:16px 44px">🚀 Launch SmartCare AI</button>
+    <div style="margin-top:14px">
+      <button onclick="enterExecutivePortal()" style="background:transparent;border:1.5px solid rgba(255,255,255,.25);color:rgba(255,255,255,.75);padding:10px 24px;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit" onmouseover="this.style.borderColor='rgba(255,255,255,.5)';this.style.color='#fff'" onmouseout="this.style.borderColor='rgba(255,255,255,.25)';this.style.color='rgba(255,255,255,.75)'">🏛 Ministry / Executive Access →</button>
+    </div>
   </div>
 
   <!-- ═══ FOOTER ═══ -->
@@ -2806,6 +2814,8 @@ Waiting for data…</pre>
         <div class="card">
           <div class="ch"><div class="ct">Assignment &amp; Initial Vitals</div></div>
           <div class="fgrid">
+            <div class="fg"><label class="fl">Province</label><select class="fsel" id="reg-province"><option value="">— Select Province —</option><option>Harare</option><option>Bulawayo</option><option>Manicaland</option><option>Mashonaland Central</option><option>Mashonaland East</option><option>Mashonaland West</option><option>Masvingo</option><option>Matabeleland North</option><option>Matabeleland South</option><option>Midlands</option></select></div>
+            <div class="fg"><label class="fl">Facility</label><input class="fi" placeholder="e.g. Mpilo Central Hospital" id="reg-facility"></div>
             <div class="fg"><label class="fl">Ward</label><select class="fsel" id="reg-ward" onchange="updateRegBeds(this)"><option>ICU</option><option>Emergency</option><option>Cardiac</option><option>General A</option><option>General B</option><option>Pediatrics</option></select></div>
             <div class="fg"><label class="fl">Bed Number</label><select class="fsel" id="reg-bed"></select></div>
             <div class="fg"><label class="fl">Assigned Doctor</label><select class="fsel" id="reg-doctor"><option>Dr. Radebe</option><option>Dr. Naidoo</option><option>Dr. Van der Merwe</option><option>Dr. Dlamini</option><option>Dr. Patel</option></select></div>
@@ -3061,6 +3071,210 @@ Waiting for data…</pre>
     </div>
   </div>
 
+  <!-- ═══ MINISTERIAL EXECUTIVE PORTAL ═══ -->
+  <style>
+    body.exec-mode .sb-nav{display:none}
+  </style>
+  <div class="page" id="page-exec">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+      <div>
+        <div class="sec-t">🏛 Ministerial Executive Portal</div>
+        <div class="sec-s">National overview — read-only aggregate statistics. No individual patient records are accessible from this view.</div>
+      </div>
+      <button class="btn btn-g" onclick="exitExecutivePortal()">← Exit Portal</button>
+    </div>
+
+    <div style="background:var(--bg4);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:10px;padding:12px 16px;margin:14px 0 18px;font-size:12px;color:var(--text2);line-height:1.6">
+      ⚠ <strong>Scope note:</strong> figures below reflect patients recorded in this SmartCare AI deployment only. They will be genuinely national once every facility reports into one shared system.
+    </div>
+
+    <!-- View switcher -->
+    <div style="display:flex;gap:8px;margin-bottom:18px;border-bottom:1px solid var(--border)">
+      <button class="btn" id="exec-tab-burden" onclick="switchExecView('burden')" style="border-radius:8px 8px 0 0;border-bottom:2px solid var(--cyan);background:var(--bg4);font-weight:700">📊 National Burden</button>
+      <button class="btn" id="exec-tab-mortality" onclick="switchExecView('mortality')" style="border-radius:8px 8px 0 0;border-bottom:2px solid transparent;background:transparent">⚰ Mortality &amp; Disease Burden</button>
+    </div>
+
+    <div style="display:flex;gap:9px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <select class="fsel" style="width:200px" id="exec-province-filter" onchange="refreshExecPortal()">
+        <option value="">All Provinces</option>
+        <option>Harare</option><option>Bulawayo</option><option>Manicaland</option>
+        <option>Mashonaland Central</option><option>Mashonaland East</option><option>Mashonaland West</option>
+        <option>Masvingo</option><option>Matabeleland North</option><option>Matabeleland South</option><option>Midlands</option>
+      </select>
+      <select class="fsel" style="width:220px" id="exec-facility-filter" onchange="refreshExecPortal()">
+        <option value="">All Facilities</option>
+      </select>
+      <button class="btn btn-g btn-sm" onclick="clearExecFilters()">✕ Clear Filters</button>
+      <span style="font-size:11px;color:var(--text3)" id="exec-filter-summary"></span>
+    </div>
+
+    <!-- ═══ NATIONAL BURDEN VIEW ═══ -->
+    <div id="exec-view-burden">
+      <div class="mGrid4">
+        <div class="mc info">
+          <div class="mc-label">Active Patients</div>
+          <div class="mc-val info" id="exec-kpi-total">0</div>
+          <div class="mc-sub" id="exec-kpi-total-sub">Nationally, in this deployment</div>
+          <div class="mc-ic">🏥</div>
+        </div>
+        <div class="mc crit">
+          <div class="mc-label">Critical / High Risk</div>
+          <div class="mc-val crit" id="exec-kpi-critical">0</div>
+          <div class="mc-sub">Requiring urgent capacity</div>
+          <div class="mc-ic">🚨</div>
+        </div>
+        <div class="mc cyan">
+          <div class="mc-label">Leading Diagnosis</div>
+          <div class="mc-val cyan" id="exec-kpi-leading-dx">—</div>
+          <div class="mc-sub" id="exec-kpi-leading-dx-sub">Most common condition</div>
+          <div class="mc-ic">🩺</div>
+        </div>
+        <div class="mc purple">
+          <div class="mc-label">Provinces Reporting</div>
+          <div class="mc-val purple" id="exec-kpi-provinces">0<span style="font-size:13px;color:var(--text3)"> / 10</span></div>
+          <div class="mc-sub">Provinces with capture data</div>
+          <div class="mc-ic">🗺️</div>
+        </div>
+      </div>
+
+      <div class="g32">
+        <div class="card">
+          <div class="ch"><div class="ct">Active Cases by Province</div><div style="font-size:10px;color:var(--text3)">Where the current caseload is concentrated</div></div>
+          <div class="cw" style="height:230px"><canvas id="execProvinceChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Top Diagnoses</div><div style="font-size:10px;color:var(--text3)">Ranked by active case count<span id="exec-diag-scope-note"></span></div></div>
+          <div class="cw" style="height:230px"><canvas id="execDiagChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="g32">
+        <div class="card">
+          <div class="ch"><div class="ct">Age Group Distribution</div><div style="font-size:10px;color:var(--text3)">Patient population breakdown by age</div></div>
+          <div class="cw" style="height:190px"><canvas id="execAgeChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Gender Distribution</div><div style="font-size:10px;color:var(--text3)">Current inpatient demographics</div></div>
+          <div class="cw" style="height:190px"><canvas id="execGenderChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="g32">
+        <div class="card">
+          <div class="ch"><div class="ct">Active Cases by Facility</div><div style="font-size:10px;color:var(--text3)">Top 10 facilities by caseload<span id="exec-facility-scope-note"></span></div></div>
+          <div class="cw" style="height:230px"><canvas id="execFacilityChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Facility Breakdown</div><div style="font-size:10px;color:var(--text3)">Full table for reporting and export</div></div>
+          <div style="overflow-x:auto">
+            <table class="tbl">
+              <thead><tr><th>Facility</th><th>Active Cases</th><th>Critical / High</th><th>Leading Diagnosis</th></tr></thead>
+              <tbody id="exec-facility-burden-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="ch"><div class="ct">Province Breakdown</div><div style="font-size:10px;color:var(--text3)">Full table for reporting and export</div></div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr><th>Province</th><th>Active Cases</th><th>Critical / High</th><th>Leading Diagnosis</th></tr></thead>
+            <tbody id="exec-province-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MORTALITY & DISEASE BURDEN VIEW ═══ -->
+    <div id="exec-view-mortality" style="display:none">
+      <div class="mGrid4">
+        <div class="mc crit">
+          <div class="mc-label">Total Deaths</div>
+          <div class="mc-val crit" id="exec-mort-kpi-total">0</div>
+          <div class="mc-sub" id="exec-mort-kpi-total-sub">All recorded, this deployment</div>
+          <div class="mc-ic">⚰</div>
+        </div>
+        <div class="mc high">
+          <div class="mc-label">Leading Cause of Death</div>
+          <div class="mc-val high" id="exec-mort-kpi-cause" style="font-size:16px">—</div>
+          <div class="mc-sub" id="exec-mort-kpi-cause-sub">By diagnosis</div>
+          <div class="mc-ic">🩸</div>
+        </div>
+        <div class="mc cyan">
+          <div class="mc-label">Highest Case-Fatality Rate</div>
+          <div class="mc-val cyan" id="exec-mort-kpi-cfr" style="font-size:16px">—</div>
+          <div class="mc-sub" id="exec-mort-kpi-cfr-sub">Deaths ÷ diagnosed cases</div>
+          <div class="mc-ic">📉</div>
+        </div>
+        <div class="mc purple">
+          <div class="mc-label">Provinces w/ Deaths</div>
+          <div class="mc-val purple" id="exec-mort-kpi-provinces">0<span style="font-size:13px;color:var(--text3)"> / 10</span></div>
+          <div class="mc-sub">Reporting at least one death</div>
+          <div class="mc-ic">🗺️</div>
+        </div>
+      </div>
+
+      <div class="callout-note" style="font-size:11px;color:var(--text3);margin:-6px 0 14px">
+        💡 Raw death count shows what's killing the most people. Case-fatality rate shows what's most dangerous <em>per case</em> — the two don't always agree, and both matter for identifying killer diseases.
+      </div>
+
+      <div class="g32">
+        <div class="card">
+          <div class="ch"><div class="ct">Causes of Death — Ranked</div><div style="font-size:10px;color:var(--text3)">Death count by diagnosis</div></div>
+          <div class="cw" style="height:230px"><canvas id="execCauseChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Case-Fatality Rate by Diagnosis</div><div style="font-size:10px;color:var(--text3)">Deaths ÷ (deaths + recovered) for the same top causes</div></div>
+          <div class="cw" style="height:230px"><canvas id="execCfrChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="g32">
+        <div class="card">
+          <div class="ch"><div class="ct">Deaths by Province</div><div style="font-size:10px;color:var(--text3)">Where mortality is concentrated</div></div>
+          <div class="cw" style="height:210px"><canvas id="execDeathsProvinceChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Monthly Trend<span id="exec-trend-scope-note"></span></div><div style="font-size:10px;color:var(--text3)">Deaths per month — use the province filter above to isolate one province</div></div>
+          <div class="cw" style="height:210px"><canvas id="execTrendChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="g32">
+        <div class="card">
+          <div class="ch"><div class="ct">Age Group Distribution</div><div style="font-size:10px;color:var(--text3)">Deaths by age band</div></div>
+          <div class="cw" style="height:190px"><canvas id="execMortAgeChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Gender Distribution</div><div style="font-size:10px;color:var(--text3)">Deaths by gender</div></div>
+          <div class="cw" style="height:190px"><canvas id="execMortGenderChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="g32" style="margin-top:0">
+        <div class="card">
+          <div class="ch"><div class="ct">Distribution by Facility</div><div style="font-size:10px;color:var(--text3)">Deaths recorded per facility</div></div>
+          <div style="overflow-x:auto">
+            <table class="tbl">
+              <thead><tr><th>Facility</th><th>Deaths</th><th>Leading Cause</th></tr></thead>
+              <tbody id="exec-facility-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Deaths by Province — Table</div><div style="font-size:10px;color:var(--text3)">Full breakdown for reporting</div></div>
+          <div style="overflow-x:auto">
+            <table class="tbl">
+              <thead><tr><th>Province</th><th>Deaths</th><th>Leading Cause</th></tr></thead>
+              <tbody id="exec-mort-province-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ AI PAGE ═══ -->
   <div class="page" id="page-ai">
     <button class="back-btn" onclick="showPage('dashboard')"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 12H5M5 12l7 7M5 12l7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Back to Dashboard</button>
@@ -3190,6 +3404,8 @@ Waiting for data…</pre>
       <div class="card">
         <div class="ch"><div class="ct">Assignment & Initial Vitals</div></div>
         <div class="fgrid">
+          <div class="fg"><label class="fl">Province</label><select class="fsel" id="reg-province"><option value="">— Select Province —</option><option>Harare</option><option>Bulawayo</option><option>Manicaland</option><option>Mashonaland Central</option><option>Mashonaland East</option><option>Mashonaland West</option><option>Masvingo</option><option>Matabeleland North</option><option>Matabeleland South</option><option>Midlands</option></select></div>
+          <div class="fg"><label class="fl">Facility</label><input class="fi" placeholder="e.g. Mpilo Central Hospital" id="reg-facility"></div>
           <div class="fg"><label class="fl">Ward</label><select class="fsel" id="reg-ward" onchange="updateRegBeds(this)"><option>ICU</option><option>Emergency</option><option>Cardiac</option><option>General A</option><option>General B</option><option>Pediatrics</option></select></div>
           <div class="fg"><label class="fl">Bed Number</label><select class="fsel" id="reg-bed"></select></div>
           <div class="fg"><label class="fl">Assigned Doctor</label><select class="fsel" id="reg-doctor"><option>Dr. Radebe</option><option>Dr. Naidoo</option><option>Dr. Van der Merwe</option><option>Dr. Dlamini</option><option>Dr. Patel</option></select></div>
@@ -4791,7 +5007,8 @@ Waiting for data…</pre>
     <div style="font-size:12px;color:var(--text3);margin-bottom:16px" id="dconf-name">Patient Name · Ward</div>
     <div class="fg"><label class="fl">Discharge Notes</label><textarea class="fi" rows="3" placeholder="Summary of treatment, follow-up instructions..." id="dconf-notes" style="resize:vertical"></textarea></div>
     <div class="fg"><label class="fl">Follow-up Required</label><select class="fsel" id="dconf-followup"><option>7 days</option><option>14 days</option><option>30 days</option><option>No follow-up needed</option></select></div>
-    <div class="fg"><label class="fl">Discharge Condition</label><select class="fsel" id="dconf-condition"><option>Improved</option><option>Fully Recovered</option><option>Transferred</option><option>Against Medical Advice</option></select></div>
+    <div class="fg"><label class="fl">Discharge Condition</label><select class="fsel" id="dconf-condition" onchange="document.getElementById('dconf-cause-wrap').style.display=(this.value==='Deceased'?'block':'none')"><option>Improved</option><option>Fully Recovered</option><option>Transferred</option><option>Against Medical Advice</option><option>Deceased</option></select></div>
+    <div class="fg" id="dconf-cause-wrap" style="display:none"><label class="fl">Cause of Death</label><input class="fi" id="dconf-cause" placeholder="e.g. Cardiac arrest secondary to septic shock"></div>
 
     <!-- Clinical Safety Override Warning Block (discharge) -->
     <div id="disch-override-warning-block" style="display:none;background:linear-gradient(135deg,rgba(180,83,9,.12),rgba(217,119,6,.08));border:2px solid rgba(180,83,9,.35);border-radius:10px;padding:14px;margin-top:14px">
@@ -5043,6 +5260,11 @@ Waiting for data…</pre>
         <div>
           <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">🏥 Ward &amp; Bed Assignment</div>
           <div class="fgrid">
+            <div class="fg">
+              <label class="fl">Province</label>
+              <select class="fsel" id="edit-province"><option value="">— Select Province —</option><option>Harare</option><option>Bulawayo</option><option>Manicaland</option><option>Mashonaland Central</option><option>Mashonaland East</option><option>Mashonaland West</option><option>Masvingo</option><option>Matabeleland North</option><option>Matabeleland South</option><option>Midlands</option></select>
+            </div>
+            <div class="fg"><label class="fl">Facility</label><input class="fi" id="edit-facility" placeholder="e.g. Mpilo Central Hospital"></div>
             <div class="fg">
               <label class="fl">Ward</label>
               <select class="fsel" id="edit-ward" onchange="updateEditBeds()">
@@ -5321,13 +5543,27 @@ const dischargedPatients = [
   {name:'Kgosi Sithole',nationalId:'7504019012345',hospitalRecNo:'HRN-2024-00098',  ward:'General B',  bed:'B-20', doctor:'Dr. Naidoo',   diagnosis:'Diabetes review',    admissionReason:'Poorly controlled T2DM, HbA1c 10.2%',       admDays:3, los:3, date:'11 Mar 2026',    condition:'Improved',        notes:'Insulin regimen optimised, dietician referral made', nok:{name:'Mpho Sithole',rel:'Child',phone:'+27 82 777 0007'}, vitalsAtDischarge:{hr:82,bp:'134/84',o2:97,temp:36.7,rr:16}, meds:['Metformin 1g BD','Insulin Glargine 20u nocte'], allergies:'None known', bloodType:'B+'},
 ];
 
-const deceasedPatients = [
-  {name:'Solomon Dube',    ward:'ICU',       diagnosis:'Multi-organ Failure',    date:'14 Mar 2026, 03:22', age:74, doctor:'Dr. Radebe',    cause:'Refractory septic shock following multi-organ failure', nok:'Zanele Dube · +27 82 111 2233'},
-  {name:'Miriam Khumalo',  ward:'ICU',       diagnosis:'Severe Pneumonia',       date:'10 Mar 2026, 21:10', age:81, doctor:'Dr. Radebe',    cause:'Hypoxic respiratory failure, pneumonia', nok:'James Khumalo · +27 83 222 3344'},
-  {name:'Patrick Letsolo', ward:'Emergency', diagnosis:'Cardiac Arrest',         date:'12 Mar 2026',      age:62, doctor:'Dr. Van der Merwe',cause:'Refractory ventricular fibrillation, ROSC not achieved', nok:'Mpho Letsolo · +27 71 333 4455'},
-  {name:'Agnes Mokoena',   ward:'General A', diagnosis:'Metastatic Cancer',      date:'10 Mar 2026',      age:67, doctor:'Dr. Naidoo',    cause:'End-stage malignancy, comfort care provided', nok:'Sipho Mokoena · +27 84 444 5566'},
-  {name:'Victor Pietersen',ward:'Cardiac',   diagnosis:'Massive MI',             date:'09 Mar 2026',      age:71, doctor:'Dr. Radebe',    cause:'Anterior STEMI with cardiogenic shock, not revascularisable', nok:'Anna Pietersen · +27 83 555 6677'},
+const DECEASED_STORAGE_KEY = 'smartcare_deceased_v1';
+const DEFAULT_DECEASED = [
+  {name:'Solomon Dube',    ward:'ICU',       diagnosis:'Multi-organ Failure',    date:'14 Mar 2026, 03:22', age:74, gender:'Male',   doctor:'Dr. Radebe',    cause:'Refractory septic shock following multi-organ failure', nok:'Zanele Dube · +27 82 111 2233', province:'', facility:''},
+  {name:'Miriam Khumalo',  ward:'ICU',       diagnosis:'Severe Pneumonia',       date:'10 Mar 2026, 21:10', age:81, gender:'Female', doctor:'Dr. Radebe',    cause:'Hypoxic respiratory failure, pneumonia', nok:'James Khumalo · +27 83 222 3344', province:'', facility:''},
+  {name:'Patrick Letsolo', ward:'Emergency', diagnosis:'Cardiac Arrest',         date:'12 Mar 2026',      age:62, gender:'Male',   doctor:'Dr. Van der Merwe',cause:'Refractory ventricular fibrillation, ROSC not achieved', nok:'Mpho Letsolo · +27 71 333 4455', province:'', facility:''},
+  {name:'Agnes Mokoena',   ward:'General A', diagnosis:'Metastatic Cancer',      date:'10 Mar 2026',      age:67, gender:'Female', doctor:'Dr. Naidoo',    cause:'End-stage malignancy, comfort care provided', nok:'Sipho Mokoena · +27 84 444 5566', province:'', facility:''},
+  {name:'Victor Pietersen',ward:'Cardiac',   diagnosis:'Massive MI',             date:'09 Mar 2026',      age:71, gender:'Male',   doctor:'Dr. Radebe',    cause:'Anterior STEMI with cardiogenic shock, not revascularisable', nok:'Anna Pietersen · +27 83 555 6677', province:'', facility:''},
 ];
+
+function loadPersistedDeceased() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(DECEASED_STORAGE_KEY) || 'null');
+    if (Array.isArray(stored) && stored.length) return stored;
+  } catch (e) {}
+  return JSON.parse(JSON.stringify(DEFAULT_DECEASED));
+}
+function persistDeceased() {
+  try { localStorage.setItem(DECEASED_STORAGE_KEY, JSON.stringify(deceasedPatients)); } catch (e) {}
+}
+
+let deceasedPatients = loadPersistedDeceased();
 
 // ═══════════════════════════════════════════════════════════════════════════
 // REACTIVE PATIENT DATA SYSTEM — Auto-compute derived fields
@@ -5491,7 +5727,7 @@ let pendingWardTransferId = null;
 // ═══════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════
-const pageTitles = {dashboard:'Dashboard Overview',monitoring:'Live Monitoring',patients:'Patient Registry',discharge:'Discharge Management',records:'Patient Records Database',beds:'Ward Monitor & Bed Management',analytics:'Analytics Overview',ai:'AI Predictions',alerts:'Alert Management',register:'Register Patient',wards:'Ward Monitor & Bed Management',outpatient:'Outpatient Management','ai-hub':'AI Clinical Hub','ai-clinical':'AI Clinical Intelligence',xray:'X-ray AI Scanner — Radiology Intelligence',settings:'Settings & API Configuration',admin:'Admin Panel — System Control'};
+const pageTitles = {dashboard:'Dashboard Overview',monitoring:'Live Monitoring',patients:'Patient Registry',discharge:'Discharge Management',records:'Patient Records Database',beds:'Ward Monitor & Bed Management',analytics:'Analytics Overview',ai:'AI Predictions',alerts:'Alert Management',register:'Register Patient',wards:'Ward Monitor & Bed Management',outpatient:'Outpatient Management','ai-hub':'AI Clinical Hub','ai-clinical':'AI Clinical Intelligence',xray:'X-ray AI Scanner — Radiology Intelligence',settings:'Settings & API Configuration',admin:'Admin Panel — System Control',exec:'Ministerial Executive Portal — National Overview'};
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -7062,6 +7298,10 @@ function _initEnterpriseSystems() {
 })();
 
 function showPage(id){
+  if(sessionStorage.getItem('sc_exec_mode')==='1' && id!=='exec'){
+    showToast('Executive Portal access is limited to national statistics.', true, '🔒 Restricted');
+    id='exec';
+  }
   if(id==='beds') id='wards';
   if(id==='admin'){
     const role = (getSession()?.role || SmartCareSecurity.getSession()?.role || '').toLowerCase();
@@ -7093,7 +7333,7 @@ function showPage(id){
   const _contentEl = document.querySelector('.content');
   if(_contentEl) _contentEl.scrollTop = 0;
   window.scrollTo(0, 0);
-  const inits = {monitoring:initMonitoring,analytics:initAnalytics,ai:initAIPage,discharge:initDischarge,wards:initWards,outpatient:initOutpatient,'ai-hub':initAIHub,'ai-clinical':initAIClinical,xray:initXray,settings:initSettings,admin:initAdminPage};
+  const inits = {monitoring:initMonitoring,analytics:initAnalytics,ai:initAIPage,discharge:initDischarge,wards:initWards,outpatient:initOutpatient,'ai-hub':initAIHub,'ai-clinical':initAIClinical,xray:initXray,settings:initSettings,admin:initAdminPage,exec:initExecPortal};
   if(inits[id]) inits[id]();
   if(id==='register'){ _scInitNationalityPickers(); _scSyncAllNationalityPickers(); }
   if(id==='patients'){ renderPatientTable(patients); showPatPane('registry'); }
@@ -8739,6 +8979,9 @@ function initDischargeFlow(pid){
   pendingDischargeId=pid;
   document.getElementById('dconf-name').textContent=`${p.name} (${p.id}) · ${p.ward} · ${p.bed}`;
   document.getElementById('dconf-notes').value='';
+  document.getElementById('dconf-condition').value='Improved';
+  document.getElementById('dconf-cause').value='';
+  document.getElementById('dconf-cause-wrap').style.display='none';
   document.getElementById('disch-confirm').classList.remove('expanded');
   document.getElementById('disch-confirm').classList.add('active');
 }
@@ -8801,6 +9044,8 @@ function confirmDischarge(){
       admDays:p.admDays,
       los:p.los,
       actualLOS: p.admDays,
+      province:p.province||'',
+      facility:p.facility||'',
       condition,
       notes,
       date: _dischDateStr + ' ' + _dischTimeStr,
@@ -8815,6 +9060,25 @@ function confirmDischarge(){
       radiology:h.radiology||[],
       overrideReason: overrideReason,
     });
+
+    if (condition === 'Deceased') {
+      const causeOfDeath = (document.getElementById('dconf-cause')?.value || '').trim() || p.diagnosis || 'Cause not specified';
+      deceasedPatients.unshift({
+        name: p.name,
+        ward: p.ward,
+        diagnosis: p.diagnosis,
+        date: _dischDateStr + ', ' + _dischTimeStr,
+        age: p.age,
+        gender: p.gender || '',
+        doctor: p.doctor,
+        cause: causeOfDeath,
+        nok: (p.nok?.name || '') + (p.nok?.phone ? ' · ' + p.nok.phone : ''),
+        province: p.province || '',
+        facility: p.facility || ''
+      });
+      persistDeceased();
+      sendAutoDeceasedNOKMessage(p, { cause: causeOfDeath });
+    }
 
     const dischargeSafety = SmartCareClinicalGovernance.applyToPatient(proposed, { source: 'discharge', overrideReason: overrideReason });
     const afterSnapshot = SmartCareClinicalGovernance.getCriticalSnapshot(proposed);
@@ -9975,6 +10239,469 @@ function initAnalytics(){
 }
 
 // ═══════════════════════════════════════════════════
+// MINISTERIAL EXECUTIVE PORTAL
+// ═══════════════════════════════════════════════════
+const ZW_PROVINCES = ['Harare','Bulawayo','Manicaland','Mashonaland Central','Mashonaland East','Mashonaland West','Masvingo','Matabeleland North','Matabeleland South','Midlands'];
+
+let execProvinceChart, execDiagChart, execAgeChart, execGenderChart, execFacilityChart;
+let execPortalInit = false;
+
+function getAllExecFacilities(){
+  const set = new Set();
+  const collect = arr => (Array.isArray(arr) ? arr : []).forEach(p => { const f = String(p.facility||'').trim(); if (f) set.add(f); });
+  collect(patients); collect(dischargedPatients); collect(deceasedPatients);
+  return Array.from(set).sort();
+}
+
+function populateExecFacilityFilter(){
+  const sel = document.getElementById('exec-facility-filter');
+  if (!sel) return;
+  const current = sel.value;
+  const facilities = getAllExecFacilities();
+  sel.innerHTML = '<option value="">All Facilities</option>' + facilities.map(f => `<option value="${_scEsc(f)}">${_scEsc(f)}</option>`).join('');
+  if (facilities.includes(current)) sel.value = current;
+}
+
+function clearExecFilters(){
+  const provSel = document.getElementById('exec-province-filter');
+  const facSel = document.getElementById('exec-facility-filter');
+  if (provSel) provSel.value = '';
+  if (facSel) facSel.value = '';
+  refreshExecPortal();
+}
+let execCauseChart, execCfrChart, execDeathsProvinceChart, execTrendChart, execMortAgeChart, execMortGenderChart;
+let execMortalityInit = false;
+
+function switchExecView(view){
+  const isBurden = view === 'burden';
+  document.getElementById('exec-view-burden').style.display = isBurden ? 'block' : 'none';
+  document.getElementById('exec-view-mortality').style.display = isBurden ? 'none' : 'block';
+  const bTab = document.getElementById('exec-tab-burden'), mTab = document.getElementById('exec-tab-mortality');
+  bTab.style.borderBottomColor = isBurden ? 'var(--cyan)' : 'transparent';
+  bTab.style.fontWeight = isBurden ? '700' : '400';
+  bTab.style.background = isBurden ? 'var(--bg4)' : 'transparent';
+  mTab.style.borderBottomColor = isBurden ? 'transparent' : 'var(--cyan)';
+  mTab.style.fontWeight = isBurden ? '400' : '700';
+  mTab.style.background = isBurden ? 'transparent' : 'var(--bg4)';
+  if(!isBurden && !execMortalityInit){
+    execMortalityInit = true;
+    initExecMortalityCharts();
+  }
+  refreshExecPortal();
+}
+
+function computeMortalityStats(provinceFilter, facilityFilter){
+  const matchesFilters = rec => (!provinceFilter || rec.province === provinceFilter) && (!facilityFilter || String(rec.facility||'').trim() === facilityFilter);
+  const dec = (Array.isArray(deceasedPatients) ? deceasedPatients : []).filter(matchesFilters);
+  const total = dec.length;
+
+  const causeCounts = {};
+  dec.forEach(d => {
+    const dx = String(d.diagnosis || 'Unknown').trim() || 'Unknown';
+    causeCounts[dx] = (causeCounts[dx] || 0) + 1;
+  });
+  const topCauses = Object.entries(causeCounts).sort((a,b)=>b[1]-a[1]);
+  const leadingCause = topCauses[0]?.[0] || '—';
+
+  // Case-fatality rate per top cause: deaths ÷ (deaths + active + discharged-alive with the same diagnosis)
+  const allPts = (Array.isArray(patients) ? patients : []).filter(matchesFilters);
+  const allDisch = (Array.isArray(dischargedPatients) ? dischargedPatients : []).filter(matchesFilters);
+  const cfrList = topCauses.slice(0,8).map(([dx, deaths]) => {
+    const activeCases = allPts.filter(p => String(p.diagnosis||'').trim() === dx).length;
+    const dischargedAlive = allDisch.filter(d => String(d.diagnosis||'').trim() === dx && d.condition !== 'Deceased').length;
+    const totalCases = deaths + activeCases + dischargedAlive;
+    const rate = totalCases ? (deaths / totalCases) * 100 : 0;
+    return { dx, deaths, totalCases, rate };
+  }).sort((a,b)=>b.rate-a.rate);
+  const highestCfr = cfrList[0];
+
+  const provinceCounts = {};
+  ZW_PROVINCES.forEach(pv => provinceCounts[pv] = 0);
+  dec.forEach(d => { if (d.province && ZW_PROVINCES.includes(d.province)) provinceCounts[d.province] += 1; });
+  const provincesReporting = Object.values(provinceCounts).filter(c => c > 0).length;
+
+  const ageLabels = ['0-10','11-20','21-30','31-40','41-50','51-60','61-70','71-80','80+'];
+  const ageCounts = Object.fromEntries(ageLabels.map(l => [l, 0]));
+  dec.forEach(d => { ageCounts[_analyticsRangeLabel(Number(d.age) || 0)] += 1; });
+
+  const genderCounts = {
+    Male: dec.filter(d => String(d.gender||'').toLowerCase()==='male').length,
+    Female: dec.filter(d => String(d.gender||'').toLowerCase()==='female').length,
+    Other: dec.filter(d => !['male','female'].includes(String(d.gender||'').toLowerCase())).length
+  };
+
+  // Monthly trend, last 6 months
+  const monthlyLabels = [];
+  const monthlyCounts = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const dt = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthKey = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+    monthlyLabels.push(dt.toLocaleDateString('en-ZA', { month: 'short', year: '2-digit' }));
+    monthlyCounts.push(dec.filter(d => {
+      const ddt = _scParseDateFlexible(d.date);
+      return ddt && `${ddt.getFullYear()}-${String(ddt.getMonth()+1).padStart(2,'0')}` === monthKey;
+    }).length);
+  }
+
+  const facilityCounts = {};
+  dec.forEach(d => {
+    const f = String(d.facility||'').trim() || 'Not specified';
+    facilityCounts[f] = (facilityCounts[f]||0) + 1;
+  });
+  const facilityTable = Object.entries(facilityCounts).sort((a,b)=>b[1]-a[1]).map(([facility,count]) => {
+    const facDeaths = dec.filter(d => (String(d.facility||'').trim() || 'Not specified') === facility);
+    const facCauseCounts = {};
+    facDeaths.forEach(d => { const dx = String(d.diagnosis||'Unknown').trim()||'Unknown'; facCauseCounts[dx]=(facCauseCounts[dx]||0)+1; });
+    const facLeading = Object.entries(facCauseCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+    return { facility, count, leadingCause: facLeading };
+  });
+
+  const provinceTable = ZW_PROVINCES.map(pv => {
+    const provDeaths = dec.filter(d => d.province === pv);
+    const provCauseCounts = {};
+    provDeaths.forEach(d => { const dx = String(d.diagnosis||'Unknown').trim()||'Unknown'; provCauseCounts[dx]=(provCauseCounts[dx]||0)+1; });
+    const provLeading = Object.entries(provCauseCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+    return { province: pv, deaths: provDeaths.length, leadingCause: provDeaths.length ? provLeading : '—' };
+  });
+
+  return { total, topCauses, leadingCause, cfrList, highestCfr, provinceCounts, provincesReporting, ageLabels, ageCounts, genderCounts, monthlyLabels, monthlyCounts, facilityTable, provinceTable };
+}
+
+function initExecMortalityCharts(){
+  execCauseChart = new Chart(document.getElementById('execCauseChart'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{ label:'Deaths', data:[], backgroundColor:'rgba(255,77,109,.75)', borderRadius:4 }] },
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => `${ctx.parsed.x} deaths` } } },
+      scales:{ x:{ grid:{ color:'rgba(148,197,240,.07)' }, ticks:{ color:'#6b88a8', font:{size:9} } },
+               y:{ grid:{display:false}, ticks:{ color:'#8fa8c4', font:{size:10} } } } }
+  });
+
+  execCfrChart = new Chart(document.getElementById('execCfrChart'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{ label:'Case-Fatality Rate %', data:[], backgroundColor:'rgba(251,191,36,.75)', borderRadius:4 }] },
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => `${ctx.parsed.x.toFixed(1)}% of diagnosed cases` } } },
+      scales:{ x:{ grid:{ color:'rgba(148,197,240,.07)' }, ticks:{ color:'#6b88a8', font:{size:9} }, max:100 },
+               y:{ grid:{display:false}, ticks:{ color:'#8fa8c4', font:{size:10} } } } }
+  });
+
+  execDeathsProvinceChart = new Chart(document.getElementById('execDeathsProvinceChart'), {
+    type:'bar',
+    data:{ labels: ZW_PROVINCES, datasets:[{ label:'Deaths', data: ZW_PROVINCES.map(()=>0), backgroundColor:'#ff4d6d', borderRadius:4 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => `${ctx.parsed.y} deaths` } } },
+      scales:{ x:{ grid:{display:false}, ticks:{ color:'#6b88a8', font:{size:9}, maxRotation:40, minRotation:40 } },
+               y:{ grid:{ color:'rgba(148,197,240,.07)' }, ticks:{ color:'#6b88a8', font:{size:10} } } } }
+  });
+
+  execTrendChart = new Chart(document.getElementById('execTrendChart'), {
+    type:'line',
+    data:{ labels:[], datasets:[{ label:'Deaths', data:[], borderColor:'#ff4d6d', backgroundColor:'rgba(255,77,109,.08)', fill:true, tension:.4, borderWidth:2, pointRadius:3 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ mode:'index', intersect:false } },
+      scales:{ x:{ grid:{display:false}, ticks:{ color:'#6b88a8', font:{size:10} } },
+               y:{ grid:{ color:'rgba(148,197,240,.07)' }, ticks:{ color:'#6b88a8', font:{size:10}, precision:0 } } } }
+  });
+
+  execMortAgeChart = new Chart(document.getElementById('execMortAgeChart'), {
+    type:'bar',
+    data:{ labels:['0-10','11-20','21-30','31-40','41-50','51-60','61-70','71-80','80+'],
+      datasets:[{ label:'Deaths', data:[0,0,0,0,0,0,0,0,0], backgroundColor:['#22d3ee','#4fa8e8','#4fa8e8','#4fa8e8','#a78bfa','#fbbf24','#f87171','#ff4d6d','#ff4d6d'], borderRadius:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => `${ctx.parsed.y} deaths` } } },
+      scales:{ x:{ grid:{display:false}, ticks:{ color:'#6b88a8', font:{size:10} } },
+               y:{ grid:{ color:'rgba(148,197,240,.07)' }, ticks:{ color:'#6b88a8', font:{size:10} } } } }
+  });
+
+  execMortGenderChart = new Chart(document.getElementById('execMortGenderChart'), {
+    type:'doughnut',
+    data:{ labels:['Male','Female','Other'], datasets:[{ data:[0,0,0], backgroundColor:['#4fa8e8','#a78bfa','#34d399'], borderWidth:0, spacing:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
+      plugins:{ legend:{display:true, position:'bottom', labels:{ color:'#8fa8c4', font:{size:10}, boxWidth:10, padding:12 } },
+                tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${ctx.parsed}` } } } }
+  });
+}
+
+function refreshExecMortality(){
+  const provinceFilter = document.getElementById('exec-province-filter')?.value || '';
+  const facilityFilter = document.getElementById('exec-facility-filter')?.value || '';
+  const s = computeMortalityStats(provinceFilter, facilityFilter);
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('exec-mort-kpi-total', s.total);
+  set('exec-mort-kpi-total-sub', [provinceFilter, facilityFilter].filter(Boolean).join(' · ') || 'All recorded, this deployment');
+  set('exec-mort-kpi-cause', s.leadingCause.length > 24 ? s.leadingCause.slice(0,22)+'…' : s.leadingCause);
+  set('exec-mort-kpi-cause-sub', s.total ? `${s.topCauses[0]?.[1]||0} of ${s.total} deaths` : 'No deaths recorded');
+  if (s.highestCfr && s.highestCfr.totalCases > 0) {
+    set('exec-mort-kpi-cfr', s.highestCfr.dx.length > 20 ? s.highestCfr.dx.slice(0,18)+'…' : s.highestCfr.dx);
+    set('exec-mort-kpi-cfr-sub', `${s.highestCfr.rate.toFixed(0)}% of ${s.highestCfr.totalCases} diagnosed cases`);
+  } else {
+    set('exec-mort-kpi-cfr', '—');
+    set('exec-mort-kpi-cfr-sub', 'Deaths ÷ diagnosed cases');
+  }
+  set('exec-mort-kpi-provinces', provinceFilter ? '—' : String(s.provincesReporting));
+
+  if (execCauseChart) {
+    const top8 = s.topCauses.slice(0,8);
+    execCauseChart.data.labels = top8.map(([dx]) => dx.length > 26 ? dx.slice(0,24)+'…' : dx);
+    execCauseChart.data.datasets[0].data = top8.map(([,c]) => c);
+    execCauseChart.update();
+  }
+  if (execCfrChart) {
+    execCfrChart.data.labels = s.cfrList.map(c => c.dx.length > 26 ? c.dx.slice(0,24)+'…' : c.dx);
+    execCfrChart.data.datasets[0].data = s.cfrList.map(c => Math.round(c.rate*10)/10);
+    execCfrChart.update();
+  }
+  if (execDeathsProvinceChart) {
+    execDeathsProvinceChart.data.datasets[0].data = ZW_PROVINCES.map(pv => s.provinceCounts[pv]);
+    execDeathsProvinceChart.update();
+  }
+  if (execTrendChart) {
+    execTrendChart.data.labels = s.monthlyLabels;
+    execTrendChart.data.datasets[0].data = s.monthlyCounts;
+    execTrendChart.update();
+  }
+  if (execMortAgeChart) {
+    execMortAgeChart.data.datasets[0].data = s.ageLabels.map(l => s.ageCounts[l]);
+    execMortAgeChart.update();
+  }
+  if (execMortGenderChart) {
+    execMortGenderChart.data.datasets[0].data = [s.genderCounts.Male, s.genderCounts.Female, s.genderCounts.Other];
+    execMortGenderChart.update();
+  }
+
+  const facBody = document.getElementById('exec-facility-table-body');
+  if (facBody) {
+    facBody.innerHTML = s.facilityTable.map(r => `
+      <tr><td style="font-weight:600;color:var(--text)">${r.facility}</td><td class="mono">${r.count}</td><td style="color:var(--text3)">${r.leadingCause}</td></tr>`).join('')
+      || '<tr><td colspan="3" style="color:var(--text3);text-align:center;padding:14px">No deaths recorded</td></tr>';
+  }
+
+  const provBody = document.getElementById('exec-mort-province-table-body');
+  if (provBody) {
+    provBody.innerHTML = s.provinceTable.map(r => `
+      <tr><td style="font-weight:600;color:var(--text)">${r.province}</td><td class="mono">${r.deaths}</td><td style="color:var(--text3)">${r.leadingCause}</td></tr>`).join('')
+      || '<tr><td colspan="3" style="color:var(--text3);text-align:center;padding:14px">No data yet</td></tr>';
+  }
+
+  const trendNote = document.getElementById('exec-trend-scope-note');
+  if (trendNote) {
+    const scopeParts = [provinceFilter, facilityFilter].filter(Boolean);
+    trendNote.textContent = scopeParts.length ? ` — ${scopeParts.join(' · ')}` : ' — all provinces';
+  }
+}
+
+function computeExecStats(provinceFilter, facilityFilter){
+  const pts = (Array.isArray(patients) ? patients : []).filter(p =>
+    (!provinceFilter || p.province === provinceFilter) &&
+    (!facilityFilter || String(p.facility||'').trim() === facilityFilter)
+  );
+
+  const total = pts.length;
+  const critical = pts.filter(p => ['critical','high'].includes(String(p.riskLevel||'').toLowerCase())).length;
+
+  const diagCounts = {};
+  pts.forEach(p => {
+    const dx = String(p.diagnosis || 'Unknown').trim() || 'Unknown';
+    diagCounts[dx] = (diagCounts[dx] || 0) + 1;
+  });
+  const topDiag = Object.entries(diagCounts).sort((a,b)=>b[1]-a[1]);
+  const leadingDx = topDiag[0]?.[0] || '—';
+
+  const provinceCounts = {};
+  ZW_PROVINCES.forEach(pv => provinceCounts[pv] = 0);
+  let unspecified = 0;
+  pts.forEach(p => {
+    if (p.province && ZW_PROVINCES.includes(p.province)) provinceCounts[p.province] += 1;
+    else unspecified += 1;
+  });
+  const provincesReporting = Object.values(provinceCounts).filter(c => c > 0).length;
+
+  const ageLabels = ['0-10','11-20','21-30','31-40','41-50','51-60','61-70','71-80','80+'];
+  const ageCounts = Object.fromEntries(ageLabels.map(l => [l, 0]));
+  pts.forEach(p => { ageCounts[_analyticsRangeLabel(Number(p.age) || 0)] += 1; });
+
+  const genderCounts = {
+    Male: pts.filter(p => String(p.gender||'').toLowerCase()==='male').length,
+    Female: pts.filter(p => String(p.gender||'').toLowerCase()==='female').length,
+    Other: pts.filter(p => !['male','female'].includes(String(p.gender||'').toLowerCase())).length
+  };
+
+  const provinceTable = ZW_PROVINCES.map(pv => {
+    const provPts = pts.filter(p => p.province === pv);
+    const provDiagCounts = {};
+    provPts.forEach(p => { const dx = String(p.diagnosis||'Unknown').trim()||'Unknown'; provDiagCounts[dx]=(provDiagCounts[dx]||0)+1; });
+    const provLeadingDx = Object.entries(provDiagCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+    return {
+      province: pv,
+      active: provPts.length,
+      critical: provPts.filter(p => ['critical','high'].includes(String(p.riskLevel||'').toLowerCase())).length,
+      leadingDx: provPts.length ? provLeadingDx : '—'
+    };
+  });
+
+  const facilityCounts = {};
+  pts.forEach(p => {
+    const f = String(p.facility||'').trim() || 'Not specified';
+    facilityCounts[f] = (facilityCounts[f]||0) + 1;
+  });
+  const facilityTable = Object.entries(facilityCounts).sort((a,b)=>b[1]-a[1]).map(([facility,count]) => {
+    const facPts = pts.filter(p => (String(p.facility||'').trim() || 'Not specified') === facility);
+    const facDiagCounts = {};
+    facPts.forEach(p => { const dx = String(p.diagnosis||'Unknown').trim()||'Unknown'; facDiagCounts[dx]=(facDiagCounts[dx]||0)+1; });
+    const facLeadingDx = Object.entries(facDiagCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+    return {
+      facility,
+      active: count,
+      critical: facPts.filter(p => ['critical','high'].includes(String(p.riskLevel||'').toLowerCase())).length,
+      leadingDx: facLeadingDx
+    };
+  });
+
+  return { total, critical, leadingDx, topDiag, provinceCounts, provincesReporting, unspecified, ageCounts, ageLabels, genderCounts, provinceTable, facilityTable };
+}
+
+function initExecPortal(){
+  if(!execPortalInit){
+    execPortalInit = true;
+
+    execProvinceChart = new Chart(document.getElementById('execProvinceChart'), {
+      type:'bar',
+      data:{ labels: ZW_PROVINCES, datasets:[{ label:'Active Cases', data: ZW_PROVINCES.map(()=>0), backgroundColor:'#22d3ee', borderRadius:4 }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => `${ctx.parsed.y} active cases` } } },
+        scales:{ x:{ grid:{display:false}, ticks:{ color:'#6b88a8', font:{size:9}, maxRotation:40, minRotation:40 } },
+                 y:{ grid:{ color:'rgba(148,197,240,.07)' }, ticks:{ color:'#6b88a8', font:{size:10} } } } }
+    });
+
+    execDiagChart = new Chart(document.getElementById('execDiagChart'), {
+      type:'bar',
+      data:{ labels:[], datasets:[{ label:'Cases', data:[], backgroundColor:'rgba(167,139,250,.7)', borderRadius:4 }] },
+      options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => `${ctx.parsed.x} cases` } } },
+        scales:{ x:{ grid:{ color:'rgba(148,197,240,.07)' }, ticks:{ color:'#6b88a8', font:{size:9} } },
+                 y:{ grid:{display:false}, ticks:{ color:'#8fa8c4', font:{size:10} } } } }
+    });
+
+    execAgeChart = new Chart(document.getElementById('execAgeChart'), {
+      type:'bar',
+      data:{ labels:['0-10','11-20','21-30','31-40','41-50','51-60','61-70','71-80','80+'],
+        datasets:[{ label:'Patients', data:[0,0,0,0,0,0,0,0,0], backgroundColor:['#22d3ee','#4fa8e8','#4fa8e8','#4fa8e8','#a78bfa','#fbbf24','#f87171','#ff4d6d','#ff4d6d'], borderRadius:5 }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => `${ctx.parsed.y} patients` } } },
+        scales:{ x:{ grid:{display:false}, ticks:{ color:'#6b88a8', font:{size:10} } },
+                 y:{ grid:{ color:'rgba(148,197,240,.07)' }, ticks:{ color:'#6b88a8', font:{size:10} } } } }
+    });
+
+    execGenderChart = new Chart(document.getElementById('execGenderChart'), {
+      type:'doughnut',
+      data:{ labels:['Male','Female','Other'], datasets:[{ data:[0,0,0], backgroundColor:['#4fa8e8','#a78bfa','#34d399'], borderWidth:0, spacing:2 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
+        plugins:{ legend:{display:true, position:'bottom', labels:{ color:'#8fa8c4', font:{size:10}, boxWidth:10, padding:12 } },
+                  tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${ctx.parsed}` } } } }
+    });
+
+    execFacilityChart = new Chart(document.getElementById('execFacilityChart'), {
+      type:'bar',
+      data:{ labels:[], datasets:[{ label:'Active Cases', data:[], backgroundColor:'rgba(52,211,153,.75)', borderRadius:4 }] },
+      options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => `${ctx.parsed.x} active cases` } } },
+        scales:{ x:{ grid:{ color:'rgba(148,197,240,.07)' }, ticks:{ color:'#6b88a8', font:{size:9} } },
+                 y:{ grid:{display:false}, ticks:{ color:'#8fa8c4', font:{size:10} } } } }
+    });
+  }
+  populateExecFacilityFilter();
+  refreshExecPortal();
+}
+
+function refreshExecPortal(){
+  populateExecFacilityFilter();
+  const provinceFilter = document.getElementById('exec-province-filter')?.value || '';
+  const facilityFilter = document.getElementById('exec-facility-filter')?.value || '';
+  const s = computeExecStats(provinceFilter, facilityFilter);
+
+  const filterSummaryEl = document.getElementById('exec-filter-summary');
+  if (filterSummaryEl) {
+    const parts = [provinceFilter, facilityFilter].filter(Boolean);
+    filterSummaryEl.textContent = parts.length ? `Filtered: ${parts.join(' · ')}` : '';
+  }
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('exec-kpi-total', s.total);
+  set('exec-kpi-total-sub', [provinceFilter, facilityFilter].filter(Boolean).join(' · ') || 'Nationally, in this deployment');
+  set('exec-kpi-critical', s.critical);
+  set('exec-kpi-leading-dx', s.leadingDx.length > 22 ? s.leadingDx.slice(0,20)+'…' : s.leadingDx);
+  set('exec-kpi-leading-dx-sub', s.total ? `${s.topDiag[0]?.[1]||0} of ${s.total} active cases` : 'No active cases');
+  set('exec-kpi-provinces', provinceFilter ? '—' : String(s.provincesReporting));
+
+  if(execProvinceChart){
+    execProvinceChart.data.datasets[0].data = ZW_PROVINCES.map(pv => s.provinceCounts[pv]);
+    execProvinceChart.update();
+  }
+  if(execDiagChart){
+    const top8 = s.topDiag.slice(0,8);
+    execDiagChart.data.labels = top8.map(([dx]) => dx.length > 26 ? dx.slice(0,24)+'…' : dx);
+    execDiagChart.data.datasets[0].data = top8.map(([,c]) => c);
+    execDiagChart.update();
+  }
+  if(execAgeChart){
+    execAgeChart.data.datasets[0].data = s.ageLabels.map(l => s.ageCounts[l]);
+    execAgeChart.update();
+  }
+  if(execGenderChart){
+    execGenderChart.data.datasets[0].data = [s.genderCounts.Male, s.genderCounts.Female, s.genderCounts.Other];
+    execGenderChart.update();
+  }
+  if(execFacilityChart){
+    const top10 = s.facilityTable.slice(0,10);
+    execFacilityChart.data.labels = top10.map(r => r.facility.length > 26 ? r.facility.slice(0,24)+'…' : r.facility);
+    execFacilityChart.data.datasets[0].data = top10.map(r => r.active);
+    execFacilityChart.update();
+  }
+
+  const tbody = document.getElementById('exec-province-table-body');
+  if(tbody){
+    tbody.innerHTML = s.provinceTable.map(r => `
+      <tr>
+        <td style="font-weight:600;color:var(--text)">${r.province}</td>
+        <td class="mono">${r.active}</td>
+        <td class="mono" style="color:${r.critical ? 'var(--crit)' : 'var(--text3)'}">${r.critical}</td>
+        <td style="color:var(--text3)">${r.leadingDx}</td>
+      </tr>`).join('') || '<tr><td colspan="4" style="color:var(--text3);text-align:center;padding:14px">No data yet</td></tr>';
+  }
+
+  const facTbody = document.getElementById('exec-facility-burden-table-body');
+  if(facTbody){
+    facTbody.innerHTML = s.facilityTable.map(r => `
+      <tr>
+        <td style="font-weight:600;color:var(--text)">${r.facility}</td>
+        <td class="mono">${r.active}</td>
+        <td class="mono" style="color:${r.critical ? 'var(--crit)' : 'var(--text3)'}">${r.critical}</td>
+        <td style="color:var(--text3)">${r.leadingDx}</td>
+      </tr>`).join('') || '<tr><td colspan="4" style="color:var(--text3);text-align:center;padding:14px">No data yet</td></tr>';
+  }
+
+  const scopeNoteEl = document.getElementById('exec-diag-scope-note');
+  if(scopeNoteEl) scopeNoteEl.textContent = s.unspecified > 0 ? ` · ${s.unspecified} active patient${s.unspecified===1?'':'s'} without a province set` : '';
+
+  if (execMortalityInit) refreshExecMortality();
+}
+
+function enterExecutivePortal(){
+  sessionStorage.setItem('sc_exec_mode', '1');
+  document.body.classList.add('exec-mode');
+  enterSystem();
+  setTimeout(()=>showPage('exec'), 520);
+}
+
+function exitExecutivePortal(){
+  goToLanding();
+  showToast('Exited Executive Portal', false, '🏛');
+}
+
+// ═══════════════════════════════════════════════════
 // AI PAGE
 // ═══════════════════════════════════════════════════
 let aiInit=false;
@@ -10731,6 +11458,8 @@ function registerPatient(triggerEl=null){
   const nationality=(regField(scope,'reg-nationality')?.value||'').trim()||'Not specified';
   const language=(regField(scope,'reg-language')?.value||'').trim()||'Not specified';
   const insurance=(regField(scope,'reg-insurance')?.value||'').trim()||'Uninsured / Not provided';
+  const province=(regField(scope,'reg-province')?.value||'').trim();
+  const facility=(regField(scope,'reg-facility')?.value||'').trim()||'SmartCare Central';
   const comorbList=(regField(scope,'reg-comorb')?.value||'').split(',').map(s=>s.trim()).filter(Boolean);
   const medsList=(regField(scope,'reg-meds')?.value||'').split(',').map(s=>s.trim()).filter(Boolean);
 
@@ -10766,7 +11495,7 @@ function registerPatient(triggerEl=null){
     id:pid, nationalId:idNum||'', hospitalRecNo, name:fullName, age, gender:regField(scope,'reg-gender')?.value||'Other',
     phone:_scNormalizePhone(contactPhone), admDate,
     ward:wardVal, bed:bedVal, diagnosis:diagText, doctor:regField(scope,'reg-doctor')?.value||'Unassigned',
-    bloodType, allergies, race, nationality, language, insurance,
+    bloodType, allergies, race, nationality, language, insurance, province, facility,
     comorbidities:comorbList, currentMeds:medsList,
     risk:prio==='critical'?.85:prio==='high'?.65:prio==='moderate'?.40:.15,
     riskLevel:prio, hr:hrVal,
@@ -19528,6 +20257,8 @@ function enterSystem(){
 }
 
 function goToLanding(){
+  sessionStorage.removeItem('sc_exec_mode');
+  document.body.classList.remove('exec-mode');
   const lp = document.getElementById('landing-page');
   const app = document.getElementById('main-app');
   if(lp){
@@ -23048,6 +23779,8 @@ function openEditPatientModal(patientId) {
   set('edit-id', patient.nationalId || '');
   set('edit-phone', patient.phone || '');
 
+  set('edit-province', patient.province || '');
+  set('edit-facility', patient.facility || '');
   set('edit-ward', patient.ward || 'ICU');
   set('edit-bed', patient.bed || '');
   set('edit-doctor', patient.doctor || 'Dr. Radebe');
@@ -23207,6 +23940,17 @@ function saveEditPatient(ev) {
       changes.updates.push(`Ward/Bed: "${currentEditPatient.ward}-${currentEditPatient.bed}" → "${newWard}-${newBed}"`);
       patients[patientIdx].ward = newWard;
       patients[patientIdx].bed = newBed;
+    }
+
+    const newProvince = getVal('edit-province');
+    if (newProvince !== (currentEditPatient.province || '')) {
+      changes.updates.push(`Province: "${currentEditPatient.province || 'Not specified'}" → "${newProvince || 'Not specified'}"`);
+      patients[patientIdx].province = newProvince;
+    }
+    const newFacility = getVal('edit-facility');
+    if (newFacility !== (currentEditPatient.facility || '')) {
+      changes.updates.push(`Facility updated`);
+      patients[patientIdx].facility = newFacility;
     }
   
     const newPriority = getVal('edit-priority').toLowerCase();
