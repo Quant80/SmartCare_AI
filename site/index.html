@@ -3119,6 +3119,7 @@ Waiting for data…</pre>
       <button class="btn" id="exec-tab-burden" onclick="switchExecView('burden')" style="border-radius:8px 8px 0 0;border-bottom:2px solid var(--cyan);background:var(--bg4);font-weight:700">📊 National Burden</button>
       <button class="btn" id="exec-tab-mortality" onclick="switchExecView('mortality')" style="border-radius:8px 8px 0 0;border-bottom:2px solid transparent;background:transparent">⚰ Mortality &amp; Disease Burden</button>
       <button class="btn" id="exec-tab-report" onclick="switchExecView('report')" style="border-radius:8px 8px 0 0;border-bottom:2px solid transparent;background:transparent">📋 National Report</button>
+      <button class="btn" id="exec-tab-ai" onclick="switchExecView('ai')" style="border-radius:8px 8px 0 0;border-bottom:2px solid transparent;background:transparent">🤖 Ask AI</button>
     </div>
 
     <div style="display:flex;gap:9px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
@@ -3386,6 +3387,78 @@ Waiting for data…</pre>
             </tr></thead>
             <tbody id="exec-report-table-body"></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ASK AI — NATIONAL HEALTH INTELLIGENCE ═══ -->
+    <div id="exec-view-ai" style="display:none">
+      <div class="card mb" id="exec-ai-welcome-card" style="margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🤖</div>
+            <div>
+              <div style="font-size:14px;font-weight:700;color:var(--text)">National Health Intelligence Assistant</div>
+              <div style="font-size:10.5px;color:var(--text3);margin-top:1px" id="exec-ai-model-desc">Select a model to begin</div>
+            </div>
+          </div>
+          <div class="ai-model-tabs" style="margin-bottom:0">
+            <div class="ai-model-tab active" data-model="claude"   onclick="selectHubModel('claude',this)">🟠 Claude</div>
+            <div class="ai-model-tab"        data-model="gemini"   onclick="selectHubModel('gemini',this)">🟡 Gemini</div>
+            <div class="ai-model-tab"        data-model="deepseek" onclick="selectHubModel('deepseek',this)">🔵 DeepSeek</div>
+            <div class="ai-model-tab"        data-model="chatgpt"  onclick="selectHubModel('chatgpt',this)">🟢 GPT-4</div>
+            <div class="ai-model-tab"        data-model="qwen"     onclick="selectHubModel('qwen',this)">🟣 Qwen</div>
+            <div class="ai-model-tab"        data-model="phi3local" onclick="selectHubModel('phi3local',this)">🖥 Phi-3 Local</div>
+          </div>
+        </div>
+        <div style="font-size:12.5px;color:var(--text2);line-height:1.55;margin-bottom:12px">
+          Hi, I'm the <strong>National Health Intelligence Assistant</strong> — I have live access to every patient, facility, mortality and billing record across all <span id="exec-ai-hosp-count">6</span> hospitals in this deployment. Ask me about national burden, resource allocation, mortality trends or the financial position, and I'll answer with real figures, tables and charts.
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">
+          <button class="btn btn-g btn-sm" onclick="execAsk('Give me a full national health system briefing — patient burden, mortality and financial position — with charts, suitable to present to the Minister.')">📋 National Briefing</button>
+          <button class="btn btn-g btn-sm" onclick="execAsk('Which province and which facility need urgent resource support right now, and why? Rank them with a chart.')">🚨 Where Is Support Needed</button>
+          <button class="btn btn-g btn-sm" onclick="execAsk('Show the leading causes of death nationally with case-fatality rates and the 6-month mortality trend, as a table and chart.')">⚰ Mortality &amp; CFR</button>
+          <button class="btn btn-g btn-sm" onclick="execAsk('Compare all facilities on patient volume, critical case load and billing collections — as a table and chart, ranked best to worst.')">🏥 Facility Comparison</button>
+          <button class="btn btn-g btn-sm" onclick="execAsk('What is our national revenue collection rate, and where is the biggest funding gap? Break down by facility and payment method.')">💰 Financial Position</button>
+          <button class="btn btn-g btn-sm" onclick="execAsk('Summarise every critical and high-risk patient currently admitted, grouped by province.')">⚠️ Critical Patients Now</button>
+          <button class="btn btn-g btn-sm" onclick="execAsk('Draft a one-page executive brief on the national health burden suitable to present to Cabinet.')">📝 Cabinet Brief</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+          <span style="font-size:20px">💡</span>
+          <span style="font-size:12.5px;color:var(--text3);line-height:1.55">Select a quick command above or type a question below. For executive oversight and briefing support — always verify before acting on any figure.</span>
+        </div>
+      </div>
+
+      <div class="card mb" id="exec-ai-response-card" style="display:none;margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">🤖</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--text)">National Health Intelligence Assistant</div>
+              <div style="font-size:10.5px;color:var(--text3)" id="exec-ai-response-meta">Waiting for query…</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-g btn-sm" onclick="copyExecAIResponse()">📋 Copy</button>
+            <button class="btn btn-g btn-sm" onclick="printExecAIResponse()">🖨 Print</button>
+            <button class="btn btn-g btn-sm" onclick="clearExecAIResponse()" style="color:var(--text3)">✕ Clear</button>
+          </div>
+        </div>
+        <div id="exec-ai-chat" style="max-height:580px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;padding:2px 0"></div>
+      </div>
+
+      <div class="card" style="border:1px solid var(--border2);position:sticky;bottom:0;background:var(--bg2);z-index:10;box-shadow:0 -2px 12px rgba(30,80,160,.08)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0">🤖</div>
+          <div style="font-size:12px;font-weight:600;color:var(--blue)">Ask about the national health system</div>
+          <span id="exec-ai-typing-state" style="font-size:10.5px;color:var(--cyan);margin-left:auto;display:none">🤖 AI is thinking…</span>
+        </div>
+        <div class="chat-input-row">
+          <input class="ci" id="exec-ai-input"
+            placeholder="e.g. Which facility has the highest case-fatality rate this month?"
+            onkeydown="if(event.key==='Enter')execAsk()"
+            style="font-size:13px;padding:10px 14px">
+          <button class="csend" onclick="execAsk()" style="padding:10px 22px;font-size:13px;font-weight:600;background:linear-gradient(135deg,var(--blue2),var(--blue));border:none">Ask AI</button>
         </div>
       </div>
     </div>
@@ -10718,7 +10791,7 @@ let execCauseChart, execCfrChart, execDeathsProvinceChart, execTrendChart, execM
 let execMortalityInit = false;
 
 function switchExecView(view){
-  ['burden','mortality','report'].forEach(v => {
+  ['burden','mortality','report','ai'].forEach(v => {
     const el = document.getElementById('exec-view-'+v);
     if (el) el.style.display = v === view ? 'block' : 'none';
     const tab = document.getElementById('exec-tab-'+v);
@@ -10734,6 +10807,10 @@ function switchExecView(view){
     initExecMortalityCharts();
   }
   if (view === 'report') renderExecNationalReport();
+  if (view === 'ai') {
+    const hc = document.getElementById('exec-ai-hosp-count');
+    if (hc) hc.textContent = String((Array.isArray(facilities)?facilities:[]).length || 6);
+  }
   refreshExecPortal();
 }
 
@@ -10792,6 +10869,282 @@ function buildExecNationalReportRows(){
     });
   });
   return rows;
+}
+
+// ═══════════════════════════════════════════════════
+// ASK AI — NATIONAL HEALTH INTELLIGENCE (Ministerial Executive Portal)
+// Reuses the same callAIModel()/chart-calc-insights rendering pipeline as
+// the hospital-level AI Clinical Hub, but grounded in the cross-hospital
+// national join (buildExecNationalReportRows) instead of one hospital's
+// local `patients` array — so it can answer province/facility/mortality/
+// financial questions across every facility in the deployment.
+// ═══════════════════════════════════════════════════
+function buildMinisterialContext(){
+  const rows = buildExecNationalReportRows();
+  const s = computeExecStats('', '');
+  const m = computeMortalityStats('', '');
+
+  const patientLines = rows.map(r =>
+    `[${r.status.toUpperCase()}] ${r.name} | ID:${r.id} | Age:${r.age ?? '—'} ${r.gender||''} | Province:${r.province||'—'} | Facility:${r.facility||'—'} | Town:${r.town||'—'} | Diagnosis:${r.diagnosis||'—'} | Risk:${r.risk||'—'} | Ward:${r.ward||'—'} Bed:${r.bed||'—'} | Billed:$${r.billed.toFixed(2)} Paid:$${r.paid.toFixed(2)} Balance:$${r.balance.toFixed(2)}`
+  ).join('\n');
+
+  const facilitySummary = (Array.isArray(facilities) ? facilities : []).map(f => {
+    const facRows = rows.filter(r => r.facility === f.name);
+    const critical = facRows.filter(r => r.risk === 'critical' || r.risk === 'high').length;
+    const deaths = facRows.filter(r => r.status === 'Deceased').length;
+    const billed = facRows.reduce((sum,r)=>sum+r.billed,0);
+    const paid = facRows.reduce((sum,r)=>sum+r.paid,0);
+    const collectionPct = billed ? Math.round(paid/billed*100) : 0;
+    return `${f.name} [${f.code||'—'}] (${f.province}, ${f.town||'—'}): ${facRows.length} total patients | ${critical} critical/high risk | ${deaths} deceased | Billed:$${billed.toFixed(2)} Collected:$${paid.toFixed(2)} (${collectionPct}%)`;
+  }).join('\n');
+
+  const mortalityLines = (m.topCauses||[]).slice(0,8).map(([dx,count]) => `${dx}: ${count} deaths`).join('\n');
+  const cfrLines = (m.cfrList||[]).map(c => `${c.dx}: CFR ${c.rate.toFixed(1)}% (${c.deaths} deaths / ${c.totalCases} total cases)`).join('\n');
+  const mortalityTrend = (m.monthlyLabels||[]).map((lbl,i) => `${lbl}: ${m.monthlyCounts[i]||0}`).join(', ');
+
+  const totalBilled = rows.reduce((sum,r)=>sum+r.billed,0);
+  const totalPaid = rows.reduce((sum,r)=>sum+r.paid,0);
+  const totalBalance = rows.reduce((sum,r)=>sum+r.balance,0);
+  const paymentMethodTotals = {};
+  (Array.isArray(invoices)?invoices:[]).forEach(inv => (inv.payments||[]).forEach(p => { paymentMethodTotals[p.method] = (paymentMethodTotals[p.method]||0) + p.amount; }));
+  const paymentLines = Object.entries(paymentMethodTotals).map(([method,amt]) => `${method}: $${amt.toFixed(2)}`).join('\n') || 'No payments recorded yet';
+  const subsidizedCount = (Array.isArray(invoices)?invoices:[]).filter(i=>i.subsidized).length;
+
+  return `NATIONAL PATIENT DATA (${rows.length} total records — admitted, discharged and deceased — across ${(facilities||[]).length} facilities):
+${patientLines}
+
+FACILITY SUMMARY:
+${facilitySummary}
+
+MORTALITY — LEADING CAUSES OF DEATH NATIONALLY:
+${mortalityLines || 'No deaths recorded'}
+
+MORTALITY — CASE-FATALITY RATES (top causes):
+${cfrLines || 'Not enough data to compute'}
+
+MORTALITY — 6-MONTH TREND (deaths per month): ${mortalityTrend || 'No data'}
+
+NATIONAL FINANCIAL POSITION:
+Total Billed: $${totalBilled.toFixed(2)} | Total Collected: $${totalPaid.toFixed(2)} | Outstanding Balance: $${totalBalance.toFixed(2)} | Collection Rate: ${totalBilled?Math.round(totalPaid/totalBilled*100):0}%
+Government-Subsidized Invoices: ${subsidizedCount} of ${(invoices||[]).length}
+Collections by Payment Method:
+${paymentLines}
+
+NATIONAL KPIs: Active Patients:${s.total} | Critical/High Risk:${s.critical} | Leading National Diagnosis:${s.leadingDx} | Provinces Currently Reporting Data:${s.provincesReporting}/10`;
+}
+
+function buildMinisterialSystemPrompt(context){
+  const chartInstructions = `
+CHART BLOCKS — embed live charts using this exact format:
+\`\`\`chart
+{"type":"bar","title":"Chart Title","labels":["A","B","C"],"datasets":[{"label":"Series","data":[1,2,3],"color":"blue"}],"height":220,"footer":"Optional note"}
+\`\`\`
+Types: bar, line, doughnut, pie, radar. Colors: blue, cyan, green, amber, red, purple.
+
+CALCULATION BLOCKS — step-by-step figures (e.g. collection rate, per-capita burden):
+\`\`\`calc
+{"title":"Calculation Name","steps":[{"label":"Step name","expr":"formula = value","result":"Result"}],"finalResult":"Final answer","unit":"units"}
+\`\`\`
+
+INSIGHT CARDS — key stat summary:
+\`\`\`insights
+[{"label":"Label","value":"42","color":"blue","sub":"subtitle"}]
+\`\`\`
+
+FORMATTING RULES:
+- Use ## for major sections, ### for subsections
+- Use **bold** for critical findings and key figures
+- Use markdown tables for facility/province comparisons (always include a header row with |---|)
+- Include charts whenever comparing figures across facilities, provinces or time
+- End every response with a ## Recommendation section written for a government health executive`;
+
+  return `You are the National Health Intelligence Assistant for SmartCare AI, briefing Ministry of Health executives and ministers on the national hospital network. You have COMPLETE access to every patient, facility, mortality and billing record provided below, spanning every hospital in this deployment.
+
+CRITICAL INSTRUCTIONS — follow exactly:
+1. Answer from an EXECUTIVE OVERSIGHT perspective — resource allocation, burden of disease, mortality trends, facility performance and financial stewardship. This is NOT a bedside clinical tool; do not give treatment/dosing advice.
+2. Always cite REAL figures from the data below — never estimate or round vaguely when an exact number is available.
+3. When comparing facilities or provinces, use tables and charts so the difference is immediately visible.
+4. If asked about a specific patient, you may identify them by name and ID exactly as provided — this is an authorised executive-oversight context, not a public-facing one.
+5. Distinguish clearly between ADMITTED, DISCHARGED and DECEASED patients when relevant.
+6. Where data is missing or a province/facility is under-reporting, say so plainly rather than guessing.
+7. Be direct and decision-oriented — every answer should help an executive decide where to act.
+
+${chartInstructions}
+
+COMPLETE NATIONAL DATA — search every section before responding:
+${context}`;
+}
+
+function generateExecFallback(query){
+  const s = computeExecStats('', '');
+  const m = computeMortalityStats('', '');
+  const rows = buildExecNationalReportRows();
+  const totalBilled = rows.reduce((sum,r)=>sum+r.billed,0);
+  const totalPaid = rows.reduce((sum,r)=>sum+r.paid,0);
+  const qlo = String(query||'').toLowerCase();
+
+  if (qlo.includes('mortal') || qlo.includes('death') || qlo.includes('cfr') || qlo.includes('fatal')) {
+    const topLines = (m.topCauses||[]).slice(0,5).map(([dx,c]) => `• **${dx}**: ${c} death(s)`).join('\n') || 'No deaths recorded';
+    return `## ⚰ National Mortality Summary\n\n**Total deaths recorded:** ${m.total}\n**Leading cause:** ${m.leadingCause}\n\n### Top Causes of Death\n${topLines}\n\n## Recommendation\nPrioritise clinical protocol review at facilities with the highest case-fatality rate for the leading cause.`;
+  }
+  if (qlo.includes('financ') || qlo.includes('bill') || qlo.includes('revenue') || qlo.includes('collect')) {
+    return `## 💰 National Financial Position\n\n**Total Billed:** $${totalBilled.toFixed(2)}\n**Total Collected:** $${totalPaid.toFixed(2)}\n**Collection Rate:** ${totalBilled?Math.round(totalPaid/totalBilled*100):0}%\n\n## Recommendation\nReview facilities with the lowest collection rate for billing process gaps or a need for expanded government subsidy coverage.`;
+  }
+  if (qlo.includes('facilit') || qlo.includes('hospital') || qlo.includes('compar')) {
+    const lines = (Array.isArray(facilities)?facilities:[]).map(f => {
+      const facRows = rows.filter(r => r.facility === f.name);
+      return `• **${f.name}** (${f.province}): ${facRows.length} patients, ${facRows.filter(r=>r.risk==='critical'||r.risk==='high').length} critical/high`;
+    }).join('\n');
+    return `## 🏥 Facility Comparison\n\n${lines || 'No facility data available'}\n\n## Recommendation\nDirect additional staffing or supply support to the facility with the highest critical/high-risk caseload relative to its patient volume.`;
+  }
+  return `## 📋 National Health Briefing\n\n**Active Patients:** ${s.total}\n**Critical / High Risk:** ${s.critical}\n**Leading Diagnosis:** ${s.leadingDx}\n**Deaths Recorded:** ${m.total}\n**Total Billed:** $${totalBilled.toFixed(2)} | **Collected:** $${totalPaid.toFixed(2)}\n\n## Recommendation\nConfigure an AI model API key in Settings for a full narrative briefing with charts — this is a local offline summary only.`;
+}
+
+async function execAsk(q){
+  const input = document.getElementById('exec-ai-input');
+  const query = q || input?.value.trim();
+  if(!query) return;
+  if(input) input.value='';
+
+  let activeModel = hubModel;
+  if(!apiKeys[activeModel]){
+    const availableModels = Object.keys(apiKeys).filter(m => apiKeys[m]);
+    if(availableModels.length > 0){
+      activeModel = availableModels[0];
+      hubModel = activeModel;
+      const tab = document.querySelector(`#exec-view-ai .ai-model-tab[data-model="${activeModel}"]`);
+      if(tab) selectHubModel(activeModel, tab);
+    } else {
+      showToast('No API keys configured. Go to Settings → AI Model API Keys to add one.', true, '❌ No Keys');
+    }
+  }
+
+  const responseCard = document.getElementById('exec-ai-response-card');
+  const welcomeCard = document.getElementById('exec-ai-welcome-card');
+  if(responseCard) responseCard.style.display='block';
+  if(welcomeCard) welcomeCard.style.display='none';
+
+  const metaEl = document.getElementById('exec-ai-response-meta');
+  const modelName = {claude:'Claude (Anthropic)', gemini:'Gemini', deepseek:'DeepSeek R1', chatgpt:'GPT-4o', qwen:'Qwen', phi3local:'Phi-3 Local'}[activeModel] || activeModel;
+  if(metaEl) metaEl.textContent = modelName + ' · "' + query.slice(0,55) + (query.length>55?'…':'"') + ' · ' + new Date().toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
+
+  const typingEl = document.getElementById('exec-ai-typing-state');
+  if(typingEl) typingEl.style.display='inline';
+  const sendBtn = input?.closest('.chat-input-row')?.querySelector('.csend');
+  if(input) input.disabled = true;
+  if(sendBtn) { sendBtn.disabled=true; sendBtn.textContent='Thinking…'; }
+
+  const chatId = 'exec-ai-chat';
+  appendUserBubble(chatId, query);
+  setTimeout(()=>{ responseCard?.scrollIntoView({behavior:'smooth', block:'start'}); }, 100);
+
+  const isLocalModel = activeModel === 'phi3local';
+  const loadId = appendLoadingBubble(chatId, isLocalModel ? 'Local AI is processing a national summary (first reply can take 20-90s)' : 'AI is analysing national health data');
+
+  if (!apiKeys[activeModel] && activeModel !== 'phi3local') {
+    document.getElementById(loadId)?.remove();
+    appendRichAIBubble(chatId, '**📊 Local Analysis (offline):**\n\n'+generateExecFallback(query));
+    if(input){ input.disabled=false; input.focus(); }
+    if(sendBtn){ sendBtn.disabled=false; sendBtn.textContent='Ask AI'; }
+    if(typingEl) typingEl.style.display='none';
+    return;
+  }
+
+  const context = buildMinisterialContext();
+  const sysPrompt = buildMinisterialSystemPrompt(context);
+
+  try{
+    const isLikelyTruncated = (txt) => {
+      const t = String(txt || '').trim();
+      if (!t || t.length < 120) return false;
+      if (/\[Response truncated: token limit reached\]\s*$/i.test(t)) return true;
+      const hasTerminal = /[.!?](["'\)\]]+)?\s*$/.test(t) || /```\s*$/.test(t);
+      return !hasTerminal;
+    };
+    const mergeContinuation = (base, continuation) => {
+      const a = String(base || '').replace(/\n\n\[Response truncated: token limit reached\]\s*$/i, '').trimEnd();
+      const b = String(continuation || '').replace(/\n\n\[Response truncated: token limit reached\]\s*$/i, '').trim();
+      if (!b) return a;
+      const maxOverlap = Math.min(220, a.length, b.length);
+      let overlap = 0;
+      for (let i = maxOverlap; i >= 20; i--) { if (a.slice(-i).toLowerCase() === b.slice(0, i).toLowerCase()) { overlap = i; break; } }
+      return a + '\n' + b.slice(overlap).trimStart();
+    };
+
+    const primaryMaxTokens = isLocalModel ? 900 : 4096;
+    let reply = await callAIModel(activeModel, sysPrompt, query, primaryMaxTokens, {clinicalMode: true, fastLocal: isLocalModel});
+
+    const maxContinuationPasses = isLocalModel ? 0 : 2;
+    for (let pass = 0; pass < maxContinuationPasses && isLikelyTruncated(reply); pass++) {
+      const tail = String(reply || '').replace(/\s+/g, ' ').slice(-600);
+      const contPrompt = 'Your previous answer was cut off. Continue exactly from where it stopped. Do not repeat earlier content. Start immediately with the next missing words.\n\nLast visible tail:\n' + tail;
+      const continuation = await callAIModel(activeModel, sysPrompt, contPrompt, 1800, {clinicalMode: true});
+      reply = mergeContinuation(reply, continuation);
+    }
+
+    document.getElementById(loadId)?.remove();
+    appendRichAIBubble(chatId, reply);
+  } catch(e) {
+    document.getElementById(loadId)?.remove();
+    appendRichAIBubble(chatId, formatAPIError(e, activeModel));
+    appendRichAIBubble(chatId, '**📊 Local Analysis (offline):**\n\n'+generateExecFallback(query));
+  } finally {
+    if(input){ input.disabled=false; input.focus(); }
+    if(sendBtn){ sendBtn.disabled=false; sendBtn.textContent='Ask AI'; }
+    if(typingEl) typingEl.style.display='none';
+    const chatBox = document.getElementById(chatId);
+    if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+  }
+}
+
+function clearExecAIResponse(){
+  const chatBox = document.getElementById('exec-ai-chat');
+  if(chatBox) chatBox.innerHTML = '';
+  const responseCard = document.getElementById('exec-ai-response-card');
+  const welcomeCard = document.getElementById('exec-ai-welcome-card');
+  if(responseCard) responseCard.style.display='none';
+  if(welcomeCard) { welcomeCard.style.display='block'; welcomeCard.scrollIntoView({behavior:'smooth',block:'start'}); }
+  const metaEl = document.getElementById('exec-ai-response-meta');
+  if(metaEl) metaEl.textContent = 'Waiting for query…';
+  const input = document.getElementById('exec-ai-input');
+  if(input){ input.disabled=false; input.focus(); }
+}
+
+function copyExecAIResponse(){
+  const chatBox = document.getElementById('exec-ai-chat');
+  if(!chatBox) return;
+  const text = chatBox.innerText || chatBox.textContent || '';
+  navigator.clipboard?.writeText(text).then(()=>{
+    showToast('AI response copied to clipboard', false, '📋 Copied');
+  }).catch(()=>{
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('AI response copied to clipboard', false, '📋 Copied');
+  });
+}
+
+function printExecAIResponse(){
+  const chatBox = document.getElementById('exec-ai-chat');
+  if(!chatBox) return;
+  const win = window.open('', '_blank');
+  const html = [
+    '<!DOCTYPE html><html><head><title>National Health Intelligence — Briefing</title>',
+    '<style>body{font-family:Arial,sans-serif;font-size:13px;color:#111;padding:28px;max-width:900px;margin:0 auto}',
+    'h1,h2,h3{color:#1a3a6c}h1{font-size:18px;border-bottom:2px solid #1a3a6c;padding-bottom:6px}',
+    'h2{font-size:15px;border-bottom:1px solid #ccd6e8;padding-bottom:4px;margin-top:18px}',
+    'table{width:100%;border-collapse:collapse;margin:10px 0}th{background:#1a3a6c;color:#fff;padding:6px 10px;text-align:left;font-size:12px}',
+    'td{padding:5px 10px;border-bottom:1px solid #e0e8f0;font-size:12px}tr:nth-child(even){background:#f4f7fb}',
+    '.header{background:#1a3a6c;color:#fff;padding:14px 20px;margin:-28px -28px 20px}',
+    '.footer{margin-top:30px;padding-top:10px;border-top:1px solid #ccd6e8;font-size:11px;color:#666;text-align:center}</style></head><body>',
+    '<div class="header"><h1 style="color:#fff;margin:0;font-size:16px">SmartCare AI — National Health Intelligence Briefing</h1></div>',
+    chatBox.innerHTML,
+    `<div class="footer">Generated ${new Date().toLocaleString('en-ZA')} · SmartCare AI Ministerial Executive Portal</div>`,
+    '</body></html>'
+  ].join('');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(()=>win.print(), 300);
 }
 
 function populateExecReportFacilityFilter(){
@@ -17904,7 +18257,7 @@ function selectHubModel(model,el){
     ? 'Phi-3 Local is not configured — go to Settings and add local endpoint'
     : `No API key for ${descs[model]||model} — go to Settings to add`;
   const descText = modelReady ? (descs[model] || model) : missingText;
-  const descEls=[document.getElementById('ai-hub-model-desc'), document.getElementById('ai-clinical-model-desc')];
+  const descEls=[document.getElementById('ai-hub-model-desc'), document.getElementById('ai-clinical-model-desc'), document.getElementById('exec-ai-model-desc')];
   descEls.forEach(descEl=>{
     if(descEl){
       descEl.textContent = descText;
