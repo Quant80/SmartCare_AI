@@ -3380,7 +3380,7 @@ Waiting for data…</pre>
             <thead><tr>
               <th>Patient ID</th><th>Name</th><th>Age</th><th>Gender</th>
               <th>Province</th><th>Facility</th><th>Town/City</th>
-              <th>Diagnosis</th><th>Risk</th><th>Status</th><th>Ward/Bed</th>
+              <th>Diagnosis</th><th>Risk</th><th>Status</th><th>Ward</th><th>Bed</th>
               <th>Blood Type</th><th>Allergies</th>
               <th>Total Billed</th><th>Paid</th><th>Balance</th>
             </tr></thead>
@@ -7694,7 +7694,16 @@ function _initEnterpriseSystems() {
     SmartCareDB.buildIndexes(typeof patients !== 'undefined' ? patients : []);
     SmartCareHealth.report();
     if (typeof SmartCareResilience !== 'undefined' && SmartCareResilience.bootstrap) {
-      void SmartCareResilience.bootstrap();
+      SmartCareResilience.bootstrap().then(restored => {
+        // A restore can reintroduce records saved before the national
+        // configuration existed (facilities/ID scheme/provinces) — re-run
+        // the upgrade against whatever just landed, then refresh anything
+        // on screen that reads from patients/invoices.
+        try {
+          const touched = runNationalDataMigration();
+          if (restored || touched) refreshAllNationalViews();
+        } catch (e) {}
+      }).catch(() => {});
     }
     if (typeof SmartCareLog !== 'undefined' && SmartCareLog.verifyAuditChain) {
       void SmartCareLog.verifyAuditChain().then(result => {
@@ -10753,7 +10762,7 @@ function buildExecNationalReportRows(){
       id: p.id, name: p.name, age: p.age, gender: p.gender||'',
       province: p.province||'', facility: p.facility||'', town: p.town||'',
       diagnosis: p.diagnosis||'', risk: (p.riskLevel||'').toLowerCase(), status: 'Admitted',
-      wardBed: [p.ward,p.bed].filter(Boolean).join(' | '),
+      ward: p.ward||'', bed: p.bed||'',
       bloodType: p.bloodType||'', allergies: p.allergies||'',
       billed: fin.billed, paid: fin.paid, balance: fin.balance
     });
@@ -10765,7 +10774,7 @@ function buildExecNationalReportRows(){
       id: d.id, name: d.name, age: d.age, gender: d.gender||'',
       province: d.province||'', facility: d.facility||'', town: d.town||'',
       diagnosis: d.diagnosis||'', risk: '', status: 'Discharged',
-      wardBed: [d.ward,d.bed].filter(Boolean).join(' | '),
+      ward: d.ward||'', bed: d.bed||'',
       bloodType: d.bloodType||'', allergies: d.allergies||'',
       billed: fin.billed, paid: fin.paid, balance: fin.balance
     });
@@ -10777,7 +10786,7 @@ function buildExecNationalReportRows(){
       id: pid, name: dec.name, age: dec.age, gender: dec.gender||'',
       province: dec.province||'', facility: dec.facility||'', town: dec.town||'',
       diagnosis: dec.diagnosis||'', risk: '', status: 'Deceased',
-      wardBed: dec.ward||'',
+      ward: dec.ward||'', bed: dec.bed||'',
       bloodType: '', allergies: '',
       billed: fin.billed, paid: fin.paid, balance: fin.balance
     });
@@ -10834,22 +10843,23 @@ function renderExecNationalReport(){
         <td style="color:var(--text3)">${_scEsc(r.diagnosis||'—')}</td>
         <td>${r.risk ? `<span class="badge ${r.risk}">${r.risk}</span>` : '—'}</td>
         <td><span class="badge ${statusBadgeCls(r.status)}">${r.status}</span></td>
-        <td class="mono" style="font-size:11px">${_scEsc(r.wardBed||'—')}</td>
+        <td class="mono" style="font-size:11px">${_scEsc(r.ward||'—')}</td>
+        <td class="mono" style="font-size:11px">${_scEsc(r.bed||'—')}</td>
         <td>${_scEsc(r.bloodType||'—')}</td>
         <td style="color:var(--text3);font-size:11px">${_scEsc(r.allergies||'—')}</td>
         <td class="mono">$${r.billed.toFixed(2)}</td>
         <td class="mono">$${r.paid.toFixed(2)}</td>
         <td class="mono" style="color:${r.balance>0?'var(--crit)':'var(--green)'}">$${r.balance.toFixed(2)}</td>
-      </tr>`).join('') || '<tr><td colspan="16" style="text-align:center;color:var(--text3);padding:20px">No matching patients</td></tr>';
+      </tr>`).join('') || '<tr><td colspan="17" style="text-align:center;color:var(--text3);padding:20px">No matching patients</td></tr>';
   }
   const countNote = document.getElementById('exec-report-count-note');
   if (countNote) countNote.textContent = `${rows.length} patient${rows.length===1?'':'s'}`;
 }
 
 function _execReportExportTable(){
-  const headers = ['Patient ID','Name','Age','Gender','Province','Facility','Town/City','Diagnosis','Risk','Status','Ward/Bed','Blood Type','Allergies','Total Billed','Paid','Balance'];
+  const headers = ['Patient ID','Name','Age','Gender','Province','Facility','Town/City','Diagnosis','Risk','Status','Ward','Bed','Blood Type','Allergies','Total Billed','Paid','Balance'];
   const rows = (window._execReportRows || []).map(r => [
-    r.id, r.name, r.age, r.gender, r.province, r.facility, r.town, r.diagnosis, r.risk, r.status, r.wardBed, r.bloodType, r.allergies, r.billed.toFixed(2), r.paid.toFixed(2), r.balance.toFixed(2)
+    r.id, r.name, r.age, r.gender, r.province, r.facility, r.town, r.diagnosis, r.risk, r.status, r.ward, r.bed, r.bloodType, r.allergies, r.billed.toFixed(2), r.paid.toFixed(2), r.balance.toFixed(2)
   ]);
   return [headers, ...rows];
 }
@@ -12119,6 +12129,108 @@ function persistInvoices(){
 
 let invoices = loadPersistedInvoices();
 let currentInvoiceId = null;
+
+// One-time upgrade for records that predate the national configuration
+// (missing province/facility/town, or still on the old ad-hoc ID format —
+// e.g. patients registered before the facility registry existed, or before
+// the P-XXXXXXXX random ID scheme was replaced). Runs against whatever is
+// currently in patients/dischargedPatients/deceasedPatients/invoices —
+// including data just restored from an encrypted local snapshot, since that
+// restore can reintroduce pre-upgrade records after this file's own defaults
+// have already loaded — so this runs on BOTH the normal load path and again
+// after SmartCareResilience.bootstrap() finishes its (async) restore, rather
+// than once behind a "ran before" flag. It's cheap and fully idempotent:
+// once every record is already on the current scheme, every check below is
+// a no-op, so running it twice per page load costs nothing but a scan.
+function runNationalDataMigration(){
+  if (!Array.isArray(facilities) || !facilities.length) return false;
+
+  const ID_SCHEME = /^[A-Z]{2,4}-P\d{4}-\d{2}$/;
+  const idRemap = new Map();
+  let touched = false;
+  let idx = 0;
+
+  function backfillLocation(rec){
+    let fac = rec.facility ? getFacilityByName(rec.facility) : null;
+    if (!fac) {
+      fac = facilities[idx % facilities.length];
+      rec.facility = fac.name;
+      touched = true;
+    }
+    if (!rec.province) { rec.province = fac.province || ''; touched = true; }
+    if (!rec.town) { rec.town = fac.town || ''; touched = true; }
+  }
+  function backfillGender(rec){
+    if (!rec.gender || !/^(male|female)/i.test(rec.gender)) {
+      rec.gender = idx % 2 === 0 ? 'Female' : 'Male';
+      touched = true;
+    }
+  }
+  function backfillId(rec){
+    if (rec.id && ID_SCHEME.test(rec.id)) return;
+    const oldId = rec.id;
+    const newId = generatePatientId(rec.facility, rec.gender);
+    if (oldId) idRemap.set(oldId, newId);
+    rec.id = newId;
+    touched = true;
+  }
+
+  [patients, dischargedPatients, deceasedPatients].forEach(arr => {
+    (Array.isArray(arr) ? arr : []).forEach(rec => {
+      backfillLocation(rec);
+      backfillGender(rec);
+      backfillId(rec);
+      idx++;
+    });
+  });
+
+  if (idRemap.size) {
+    invoices.forEach(inv => { if (idRemap.has(inv.patientId)) { inv.patientId = idRemap.get(inv.patientId); touched = true; } });
+  }
+
+  // Every admitted/discharged patient should have at least one estimated bill.
+  const billedIds = new Set(invoices.map(i => i.patientId));
+  [...patients, ...dischargedPatients.filter(d => d.condition !== 'Deceased')].forEach(p => {
+    if (billedIds.has(p.id)) return;
+    const inv = getOrCreateOpenInvoiceForPatient(p.id);
+    if (inv) {
+      addAutoChargeLineItem(p.id, 'admission-fee');
+      addAutoChargeLineItem(p.id, 'card-fee');
+      addAutoChargeLineItem(p.id, (p.riskLevel === 'critical' || p.riskLevel === 'high') ? 'specialist' : 'consultation');
+      touched = true;
+    }
+  });
+
+  if (touched) {
+    persistPatients();
+    if (typeof persistDeceased === 'function') persistDeceased();
+    persistInvoices();
+    try {
+      if (typeof SmartCareResilience !== 'undefined' && SmartCareResilience.persistSnapshot) {
+        void SmartCareResilience.persistSnapshot('national-data-migration');
+      }
+    } catch (e) {}
+  }
+  return touched;
+}
+
+// Re-renders every view that depends on patients/facilities/billing so a
+// migration (or a snapshot restore) that changed data in place is reflected
+// immediately, without waiting for the user to navigate away and back.
+function refreshAllNationalViews(){
+  try { if (typeof renderPatientTable === 'function') renderPatientTable(patients); } catch (e) {}
+  try { if (typeof updateCounters === 'function') updateCounters(); } catch (e) {}
+  try { if (typeof renderBillingTable === 'function') renderBillingTable(); } catch (e) {}
+  try { if (typeof refreshExecPortal === 'function') refreshExecPortal(); } catch (e) {}
+  try { if (typeof renderExecNationalReport === 'function' && document.getElementById('exec-report-table-body')) renderExecNationalReport(); } catch (e) {}
+  try { if (typeof execMortalityInit !== 'undefined' && execMortalityInit && typeof initExecMortalityCharts === 'function') initExecMortalityCharts(); } catch (e) {}
+}
+
+// Run once now against whatever loaded synchronously (fresh installs and
+// browsers with no encrypted snapshot get fixed up immediately). The second,
+// post-bootstrap pass below catches browsers where an old snapshot restore
+// overwrites this with pre-upgrade data a moment later.
+try { runNationalDataMigration(); } catch (e) {}
 
 function generateInvoiceId(){
   const year = new Date().getFullYear();
