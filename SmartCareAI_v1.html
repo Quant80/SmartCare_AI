@@ -2841,6 +2841,7 @@ Waiting for data…</pre>
           <div class="fgrid">
             <div class="fg"><label class="fl">Province</label><select class="fsel" id="reg-province"><option value="">— Select Province —</option><option>Harare</option><option>Bulawayo</option><option>Manicaland</option><option>Mashonaland Central</option><option>Mashonaland East</option><option>Mashonaland West</option><option>Masvingo</option><option>Matabeleland North</option><option>Matabeleland South</option><option>Midlands</option></select></div>
             <div class="fg"><label class="fl">Facility</label><select class="fsel facility-select" id="reg-facility" onchange="toggleFacilityOther(this)"></select><input class="fi facility-other-input" id="reg-facility-other" placeholder="Type facility name" style="display:none;margin-top:6px"></div>
+            <div class="fg"><label class="fl">Town</label><input class="fi" id="reg-town" placeholder="e.g. Bulawayo"></div>
             <div class="fg"><label class="fl">Ward</label><select class="fsel" id="reg-ward" onchange="updateRegBeds(this)"><option>ICU</option><option>Emergency</option><option>Cardiac</option><option>General A</option><option>General B</option><option>Pediatrics</option></select></div>
             <div class="fg"><label class="fl">Bed Number</label><select class="fsel" id="reg-bed"></select></div>
             <div class="fg"><label class="fl">Assigned Doctor</label><select class="fsel" id="reg-doctor"><option>Dr. Radebe</option><option>Dr. Naidoo</option><option>Dr. Van der Merwe</option><option>Dr. Dlamini</option><option>Dr. Patel</option></select></div>
@@ -3117,6 +3118,7 @@ Waiting for data…</pre>
     <div style="display:flex;gap:8px;margin-bottom:18px;border-bottom:1px solid var(--border)">
       <button class="btn" id="exec-tab-burden" onclick="switchExecView('burden')" style="border-radius:8px 8px 0 0;border-bottom:2px solid var(--cyan);background:var(--bg4);font-weight:700">📊 National Burden</button>
       <button class="btn" id="exec-tab-mortality" onclick="switchExecView('mortality')" style="border-radius:8px 8px 0 0;border-bottom:2px solid transparent;background:transparent">⚰ Mortality &amp; Disease Burden</button>
+      <button class="btn" id="exec-tab-report" onclick="switchExecView('report')" style="border-radius:8px 8px 0 0;border-bottom:2px solid transparent;background:transparent">📋 National Report</button>
     </div>
 
     <div style="display:flex;gap:9px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
@@ -3186,8 +3188,17 @@ Waiting for data…</pre>
 
       <div class="g32">
         <div class="card">
-          <div class="ch"><div class="ct">Active Cases by Facility</div><div style="font-size:10px;color:var(--text3)">Top 10 facilities by caseload<span id="exec-facility-scope-note"></span></div></div>
-          <div class="cw" style="height:230px"><canvas id="execFacilityChart"></canvas></div>
+          <div class="ch">
+            <div><div class="ct">Active Cases by Facility</div><div style="font-size:10px;color:var(--text3)">By caseload<span id="exec-facility-scope-note"></span></div></div>
+            <select class="fsel" style="width:110px;font-size:10.5px" id="exec-facility-topn" onchange="refreshExecPortal()">
+              <option value="top-10">Top 10</option>
+              <option value="top-25">Top 25</option>
+              <option value="top-100">Top 100</option>
+              <option value="bottom-10">Bottom 10</option>
+              <option value="bottom-100">Bottom 100</option>
+            </select>
+          </div>
+          <div class="cw" id="exec-facility-chart-wrap" style="height:230px"><canvas id="execFacilityChart"></canvas></div>
         </div>
         <div class="card">
           <div class="ch"><div class="ct">Facility Breakdown</div><div style="font-size:10px;color:var(--text3)">Full table for reporting and export</div></div>
@@ -3195,6 +3206,31 @@ Waiting for data…</pre>
             <table class="tbl">
               <thead><tr><th>Facility</th><th>Active Cases</th><th>Critical / High</th><th>Leading Diagnosis</th></tr></thead>
               <tbody id="exec-facility-burden-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="g32">
+        <div class="card">
+          <div class="ch">
+            <div><div class="ct">Active Cases by Town / City</div><div style="font-size:10px;color:var(--text3)">By caseload<span id="exec-town-scope-note"></span></div></div>
+            <select class="fsel" style="width:110px;font-size:10.5px" id="exec-town-topn" onchange="refreshExecPortal()">
+              <option value="top-10">Top 10</option>
+              <option value="top-25">Top 25</option>
+              <option value="top-100">Top 100</option>
+              <option value="bottom-10">Bottom 10</option>
+              <option value="bottom-100">Bottom 100</option>
+            </select>
+          </div>
+          <div class="cw" id="exec-town-chart-wrap" style="height:230px"><canvas id="execTownChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Town / City Breakdown</div><div style="font-size:10px;color:var(--text3)">Full table for reporting and export</div></div>
+          <div style="overflow-x:auto;max-height:280px;overflow-y:auto">
+            <table class="tbl">
+              <thead><tr><th>Town / City</th><th>Active Cases</th><th>Critical / High</th><th>Leading Diagnosis</th></tr></thead>
+              <tbody id="exec-town-burden-table-body"></tbody>
             </table>
           </div>
         </div>
@@ -3295,6 +3331,61 @@ Waiting for data…</pre>
               <tbody id="exec-mort-province-table-body"></tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ NATIONAL REPORT VIEW ═══ -->
+    <div id="exec-view-report" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div style="font-size:11px;color:var(--text3);max-width:60ch">Every patient — active, discharged, and deceased — with bio, medical, facility, and financial data in one exportable table.</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-g btn-sm" onclick="exportExecReportCSV()">⬇ Export CSV</button>
+          <button class="btn btn-g btn-sm" onclick="exportExecReportExcel()">⬇ Export Excel</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+        <input class="fi" style="max-width:190px" placeholder="🔍 Search name, ID, diagnosis…" id="exec-report-search" oninput="renderExecNationalReport()">
+        <select class="fsel" style="width:150px" id="exec-report-province" onchange="renderExecNationalReport()">
+          <option value="">All Provinces</option>
+          <option>Harare</option><option>Bulawayo</option><option>Manicaland</option>
+          <option>Mashonaland Central</option><option>Mashonaland East</option><option>Mashonaland West</option>
+          <option>Masvingo</option><option>Matabeleland North</option><option>Matabeleland South</option><option>Midlands</option>
+        </select>
+        <select class="fsel" style="width:170px" id="exec-report-facility" onchange="renderExecNationalReport()">
+          <option value="">All Facilities</option>
+        </select>
+        <input class="fi" style="width:130px" placeholder="Town / City" id="exec-report-town" oninput="renderExecNationalReport()">
+        <select class="fsel" style="width:120px" id="exec-report-status" onchange="renderExecNationalReport()">
+          <option value="">All Statuses</option>
+          <option value="admitted">Admitted</option>
+          <option value="discharged">Discharged</option>
+          <option value="deceased">Deceased</option>
+        </select>
+        <select class="fsel" style="width:120px" id="exec-report-risk" onchange="renderExecNationalReport()">
+          <option value="">All Risk Levels</option>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="moderate">Moderate</option>
+          <option value="stable">Stable</option>
+        </select>
+        <button class="btn btn-g btn-sm" onclick="clearExecReportFilters()">✕ Clear</button>
+      </div>
+
+      <div class="card">
+        <div class="ch"><div class="ct">National Patient Report</div><div style="font-size:10px;color:var(--text3)" id="exec-report-count-note"></div></div>
+        <div style="overflow-x:auto">
+          <table class="tbl" style="white-space:nowrap">
+            <thead><tr>
+              <th>Patient ID</th><th>Name</th><th>Age</th><th>Gender</th>
+              <th>Province</th><th>Facility</th><th>Town/City</th>
+              <th>Diagnosis</th><th>Risk</th><th>Status</th><th>Ward/Bed</th>
+              <th>Blood Type</th><th>Allergies</th>
+              <th>Total Billed</th><th>Paid</th><th>Balance</th>
+            </tr></thead>
+            <tbody id="exec-report-table-body"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -3607,6 +3698,7 @@ Waiting for data…</pre>
         <div class="fgrid">
           <div class="fg"><label class="fl">Province</label><select class="fsel" id="reg-province"><option value="">— Select Province —</option><option>Harare</option><option>Bulawayo</option><option>Manicaland</option><option>Mashonaland Central</option><option>Mashonaland East</option><option>Mashonaland West</option><option>Masvingo</option><option>Matabeleland North</option><option>Matabeleland South</option><option>Midlands</option></select></div>
           <div class="fg"><label class="fl">Facility</label><select class="fsel facility-select" id="reg-facility" onchange="toggleFacilityOther(this)"></select><input class="fi facility-other-input" id="reg-facility-other" placeholder="Type facility name" style="display:none;margin-top:6px"></div>
+          <div class="fg"><label class="fl">Town</label><input class="fi" id="reg-town" placeholder="e.g. Bulawayo"></div>
           <div class="fg"><label class="fl">Ward</label><select class="fsel" id="reg-ward" onchange="updateRegBeds(this)"><option>ICU</option><option>Emergency</option><option>Cardiac</option><option>General A</option><option>General B</option><option>Pediatrics</option></select></div>
           <div class="fg"><label class="fl">Bed Number</label><select class="fsel" id="reg-bed"></select></div>
           <div class="fg"><label class="fl">Assigned Doctor</label><select class="fsel" id="reg-doctor"><option>Dr. Radebe</option><option>Dr. Naidoo</option><option>Dr. Van der Merwe</option><option>Dr. Dlamini</option><option>Dr. Patel</option></select></div>
@@ -5570,6 +5662,7 @@ Waiting for data…</pre>
               <select class="fsel" id="edit-province"><option value="">— Select Province —</option><option>Harare</option><option>Bulawayo</option><option>Manicaland</option><option>Mashonaland Central</option><option>Mashonaland East</option><option>Mashonaland West</option><option>Masvingo</option><option>Matabeleland North</option><option>Matabeleland South</option><option>Midlands</option></select>
             </div>
             <div class="fg"><label class="fl">Facility</label><select class="fsel facility-select" id="edit-facility" onchange="toggleFacilityOther(this)"></select><input class="fi facility-other-input" id="edit-facility-other" placeholder="Type facility name" style="display:none;margin-top:6px"></div>
+            <div class="fg"><label class="fl">Town</label><input class="fi" id="edit-town" placeholder="e.g. Bulawayo"></div>
             <div class="fg">
               <label class="fl">Ward</label>
               <select class="fsel" id="edit-ward" onchange="updateEditBeds()">
@@ -6616,6 +6709,16 @@ const SmartCareClinicalGovernance = (() => {
     const administrativeOnly = !!(opts && opts.administrativeOnly);
     const riskyAction = !administrativeOnly && (['discharged', 'due', 'deceased'].includes(afterPatient?.dischStatus) || beforePatient?.riskLevel === 'critical' || assessment.humanConfirmationRequired);
     if (!riskyAction) return { required: false, assessment, reason: '' };
+    // Doctors and clinicians don't need to justify their own clinical
+    // judgement with a typed reason - the override exists to catch
+    // non-clinical staff changing something that affects a critical
+    // patient's safety score, not to slow down the people qualified to
+    // make that call. The change is still fully audited either way via
+    // the before/after snapshot logging every caller already does.
+    const actorRole = (typeof getCurrentSessionUser === 'function' ? getCurrentSessionUser()?.role : '') || '';
+    if (typeof isDoctorLikeRole === 'function' && isDoctorLikeRole(actorRole)) {
+      return { required: false, assessment, reason: '', bypassedFor: 'clinical-role' };
+    }
     const message = `${actionLabel} affects a patient with NEWS2 ${assessment.news2.score} / qSOFA ${assessment.qsofa.score}. Enter an auditable override reason to continue.`;
     // Store override data globally to be handled by UI form
     window._pendingOverride = {
@@ -9360,6 +9463,7 @@ function confirmDischarge(){
       actualLOS: p.admDays,
       province:p.province||'',
       facility:p.facility||'',
+      town:p.town||'',
       condition,
       notes,
       date: _dischDateStr + ' ' + _dischTimeStr,
@@ -9388,7 +9492,8 @@ function confirmDischarge(){
         cause: causeOfDeath,
         nok: (p.nok?.name || '') + (p.nok?.phone ? ' · ' + p.nok.phone : ''),
         province: p.province || '',
-        facility: p.facility || ''
+        facility: p.facility || '',
+        town: p.town || ''
       });
       persistDeceased();
       sendAutoDeceasedNOKMessage(p, { cause: causeOfDeath });
@@ -10557,7 +10662,7 @@ function initAnalytics(){
 // ═══════════════════════════════════════════════════
 const ZW_PROVINCES = ['Harare','Bulawayo','Manicaland','Mashonaland Central','Mashonaland East','Mashonaland West','Masvingo','Matabeleland North','Matabeleland South','Midlands'];
 
-let execProvinceChart, execDiagChart, execAgeChart, execGenderChart, execFacilityChart;
+let execProvinceChart, execDiagChart, execAgeChart, execGenderChart, execFacilityChart, execTownChart;
 let execPortalInit = false;
 
 function getAllExecFacilities(){
@@ -10587,21 +10692,416 @@ let execCauseChart, execCfrChart, execDeathsProvinceChart, execTrendChart, execM
 let execMortalityInit = false;
 
 function switchExecView(view){
-  const isBurden = view === 'burden';
-  document.getElementById('exec-view-burden').style.display = isBurden ? 'block' : 'none';
-  document.getElementById('exec-view-mortality').style.display = isBurden ? 'none' : 'block';
-  const bTab = document.getElementById('exec-tab-burden'), mTab = document.getElementById('exec-tab-mortality');
-  bTab.style.borderBottomColor = isBurden ? 'var(--cyan)' : 'transparent';
-  bTab.style.fontWeight = isBurden ? '700' : '400';
-  bTab.style.background = isBurden ? 'var(--bg4)' : 'transparent';
-  mTab.style.borderBottomColor = isBurden ? 'transparent' : 'var(--cyan)';
-  mTab.style.fontWeight = isBurden ? '400' : '700';
-  mTab.style.background = isBurden ? 'transparent' : 'var(--bg4)';
-  if(!isBurden && !execMortalityInit){
+  ['burden','mortality','report'].forEach(v => {
+    const el = document.getElementById('exec-view-'+v);
+    if (el) el.style.display = v === view ? 'block' : 'none';
+    const tab = document.getElementById('exec-tab-'+v);
+    if (tab) {
+      const active = v === view;
+      tab.style.borderBottomColor = active ? 'var(--cyan)' : 'transparent';
+      tab.style.fontWeight = active ? '700' : '400';
+      tab.style.background = active ? 'var(--bg4)' : 'transparent';
+    }
+  });
+  if (view === 'mortality' && !execMortalityInit) {
     execMortalityInit = true;
     initExecMortalityCharts();
   }
+  if (view === 'report') renderExecNationalReport();
   refreshExecPortal();
+}
+
+// ═══════════════════════════════════════════════════
+// NATIONAL REPORT — every patient (active/discharged/deceased) joined with
+// their billing totals. This is the client-side stand-in for what should
+// eventually be a single SQL join across patients/facilities/invoices
+// tables once there's a real backend (see the schema design offered
+// alongside this feature).
+// ═══════════════════════════════════════════════════
+function buildExecNationalReportRows(){
+  const rows = [];
+  const finTotalsFor = (patientId) => {
+    const patInvoices = invoices.filter(i => i.patientId === patientId);
+    let billed = 0, paid = 0, balance = 0;
+    patInvoices.forEach(inv => {
+      const t = computeInvoiceTotals(inv);
+      billed += t.total; paid += t.paid; balance += t.balance;
+    });
+    return { billed, paid, balance };
+  };
+
+  (Array.isArray(patients)?patients:[]).forEach(p => {
+    const fin = finTotalsFor(p.id);
+    rows.push({
+      id: p.id, name: p.name, age: p.age, gender: p.gender||'',
+      province: p.province||'', facility: p.facility||'', town: p.town||'',
+      diagnosis: p.diagnosis||'', risk: (p.riskLevel||'').toLowerCase(), status: 'Admitted',
+      wardBed: [p.ward,p.bed].filter(Boolean).join(' / '),
+      bloodType: p.bloodType||'', allergies: p.allergies||'',
+      billed: fin.billed, paid: fin.paid, balance: fin.balance
+    });
+  });
+  (Array.isArray(dischargedPatients)?dischargedPatients:[]).forEach(d => {
+    if (d.condition === 'Deceased') return; // deceased are recorded separately below
+    const fin = finTotalsFor(d.id);
+    rows.push({
+      id: d.id, name: d.name, age: d.age, gender: d.gender||'',
+      province: d.province||'', facility: d.facility||'', town: d.town||'',
+      diagnosis: d.diagnosis||'', risk: '', status: 'Discharged',
+      wardBed: [d.ward,d.bed].filter(Boolean).join(' / '),
+      bloodType: d.bloodType||'', allergies: d.allergies||'',
+      billed: fin.billed, paid: fin.paid, balance: fin.balance
+    });
+  });
+  (Array.isArray(deceasedPatients)?deceasedPatients:[]).forEach((dec,i) => {
+    const pid = dec.id || `DEC-${i+1}`;
+    const fin = finTotalsFor(pid);
+    rows.push({
+      id: pid, name: dec.name, age: dec.age, gender: dec.gender||'',
+      province: dec.province||'', facility: dec.facility||'', town: dec.town||'',
+      diagnosis: dec.diagnosis||'', risk: '', status: 'Deceased',
+      wardBed: dec.ward||'',
+      bloodType: '', allergies: '',
+      billed: fin.billed, paid: fin.paid, balance: fin.balance
+    });
+  });
+  return rows;
+}
+
+function populateExecReportFacilityFilter(){
+  const sel = document.getElementById('exec-report-facility');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">All Facilities</option>' + facilities.map(f => `<option value="${_scEsc(f.name)}">${_scEsc(f.name)}</option>`).join('');
+  if ([...sel.options].some(o => o.value === current)) sel.value = current;
+}
+
+function clearExecReportFilters(){
+  ['exec-report-search','exec-report-town'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['exec-report-province','exec-report-facility','exec-report-status','exec-report-risk'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  renderExecNationalReport();
+}
+
+function renderExecNationalReport(){
+  populateExecReportFacilityFilter();
+  const q = (document.getElementById('exec-report-search')?.value||'').toLowerCase().trim();
+  const province = document.getElementById('exec-report-province')?.value || '';
+  const facility = document.getElementById('exec-report-facility')?.value || '';
+  const town = (document.getElementById('exec-report-town')?.value||'').toLowerCase().trim();
+  const status = document.getElementById('exec-report-status')?.value || '';
+  const risk = document.getElementById('exec-report-risk')?.value || '';
+
+  const rows = buildExecNationalReportRows().filter(r => {
+    if (province && r.province !== province) return false;
+    if (facility && r.facility !== facility) return false;
+    if (town && !r.town.toLowerCase().includes(town)) return false;
+    if (status && r.status.toLowerCase() !== status) return false;
+    if (risk && r.risk !== risk) return false;
+    if (q && !(r.name||'').toLowerCase().includes(q) && !(r.id||'').toLowerCase().includes(q) && !(r.diagnosis||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  window._execReportRows = rows;
+
+  const tbody = document.getElementById('exec-report-table-body');
+  if (tbody) {
+    const statusBadgeCls = s => s==='Deceased' ? 'critical' : s==='Discharged' ? 'discharge' : 'stable';
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td class="mono">${_scEsc(r.id)}</td>
+        <td style="font-weight:600;color:var(--text)">${_scEsc(r.name)}</td>
+        <td>${r.age ?? '—'}</td>
+        <td>${_scEsc(r.gender||'—')}</td>
+        <td>${_scEsc(r.province||'—')}</td>
+        <td>${_scEsc(r.facility||'—')}</td>
+        <td>${_scEsc(r.town||'—')}</td>
+        <td style="color:var(--text3)">${_scEsc(r.diagnosis||'—')}</td>
+        <td>${r.risk ? `<span class="badge ${r.risk}">${r.risk}</span>` : '—'}</td>
+        <td><span class="badge ${statusBadgeCls(r.status)}">${r.status}</span></td>
+        <td class="mono" style="font-size:11px">${_scEsc(r.wardBed||'—')}</td>
+        <td>${_scEsc(r.bloodType||'—')}</td>
+        <td style="color:var(--text3);font-size:11px">${_scEsc(r.allergies||'—')}</td>
+        <td class="mono">$${r.billed.toFixed(2)}</td>
+        <td class="mono">$${r.paid.toFixed(2)}</td>
+        <td class="mono" style="color:${r.balance>0?'var(--crit)':'var(--green)'}">$${r.balance.toFixed(2)}</td>
+      </tr>`).join('') || '<tr><td colspan="16" style="text-align:center;color:var(--text3);padding:20px">No matching patients</td></tr>';
+  }
+  const countNote = document.getElementById('exec-report-count-note');
+  if (countNote) countNote.textContent = `${rows.length} patient${rows.length===1?'':'s'}`;
+}
+
+function _execReportExportTable(){
+  const headers = ['Patient ID','Name','Age','Gender','Province','Facility','Town/City','Diagnosis','Risk','Status','Ward/Bed','Blood Type','Allergies','Total Billed','Paid','Balance'];
+  const rows = (window._execReportRows || []).map(r => [
+    r.id, r.name, r.age, r.gender, r.province, r.facility, r.town, r.diagnosis, r.risk, r.status, r.wardBed, r.bloodType, r.allergies, r.billed.toFixed(2), r.paid.toFixed(2), r.balance.toFixed(2)
+  ]);
+  return [headers, ...rows];
+}
+function _csvEscape(val){
+  const s = String(val ?? '');
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+}
+function _downloadBlob(content, mime, filename){
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportExecReportCSV(){
+  renderExecNationalReport();
+  const csv = _execReportExportTable().map(row => row.map(_csvEscape).join(',')).join('\r\n');
+  _downloadBlob('﻿' + csv, 'text/csv;charset=utf-8;', `SmartCare_National_Report_${new Date().toISOString().slice(0,10)}.csv`);
+  showToast('CSV exported', false, '⬇ Downloaded');
+}
+
+// ── National financial rollup, shared by the Executive Summary and
+// Financial Summary sheets ──────────────────────────────────────
+function computeNationalFinancialSummary(){
+  let totalBilled=0, totalPaid=0, totalBalance=0, subsidizedCount=0, subsidizedBilled=0;
+  const statusCounts = { open:0, partial:0, paid:0, waived:0 };
+  const methodTotals = {};
+  invoices.forEach(inv => {
+    const t = computeInvoiceTotals(inv);
+    totalBilled += t.total; totalPaid += t.paid; totalBalance += t.balance;
+    statusCounts[t.status] = (statusCounts[t.status]||0) + 1;
+    if (inv.subsidized) { subsidizedCount++; subsidizedBilled += t.total; }
+    (inv.payments||[]).forEach(p => { methodTotals[p.method] = (methodTotals[p.method]||0) + p.amount; });
+  });
+  return { totalBilled, totalPaid, totalBalance, statusCounts, methodTotals, subsidizedCount, subsidizedBilled, invoiceCount: invoices.length };
+}
+
+// Groups the unified national-report rows (one per patient, any status) by
+// a field — province, facility, or town — for the per-dimension summary
+// sheets. Reusing buildExecNationalReportRows() keeps every sheet counting
+// the same underlying patients the same way.
+function _groupSummaryBy(rows, field){
+  const groups = {};
+  rows.forEach(r => {
+    const key = r[field] || 'Not specified';
+    (groups[key] = groups[key] || []).push(r);
+  });
+  return Object.entries(groups).map(([key, grp]) => {
+    const active = grp.filter(r => r.status === 'Admitted').length;
+    const deaths = grp.filter(r => r.status === 'Deceased').length;
+    const critHigh = grp.filter(r => ['critical','high'].includes(r.risk)).length;
+    const diagCounts = {};
+    grp.forEach(r => { if (r.diagnosis) diagCounts[r.diagnosis] = (diagCounts[r.diagnosis]||0) + 1; });
+    const leadingDx = Object.entries(diagCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+    return {
+      key, total: grp.length, active, critHigh, discharged: grp.length - active - deaths, deaths, leadingDx,
+      billed: grp.reduce((s,r)=>s+r.billed,0), paid: grp.reduce((s,r)=>s+r.paid,0), balance: grp.reduce((s,r)=>s+r.balance,0)
+    };
+  }).sort((a,b) => b.total - a.total);
+}
+
+// ── Row-typed sheet builders ─────────────────────────────────────
+// Every sheet is built as an array of {type, cells} rows instead of plain
+// arrays, so the XML writer below can style titles/section bands/column
+// headers/data distinctly — that structure is what was missing before
+// (plain <td>s with no visual hierarchy read as "all mixed up").
+const _R = {
+  title:   (...cells) => ({ type:'title',   cells }),
+  section: (label)    => ({ type:'section', cells:[label] }),
+  header:  (...cells) => ({ type:'header',  cells }),
+  data:    (...cells) => ({ type:'data',    cells }),
+  blank:   ()          => ({ type:'blank',  cells:[] })
+};
+function _sheetFromTable(table){
+  return table.map((row,i) => i===0 ? _R.header(...row) : _R.data(...row));
+}
+
+function _sheetGroupedSummary(field, label){
+  const groups = _groupSummaryBy(buildExecNationalReportRows(), field);
+  const header = [label, 'Total Patients', 'Currently Admitted', 'Critical/High (Admitted)', 'Discharged', 'Deaths', 'Leading Diagnosis', 'Total Billed', 'Total Paid', 'Balance'];
+  return [
+    _R.header(...header),
+    ...groups.map(g => _R.data(g.key, g.total, g.active, g.critHigh, g.discharged, g.deaths, g.leadingDx, '$'+g.billed.toFixed(2), '$'+g.paid.toFixed(2), '$'+g.balance.toFixed(2)))
+  ];
+}
+
+function _sheetExecutiveSummary(){
+  const reportRows = buildExecNationalReportRows();
+  const activeCount = patients.length;
+  const dischargedCount = reportRows.filter(r => r.status === 'Discharged').length;
+  const deceasedCount = reportRows.filter(r => r.status === 'Deceased').length;
+  const critHigh = patients.filter(p => ['critical','high'].includes(String(p.riskLevel||'').toLowerCase())).length;
+  const withField = f => new Set(reportRows.map(r => r[f]).filter(Boolean)).size;
+  const missingProvince = reportRows.filter(r => !r.province).length;
+  const missingFacility = reportRows.filter(r => !r.facility).length;
+
+  const diagCounts = {};
+  patients.forEach(p => { const dx = String(p.diagnosis||'Unknown').trim()||'Unknown'; diagCounts[dx] = (diagCounts[dx]||0) + 1; });
+  const topDiag = Object.entries(diagCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  const mort = computeMortalityStats('', '');
+  const fin = computeNationalFinancialSummary();
+
+  return [
+    _R.title('SmartCare AI — National Executive Summary'),
+    _R.data('Generated', new Date().toLocaleString('en-ZA')),
+    _R.data('Scope', 'This deployment only — see the National Platform Proposal on multi-facility data centralisation'),
+    _R.blank(),
+    _R.section('PATIENT VOLUME'),
+    _R.data('Total Patients (all-time)', activeCount + dischargedCount + deceasedCount),
+    _R.data('Currently Admitted', activeCount),
+    _R.data('Discharged (alive)', dischargedCount),
+    _R.data('Deceased', deceasedCount),
+    _R.data('Critical / High Risk (currently admitted)', critHigh),
+    _R.blank(),
+    _R.section('COVERAGE'),
+    _R.data('Provinces Reporting', withField('province') + ' / 10'),
+    _R.data('Facilities Reporting', withField('facility')),
+    _R.data('Towns / Cities Reporting', withField('town')),
+    _R.data('Patients Missing Province', missingProvince),
+    _R.data('Patients Missing Facility', missingFacility),
+    _R.blank(),
+    _R.section('TOP 5 DIAGNOSES — CURRENTLY ADMITTED'),
+    ...topDiag.map(([dx,c],i) => _R.data(`${i+1}. ${dx}`, c)),
+    _R.blank(),
+    _R.section('MORTALITY'),
+    _R.data('Total Deaths Recorded', mort.total),
+    _R.data('Leading Cause of Death', mort.leadingCause),
+    _R.data('Highest Case-Fatality Rate', mort.highestCfr ? `${mort.highestCfr.dx} — ${mort.highestCfr.rate.toFixed(1)}%` : '—'),
+    _R.blank(),
+    _R.section('FINANCIAL'),
+    _R.data('Total Invoices Issued', fin.invoiceCount),
+    _R.data('Total Billed (USD)', '$'+fin.totalBilled.toFixed(2)),
+    _R.data('Total Collected (USD)', '$'+fin.totalPaid.toFixed(2)),
+    _R.data('Outstanding Balance (USD)', '$'+fin.totalBalance.toFixed(2)),
+    _R.data('Collection Rate', fin.totalBilled > 0 ? Math.round(fin.totalPaid/fin.totalBilled*100)+'%' : '—'),
+    _R.data('Government-Subsidized Invoices', fin.subsidizedCount),
+    _R.data('Government-Subsidized Value (USD)', '$'+fin.subsidizedBilled.toFixed(2))
+  ];
+}
+
+function _sheetDemographics(){
+  const s = computeExecStats('', '');
+  return [
+    _R.title('Demographics — Currently Admitted Patients'),
+    _R.blank(),
+    _R.section('AGE GROUP DISTRIBUTION'),
+    _R.header('Age Group', 'Patients'),
+    ...s.ageLabels.map(l => _R.data(l, s.ageCounts[l])),
+    _R.blank(),
+    _R.section('GENDER DISTRIBUTION'),
+    _R.header('Gender', 'Patients'),
+    _R.data('Male', s.genderCounts.Male), _R.data('Female', s.genderCounts.Female), _R.data('Other', s.genderCounts.Other)
+  ];
+}
+
+function _sheetMortality(){
+  const m = computeMortalityStats('', '');
+  return [
+    _R.title('Mortality & Disease Burden — National'),
+    _R.data('Total Deaths', m.total),
+    _R.data('Leading Cause of Death', m.leadingCause),
+    _R.blank(),
+    _R.section('CAUSES OF DEATH — RANKED'),
+    _R.header('Diagnosis', 'Deaths'),
+    ...m.topCauses.map(([dx,c]) => _R.data(dx, c)),
+    _R.blank(),
+    _R.section('CASE-FATALITY RATE BY DIAGNOSIS (deaths ÷ deaths+active+discharged-alive with same diagnosis)'),
+    _R.header('Diagnosis', 'Deaths', 'Total Diagnosed Cases', 'Case-Fatality Rate %'),
+    ...m.cfrList.map(c => _R.data(c.dx, c.deaths, c.totalCases, c.rate.toFixed(1))),
+    _R.blank(),
+    _R.section('DEATHS BY PROVINCE'),
+    _R.header('Province', 'Deaths', 'Leading Cause'),
+    ...m.provinceTable.filter(r => r.deaths > 0).map(r => _R.data(r.province, r.deaths, r.leadingCause)),
+    _R.blank(),
+    _R.section('DEATHS BY AGE GROUP'),
+    _R.header('Age Group', 'Deaths'),
+    ...m.ageLabels.map(l => _R.data(l, m.ageCounts[l])),
+    _R.blank(),
+    _R.section('DEATHS BY GENDER'),
+    _R.header('Gender', 'Deaths'),
+    _R.data('Male', m.genderCounts.Male), _R.data('Female', m.genderCounts.Female), _R.data('Other', m.genderCounts.Other),
+    _R.blank(),
+    _R.section('MONTHLY TREND — LAST 6 MONTHS'),
+    _R.header('Month', 'Deaths'),
+    ...m.monthlyLabels.map((l,i) => _R.data(l, m.monthlyCounts[i]))
+  ];
+}
+
+function _sheetFinancial(){
+  const fin = computeNationalFinancialSummary();
+  return [
+    _R.title('Financial Summary — National'),
+    _R.data('Total Invoices Issued', fin.invoiceCount),
+    _R.data('Total Billed (USD)', '$'+fin.totalBilled.toFixed(2)),
+    _R.data('Total Collected (USD)', '$'+fin.totalPaid.toFixed(2)),
+    _R.data('Outstanding Balance (USD)', '$'+fin.totalBalance.toFixed(2)),
+    _R.data('Collection Rate', fin.totalBilled > 0 ? Math.round(fin.totalPaid/fin.totalBilled*100)+'%' : '—'),
+    _R.blank(),
+    _R.section('INVOICE STATUS BREAKDOWN'),
+    _R.header('Status', 'Count'),
+    _R.data('Open', fin.statusCounts.open||0),
+    _R.data('Partially Paid', fin.statusCounts.partial||0),
+    _R.data('Paid', fin.statusCounts.paid||0),
+    _R.data('Waived', fin.statusCounts.waived||0),
+    _R.blank(),
+    _R.section('COLLECTIONS BY PAYMENT METHOD'),
+    _R.header('Method', 'Total Collected (USD)'),
+    ...Object.entries(fin.methodTotals).sort((a,b)=>b[1]-a[1]).map(([method,amt]) => _R.data(method, '$'+amt.toFixed(2))),
+    _R.blank(),
+    _R.section('GOVERNMENT-SUBSIDIZED CARE'),
+    _R.data('Subsidized Invoices', fin.subsidizedCount),
+    _R.data('Subsidized Billed Value (USD)', '$'+fin.subsidizedBilled.toFixed(2))
+  ];
+}
+
+function _xmlEscape(v){
+  return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Renders one sheet's rows into SpreadsheetML <Table> markup. Section rows
+// merge across the sheet's full column count so they read as a banner, not
+// a stray cell in column A.
+function _sheetXml(name, rows){
+  const maxCols = Math.max(1, ...rows.map(r => r.cells.length));
+  const cols = Array.from({length: maxCols}).map((_,i) => `<Column ss:Width="${i===0?230:120}"/>`).join('');
+  const rowsXml = rows.map(r => {
+    if (r.type === 'blank') return '<Row/>';
+    if (r.type === 'title') return `<Row ss:Height="22"><Cell ss:StyleID="sTitle" ss:MergeAcross="${maxCols-1}"><Data ss:Type="String">${_xmlEscape(r.cells[0])}</Data></Cell></Row>`;
+    if (r.type === 'section') return `<Row ss:Height="18"><Cell ss:StyleID="sSection" ss:MergeAcross="${maxCols-1}"><Data ss:Type="String">${_xmlEscape(r.cells[0])}</Data></Cell></Row>`;
+    const styleId = r.type === 'header' ? 'sColHeader' : 'sData';
+    return `<Row>${r.cells.map(c => `<Cell ss:StyleID="${styleId}"><Data ss:Type="${typeof c === 'number' ? 'Number' : 'String'}">${_xmlEscape(c)}</Data></Cell>`).join('')}</Row>`;
+  }).join('');
+  return `<Worksheet ss:Name="${_xmlEscape(name)}"><Table>${cols}${rowsXml}</Table></Worksheet>`;
+}
+
+// Real multi-sheet Excel workbook via SpreadsheetML (Office's "XML
+// Spreadsheet 2003" format) — unlike the multiple-<table>-in-one-HTML
+// trick, this reliably produces genuinely separate, populated tabs across
+// Excel versions, with real cell styling instead of plain unstyled <td>s.
+// Excel may show a one-time "format doesn't match extension" prompt for
+// the .xls name; choosing "Yes" opens it normally.
+function exportExecReportExcel(){
+  renderExecNationalReport();
+  const sheets = [
+    { name: 'Executive Summary', rows: _sheetExecutiveSummary() },
+    { name: 'National Report', rows: _sheetFromTable(_execReportExportTable()) },
+    { name: 'Province Summary', rows: _sheetGroupedSummary('province', 'Province') },
+    { name: 'Facility Summary', rows: _sheetGroupedSummary('facility', 'Facility') },
+    { name: 'Town Summary', rows: _sheetGroupedSummary('town', 'Town-City') },
+    { name: 'Demographics', rows: _sheetDemographics() },
+    { name: 'Mortality', rows: _sheetMortality() },
+    { name: 'Financial Summary', rows: _sheetFinancial() }
+  ];
+  const xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">
+<Styles>
+<Style ss:ID="sTitle"><Font ss:Bold="1" ss:Size="14" ss:Color="#0F2A50"/></Style>
+<Style ss:ID="sSection"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#0D9488" ss:Pattern="Solid"/></Style>
+<Style ss:ID="sColHeader"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1E50A0" ss:Pattern="Solid"/></Style>
+<Style ss:ID="sData"><Alignment ss:Vertical="Top"/></Style>
+</Styles>
+${sheets.map(s => _sheetXml(s.name, s.rows)).join('\n')}
+</Workbook>`;
+  _downloadBlob('﻿' + xml, 'application/vnd.ms-excel;charset=utf-8;', `SmartCare_National_Report_${new Date().toISOString().slice(0,10)}.xls`);
+  showToast('Comprehensive Excel workbook exported — 8 sheets', false, '⬇ Downloaded');
 }
 
 function computeMortalityStats(provinceFilter, facilityFilter){
@@ -10874,7 +11374,35 @@ function computeExecStats(provinceFilter, facilityFilter){
     };
   });
 
-  return { total, critical, leadingDx, topDiag, provinceCounts, provincesReporting, unspecified, ageCounts, ageLabels, genderCounts, provinceTable, facilityTable };
+  const townCounts = {};
+  pts.forEach(p => {
+    const tw = String(p.town||'').trim() || 'Not specified';
+    townCounts[tw] = (townCounts[tw]||0) + 1;
+  });
+  const townTable = Object.entries(townCounts).sort((a,b)=>b[1]-a[1]).map(([town,count]) => {
+    const twPts = pts.filter(p => (String(p.town||'').trim() || 'Not specified') === town);
+    const twDiagCounts = {};
+    twPts.forEach(p => { const dx = String(p.diagnosis||'Unknown').trim()||'Unknown'; twDiagCounts[dx]=(twDiagCounts[dx]||0)+1; });
+    const twLeadingDx = Object.entries(twDiagCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+    return {
+      town,
+      active: count,
+      critical: twPts.filter(p => ['critical','high'].includes(String(p.riskLevel||'').toLowerCase())).length,
+      leadingDx: twLeadingDx
+    };
+  });
+
+  return { total, critical, leadingDx, topDiag, provinceCounts, provincesReporting, unspecified, ageCounts, ageLabels, genderCounts, provinceTable, facilityTable, townTable };
+}
+
+// Slices a count-sorted (descending) table per a "top-N"/"bottom-N" select
+// value, e.g. "top-10" or "bottom-100" — shared by the Facility and Town
+// breakdowns since both can run into the hundreds for a national deployment.
+function applyTopBottomN(table, selectId){
+  const mode = document.getElementById(selectId)?.value || 'top-10';
+  const [dir, nStr] = mode.split('-');
+  const n = parseInt(nStr) || 10;
+  return dir === 'bottom' ? table.slice(-n).reverse() : table.slice(0, n);
 }
 
 function initExecPortal(){
@@ -10934,6 +11462,15 @@ function initExecPortal(){
         scales:{ x:{ grid:{ color:'rgba(148,197,240,.07)' }, ticks:{ color:'#6b88a8', font:{size:9} } },
                  y:{ grid:{display:false}, ticks:{ color:'#8fa8c4', font:{size:10} } } } }
     });
+
+    execTownChart = new Chart(document.getElementById('execTownChart'), {
+      type:'bar',
+      data:{ labels:[], datasets:[{ label:'Active Cases', data:[], backgroundColor:'rgba(167,139,250,.75)', borderRadius:4 }] },
+      options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => `${ctx.parsed.x} active cases` } } },
+        scales:{ x:{ grid:{ color:'rgba(148,197,240,.07)' }, ticks:{ color:'#6b88a8', font:{size:9} } },
+                 y:{ grid:{display:false}, ticks:{ color:'#8fa8c4', font:{size:10} } } } }
+    });
   }
   populateExecFacilityFilter();
   refreshExecPortal();
@@ -10978,10 +11515,22 @@ function refreshExecPortal(){
     execGenderChart.update();
   }
   if(execFacilityChart){
-    const top10 = s.facilityTable.slice(0,10);
-    execFacilityChart.data.labels = top10.map(r => r.facility.length > 26 ? r.facility.slice(0,24)+'…' : r.facility);
-    execFacilityChart.data.datasets[0].data = top10.map(r => r.active);
+    const sliced = applyTopBottomN(s.facilityTable, 'exec-facility-topn');
+    const wrap = document.getElementById('exec-facility-chart-wrap');
+    if (wrap) wrap.style.height = Math.max(230, sliced.length * 20) + 'px';
+    execFacilityChart.data.labels = sliced.map(r => r.facility.length > 26 ? r.facility.slice(0,24)+'…' : r.facility);
+    execFacilityChart.data.datasets[0].data = sliced.map(r => r.active);
+    execFacilityChart.resize();
     execFacilityChart.update();
+  }
+  if(execTownChart){
+    const slicedT = applyTopBottomN(s.townTable, 'exec-town-topn');
+    const wrapT = document.getElementById('exec-town-chart-wrap');
+    if (wrapT) wrapT.style.height = Math.max(230, slicedT.length * 20) + 'px';
+    execTownChart.data.labels = slicedT.map(r => r.town.length > 26 ? r.town.slice(0,24)+'…' : r.town);
+    execTownChart.data.datasets[0].data = slicedT.map(r => r.active);
+    execTownChart.resize();
+    execTownChart.update();
   }
 
   const tbody = document.getElementById('exec-province-table-body');
@@ -11006,8 +11555,23 @@ function refreshExecPortal(){
       </tr>`).join('') || '<tr><td colspan="4" style="color:var(--text3);text-align:center;padding:14px">No data yet</td></tr>';
   }
 
+  const townTbody = document.getElementById('exec-town-burden-table-body');
+  if(townTbody){
+    townTbody.innerHTML = s.townTable.map(r => `
+      <tr>
+        <td style="font-weight:600;color:var(--text)">${r.town}</td>
+        <td class="mono">${r.active}</td>
+        <td class="mono" style="color:${r.critical ? 'var(--crit)' : 'var(--text3)'}">${r.critical}</td>
+        <td style="color:var(--text3)">${r.leadingDx}</td>
+      </tr>`).join('') || '<tr><td colspan="4" style="color:var(--text3);text-align:center;padding:14px">No data yet</td></tr>';
+  }
+
   const scopeNoteEl = document.getElementById('exec-diag-scope-note');
   if(scopeNoteEl) scopeNoteEl.textContent = s.unspecified > 0 ? ` · ${s.unspecified} active patient${s.unspecified===1?'':'s'} without a province set` : '';
+  const facScopeEl = document.getElementById('exec-facility-scope-note');
+  if(facScopeEl) facScopeEl.textContent = ` · ${s.facilityTable.length} total`;
+  const townScopeEl = document.getElementById('exec-town-scope-note');
+  if(townScopeEl) townScopeEl.textContent = ` · ${s.townTable.length} total`;
 
   if (execMortalityInit) refreshExecMortality();
 }
@@ -11399,6 +11963,7 @@ function createInvoiceForPatient(pid){
     patientName: p.name,
     province: p.province || '',
     facility: p.facility || '',
+    town: p.town || '',
     age: p.age ?? '',
     gender: p.gender || '',
     ward: p.ward || '',
@@ -11496,7 +12061,7 @@ function getOrCreateOpenInvoiceForPatient(patientId){
   if (!p) return null;
   const inv = {
     id: generateInvoiceId(), patientId: p.id, patientName: p.name,
-    province: p.province || '', facility: p.facility || '',
+    province: p.province || '', facility: p.facility || '', town: p.town || '',
     age: p.age ?? '', gender: p.gender || '', ward: p.ward || '', bed: p.bed || '', nok: p.nok || null,
     createdAt: new Date().toISOString(), lineItems: [], payments: [], subsidized: false, waived: false,
     wardAccrual: { enabled: false, dailyRate: 0 }
@@ -12850,6 +13415,7 @@ function registerPatient(triggerEl=null){
   const insurance=(regField(scope,'reg-insurance')?.value||'').trim()||'Uninsured / Not provided';
   const province=(regField(scope,'reg-province')?.value||'').trim();
   const facility=resolveFacilityFieldValue(regField(scope,'reg-facility'), regField(scope,'reg-facility-other'))||'SmartCare Central';
+  const town=(regField(scope,'reg-town')?.value||'').trim();
   const comorbList=(regField(scope,'reg-comorb')?.value||'').split(',').map(s=>s.trim()).filter(Boolean);
   const medsList=(regField(scope,'reg-meds')?.value||'').split(',').map(s=>s.trim()).filter(Boolean);
 
@@ -12885,7 +13451,7 @@ function registerPatient(triggerEl=null){
     id:pid, nationalId:idNum||'', hospitalRecNo, name:fullName, age, gender:regField(scope,'reg-gender')?.value||'Other',
     phone:_scNormalizePhone(contactPhone), admDate,
     ward:wardVal, bed:bedVal, diagnosis:diagText, doctor:regField(scope,'reg-doctor')?.value||'Unassigned',
-    bloodType, allergies, race, nationality, language, insurance, province, facility,
+    bloodType, allergies, race, nationality, language, insurance, province, facility, town,
     comorbidities:comorbList, currentMeds:medsList,
     risk:prio==='critical'?.85:prio==='high'?.65:prio==='moderate'?.40:.15,
     riskLevel:prio, hr:hrVal,
@@ -21612,9 +22178,11 @@ function doCreateAccount(){
   if(profEmail) profEmail.value = email;
   if(profRole)  { for(let o of profRole.options){ if(o.value===role){o.selected=true;break;} } }
   try { SmartCareSecurity.createSession(result.user); } catch(e) {}
-  _updateSidebarUser({name: name, role: role});
-  applyFacilityBranding(facility);
-  syncPrivilegedUI();
+  try { _updateSidebarUser({name: name, role: role}); } catch(e) { console.warn('Sidebar update failed:', e); }
+  try { applyFacilityBranding(facility); } catch(e) { console.warn('Facility branding failed:', e); }
+  try { syncPrivilegedUI(); } catch(e) { console.warn('Privileged UI sync failed:', e); }
+  // Account creation itself already succeeded above — nothing past this
+  // point should be able to leave the user stuck looking at the modal.
   closeAuthModal();
   enterSystem();
   showToast('Welcome, ' + name + '! Account created successfully.', false, '✅ Account Created');
@@ -21639,9 +22207,11 @@ function doSignIn(){
   if(profName)  profName.value  = result.user.name;
   if(profEmail) profEmail.value = result.user.email;
   try { SmartCareSecurity.createSession(result.user); } catch(e) {}
-  _updateSidebarUser(result.user);
-  applyFacilityBranding(result.user.facility || '');
-  syncPrivilegedUI();
+  try { _updateSidebarUser(result.user); } catch(e) { console.warn('Sidebar update failed:', e); }
+  try { applyFacilityBranding(result.user.facility || ''); } catch(e) { console.warn('Facility branding failed:', e); }
+  try { syncPrivilegedUI(); } catch(e) { console.warn('Privileged UI sync failed:', e); }
+  // Sign-in itself already succeeded above — nothing past this point should
+  // be able to leave the user stuck looking at the modal.
   closeAuthModal();
   enterSystem();
   showToast('Welcome back, ' + result.user.name + '!', false, '✅ Signed In');
@@ -21681,7 +22251,10 @@ function openLocalAccountModal(mode){
   if(errEl) errEl.textContent = '';
   const signinErrEl = document.getElementById('auth-signin-error');
   if(signinErrEl) signinErrEl.textContent = '';
-  if(showCreate) { _refreshCreateAccountRoleAccess(); populateAuthFacilitySelect(); }
+  if(showCreate) {
+    try { _refreshCreateAccountRoleAccess(); } catch(e) { console.warn('Role-access refresh failed:', e); }
+    try { populateAuthFacilitySelect(); } catch(e) { console.warn('Facility select populate failed:', e); }
+  }
 }
 
 function populateAuthFacilitySelect(){
@@ -25018,7 +25591,7 @@ function normalizeRole(v) {
 
 function isDoctorLikeRole(role) {
   const r = normalizeRole(role);
-  return r.includes('doctor') || r.includes('physician') || r.includes('registrar') || r.includes('medical officer') || r.includes('chief medical officer');
+  return r.includes('doctor') || r.includes('physician') || r.includes('registrar') || r.includes('medical officer') || r.includes('chief medical officer') || r.includes('clinician') || r.includes('radiologist');
 }
 
 function isAdminLikeRole(role) {
@@ -25048,7 +25621,6 @@ function getEditAuthorizationState(patient) {
   const isAttendingDoctor = !!attendingDoctor && namesLikelySameDoctor(actorName, attendingDoctor);
   const isAdmin = isAdminLikeRole(actorRole);
   const isDoctor = isDoctorLikeRole(actorRole);
-  const isPrivileged = isDoctor || isAdmin;
   const isCritical = isHighRiskPatientForEditLock(patient);
   const approvedActive = auth.status === 'approved' && auth.expiresAt && now < auth.expiresAt;
   const approvedForActor = approvedActive && (
@@ -25058,7 +25630,7 @@ function getEditAuthorizationState(patient) {
 
   if (!isCritical) {
     return {
-      locked: false,
+      locked: false, medicalLocked: false, bioLocked: false,
       reason: '',
       pending: false,
       canRequest: false,
@@ -25071,12 +25643,22 @@ function getEditAuthorizationState(patient) {
     };
   }
 
-  if (isPrivileged || approvedForActor) {
+  // Doctors/clinicians are trusted with medical fields on their own
+  // judgement, and were never restricted from bio fields either. Admins
+  // get bio/administrative fields unlocked automatically but still need
+  // doctor authorization to change diagnosis, vitals, risk level, or
+  // discharge status - not the reverse.
+  const medicalLocked = !(isDoctor || approvedForActor);
+  const bioLocked = !(isDoctor || isAdmin || approvedForActor);
+  const locked = medicalLocked && bioLocked;
+  const pending = auth.status === 'pending';
+
+  if (!locked) {
     return {
-      locked: false,
-      reason: '',
-      pending: auth.status === 'pending',
-      canRequest: false,
+      locked: false, medicalLocked, bioLocked,
+      reason: medicalLocked ? 'Medical fields (diagnosis, vitals, risk level, discharge status) are locked for this critical patient. Doctor authorization is required to change them.' : '',
+      pending,
+      canRequest: medicalLocked && !pending,
       canApprove: false,
       isCritical: true,
       isAttendingDoctor,
@@ -25086,9 +25668,8 @@ function getEditAuthorizationState(patient) {
     };
   }
 
-  const pending = auth.status === 'pending';
   return {
-    locked: true,
+    locked: true, medicalLocked, bioLocked,
     reason: 'High/Critical patient record is locked. Doctor authorization is required before updates.',
     pending,
     canRequest: !pending,
@@ -25101,24 +25682,32 @@ function getEditAuthorizationState(patient) {
   };
 }
 
-function setEditFormLockedInputs(locked) {
+// Fields that carry clinical judgement - the ones a doctor/clinician is
+// trusted to change on a critical patient without a lock, and an admin
+// is not. Everything else in the edit form (name, contact, NOK, ward/bed,
+// province/facility/town, admission logistics) is bio/administrative.
+const EDIT_MEDICAL_FIELD_IDS = ['edit-diagnosis','edit-priority','edit-hr','edit-o2','edit-bp','edit-temp','edit-rr','edit-glucose','edit-patient-status'];
+
+// Accepts either a plain boolean (legacy: lock everything) or a
+// {medicalLocked, bioLocked} state object for per-domain locking.
+function setEditFormLockedInputs(state){
+  const access = typeof state === 'object' && state !== null
+    ? { medicalLocked: !!state.medicalLocked, bioLocked: !!state.bioLocked }
+    : { medicalLocked: !!state, bioLocked: !!state };
   const overlay = document.getElementById('edit-patient-overlay');
   if (!overlay) return;
   overlay.querySelectorAll('input, select, textarea').forEach(el => {
-    if (el.id === 'override-reason-input' || el.id === 'override-reason-select') {
+    if (el.id === 'override-reason-input' || el.id === 'override-reason-select' || el.id === 'lock-request-note') {
       el.disabled = false;
       return;
     }
-    if (el.id === 'lock-request-note') {
-      el.disabled = !locked ? false : false;
-      return;
-    }
-    el.disabled = !!locked;
+    el.disabled = EDIT_MEDICAL_FIELD_IDS.includes(el.id) ? access.medicalLocked : access.bioLocked;
   });
+  const fullyLocked = access.medicalLocked && access.bioLocked;
   const saveBtn = document.getElementById('edit-save-btn');
-  if (saveBtn) saveBtn.style.display = locked ? 'none' : '';
+  if (saveBtn) saveBtn.style.display = fullyLocked ? 'none' : '';
   const deleteBtn = document.getElementById('edit-delete-draft-btn');
-  if (deleteBtn) deleteBtn.style.display = locked ? 'none' : '';
+  if (deleteBtn) deleteBtn.style.display = fullyLocked ? 'none' : '';
 }
 
 function renderCriticalEditLockPanel(patient) {
@@ -25141,12 +25730,22 @@ function renderCriticalEditLockPanel(patient) {
   }
 
   panel.style.display = 'block';
-  setEditFormLockedInputs(state.locked);
+  setEditFormLockedInputs(state);
   requestBtn.style.display = 'none';
   approveBtn.style.display = 'none';
 
   if (!state.locked) {
-    if (state.isAttendingDoctor || isAdminLikeRole(state.sessionUser?.role || '')) {
+    if (state.medicalLocked) {
+      // Admin (or similar non-clinical role): bio/administrative fields are
+      // open, medical fields still require doctor authorization - this is
+      // the partial-access case, distinct from full unlock below.
+      msgEl.textContent = 'You can edit bio/administrative fields now. Diagnosis, vitals, risk level, and discharge status are locked and need doctor authorization.';
+      metaEl.textContent = `Role: ${state.sessionUser?.role || 'Administrator'}`;
+      if (state.canRequest) {
+        requestBtn.style.display = '';
+        requestBtn.textContent = 'Send Authorization Request to Doctor (medical fields)';
+      }
+    } else if (isDoctorLikeRole(state.sessionUser?.role || '') || state.isAttendingDoctor) {
       msgEl.textContent = 'Critical update path unlocked. You can proceed with changes.';
       metaEl.textContent = `Role override active (${state.sessionUser?.role || 'Privileged user'})`;
     } else if (state.approvedForActor) {
@@ -25159,7 +25758,7 @@ function renderCriticalEditLockPanel(patient) {
     }
 
     // Even privileged users should see pending requests to explicitly approve.
-    const canApprovePending = auth.status === 'pending' && (state.isAttendingDoctor || isAdminLikeRole(state.sessionUser?.role || ''));
+    const canApprovePending = auth.status === 'pending' && (state.isAttendingDoctor || isDoctorLikeRole(state.sessionUser?.role || '') || isAdminLikeRole(state.sessionUser?.role || ''));
     if (canApprovePending) {
       approveBtn.style.display = '';
       approveBtn.textContent = 'Authorize & Unlock Edits';
@@ -25304,6 +25903,7 @@ function openEditPatientModal(patientId) {
   set('edit-province', patient.province || '');
   populateFacilitySelects();
   setFacilityFieldValue('edit-facility', 'edit-facility-other', patient.facility || '');
+  set('edit-town', patient.town || '');
   set('edit-ward', patient.ward || 'ICU');
   set('edit-bed', patient.bed || '');
   set('edit-doctor', patient.doctor || 'Dr. Radebe');
@@ -25475,19 +26075,30 @@ function saveEditPatient(ev) {
       changes.updates.push(`Facility updated`);
       patients[patientIdx].facility = newFacility;
     }
-  
-    const newPriority = getVal('edit-priority').toLowerCase();
-    if (newPriority && newPriority !== currentEditPatient.riskLevel) {
-      changes.updates.push(`Priority: "${currentEditPatient.riskLevel}" → "${newPriority}"`);
-      clinicallyRelevantChange = true;
-      patients[patientIdx].riskLevel = newPriority;
-      patients[patientIdx].risk = { critical:0.92, high:0.72, moderate:0.45, stable:0.18 }[newPriority] || patients[patientIdx].risk;
+    const newTown = getVal('edit-town');
+    if (newTown !== (currentEditPatient.town || '')) {
+      changes.updates.push(`Town: "${currentEditPatient.town || 'Not specified'}" → "${newTown || 'Not specified'}"`);
+      patients[patientIdx].town = newTown;
     }
-  
-    const newDiagnosis = getVal('edit-diagnosis');
-    if (newDiagnosis !== currentEditPatient.diagnosis) {
-      changes.updates.push(`Diagnosis updated`);
-      patients[patientIdx].diagnosis = newDiagnosis;
+
+    // Medical fields (priority/risk, diagnosis, vitals, discharge status)
+    // are gated by currentState.medicalLocked - the form already disables
+    // these inputs for anyone without medical access, this is the
+    // belt-and-suspenders check against the underlying data itself.
+    if (!currentState.medicalLocked) {
+      const newPriority = getVal('edit-priority').toLowerCase();
+      if (newPriority && newPriority !== currentEditPatient.riskLevel) {
+        changes.updates.push(`Priority: "${currentEditPatient.riskLevel}" → "${newPriority}"`);
+        clinicallyRelevantChange = true;
+        patients[patientIdx].riskLevel = newPriority;
+        patients[patientIdx].risk = { critical:0.92, high:0.72, moderate:0.45, stable:0.18 }[newPriority] || patients[patientIdx].risk;
+      }
+
+      const newDiagnosis = getVal('edit-diagnosis');
+      if (newDiagnosis !== currentEditPatient.diagnosis) {
+        changes.updates.push(`Diagnosis updated`);
+        patients[patientIdx].diagnosis = newDiagnosis;
+      }
     }
 
     const newAdmDate = getVal('edit-admdate');
@@ -25512,36 +26123,38 @@ function saveEditPatient(ev) {
       patients[patientIdx].notes = newNotes;
     }
   
-    const vitalReason = getVal('edit-vitals-reason');
-    const newHR = getVal('edit-hr');
-    const newO2 = getVal('edit-o2');
-    const newBP = getVal('edit-bp');
-    const newTemp = getVal('edit-temp');
-    const newRR = getVal('edit-rr');
-    
-    // The form always pre-fills these fields with the patient's current
-    // vitals, so they're never empty - compare against the previous value
-    // (like every other field here does) instead of just checking
-    // truthiness, otherwise every save logs a spurious "Vitals updated"
-    // and incorrectly triggers the clinical safety override below even
-    // when the user only touched an unrelated field.
-    const vitalsChanged =
-      (newHR && parseInt(newHR) !== currentEditPatient.hr) ||
-      (newO2 && parseInt(newO2) !== currentEditPatient.o2) ||
-      (newBP && newBP !== currentEditPatient.bp) ||
-      (newTemp && parseFloat(newTemp) !== currentEditPatient.temp) ||
-      (newRR && parseInt(newRR) !== currentEditPatient.rr);
-    if (vitalsChanged) {
-      changes.updates.push(`Vitals updated (${vitalReason})`);
-      clinicallyRelevantChange = true;
-      if (newHR) patients[patientIdx].hr = parseInt(newHR);
-      if (newO2) patients[patientIdx].o2 = parseInt(newO2);
-      if (newBP) patients[patientIdx].bp = newBP;
-      if (newTemp) patients[patientIdx].temp = parseFloat(newTemp);
-      if (newRR) patients[patientIdx].rr = parseInt(newRR);
-    }
-    if (vitalReason !== (currentEditPatient.updateReason || 'correction')) {
-      patients[patientIdx].updateReason = vitalReason;
+    if (!currentState.medicalLocked) {
+      const vitalReason = getVal('edit-vitals-reason');
+      const newHR = getVal('edit-hr');
+      const newO2 = getVal('edit-o2');
+      const newBP = getVal('edit-bp');
+      const newTemp = getVal('edit-temp');
+      const newRR = getVal('edit-rr');
+
+      // The form always pre-fills these fields with the patient's current
+      // vitals, so they're never empty - compare against the previous value
+      // (like every other field here does) instead of just checking
+      // truthiness, otherwise every save logs a spurious "Vitals updated"
+      // and incorrectly triggers the clinical safety override below even
+      // when the user only touched an unrelated field.
+      const vitalsChanged =
+        (newHR && parseInt(newHR) !== currentEditPatient.hr) ||
+        (newO2 && parseInt(newO2) !== currentEditPatient.o2) ||
+        (newBP && newBP !== currentEditPatient.bp) ||
+        (newTemp && parseFloat(newTemp) !== currentEditPatient.temp) ||
+        (newRR && parseInt(newRR) !== currentEditPatient.rr);
+      if (vitalsChanged) {
+        changes.updates.push(`Vitals updated (${vitalReason})`);
+        clinicallyRelevantChange = true;
+        if (newHR) patients[patientIdx].hr = parseInt(newHR);
+        if (newO2) patients[patientIdx].o2 = parseInt(newO2);
+        if (newBP) patients[patientIdx].bp = newBP;
+        if (newTemp) patients[patientIdx].temp = parseFloat(newTemp);
+        if (newRR) patients[patientIdx].rr = parseInt(newRR);
+      }
+      if (vitalReason !== (currentEditPatient.updateReason || 'correction')) {
+        patients[patientIdx].updateReason = vitalReason;
+      }
     }
   
     const newNokName = getVal('edit-nok-name');
@@ -25561,24 +26174,26 @@ function saveEditPatient(ev) {
       }
     }
   
-    const newStatus = getVal('edit-patient-status');
-    const mappedStatus = newStatus === 'discharged'
-      ? 'discharged'
-      : newStatus === 'pending'
-        ? 'due'
-        : newStatus === 'deceased'
-          ? 'deceased'
-          : 'admitted';
-    if (mappedStatus !== currentEditPatient.dischStatus) {
-      changes.updates.push(`Status: "${currentEditPatient.dischStatus}" → "${mappedStatus}"`);
-      clinicallyRelevantChange = true;
-      patients[patientIdx].dischStatus = mappedStatus;
-      if (mappedStatus === 'discharged') patients[patientIdx].dischDate = 'Today';
-      else if (mappedStatus === 'due') patients[patientIdx].dischDate = 'Today';
-      else if (mappedStatus === 'deceased') patients[patientIdx].dischDate = 'Deceased';
-      else if (patients[patientIdx].los != null && patients[patientIdx].admDays != null) {
-        const daysLeft = Math.max(1, patients[patientIdx].los - patients[patientIdx].admDays);
-        patients[patientIdx].dischDate = `In ${daysLeft} days`;
+    if (!currentState.medicalLocked) {
+      const newStatus = getVal('edit-patient-status');
+      const mappedStatus = newStatus === 'discharged'
+        ? 'discharged'
+        : newStatus === 'pending'
+          ? 'due'
+          : newStatus === 'deceased'
+            ? 'deceased'
+            : 'admitted';
+      if (mappedStatus !== currentEditPatient.dischStatus) {
+        changes.updates.push(`Status: "${currentEditPatient.dischStatus}" → "${mappedStatus}"`);
+        clinicallyRelevantChange = true;
+        patients[patientIdx].dischStatus = mappedStatus;
+        if (mappedStatus === 'discharged') patients[patientIdx].dischDate = 'Today';
+        else if (mappedStatus === 'due') patients[patientIdx].dischDate = 'Today';
+        else if (mappedStatus === 'deceased') patients[patientIdx].dischDate = 'Deceased';
+        else if (patients[patientIdx].los != null && patients[patientIdx].admDays != null) {
+          const daysLeft = Math.max(1, patients[patientIdx].los - patients[patientIdx].admDays);
+          patients[patientIdx].dischDate = `In ${daysLeft} days`;
+        }
       }
     }
     
