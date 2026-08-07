@@ -1444,8 +1444,8 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
         Create Account →
       </button>
       <p style="text-align:center;margin-top:16px;font-size:13.5px;color:#6b7280">
-        Already have an account?
-        <button onclick="showSignIn()" style="background:none;border:none;cursor:pointer;
+        Already have a local account?
+        <button onclick="openLocalAccountModal('signin')" style="background:none;border:none;cursor:pointer;
           color:#1a6fc4;font-weight:700;font-size:13.5px;padding:0">Sign in</button>
       </p>
     </div>
@@ -1504,8 +1504,8 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
           color:#7c3aed;font-weight:600;font-size:13px;padding:0">Forgot password?</button>
       </p>
       <p style="text-align:center;margin-top:8px;font-size:13.5px;color:#6b7280">
-        Don't have an account?
-        <button type="button" onclick="showCreateAccount()" style="background:none;border:none;cursor:pointer;
+        Don't have a local account?
+        <button type="button" onclick="openLocalAccountModal('create')" style="background:none;border:none;cursor:pointer;
           color:#1a6fc4;font-weight:700;font-size:13.5px;padding:0">Create one</button>
       </p>
     </div>
@@ -2336,6 +2336,14 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
     </div>
 
     <div class="sb-box">
+      <div class="sb-box-label">Finance</div>
+      <div class="ni" onclick="showPage('billing')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" stroke-width="1.5"/><line x1="2" y1="10" x2="22" y2="10" stroke-width="1.5"/></svg>
+        Billing &amp; Payments<span class="nb" id="nb-billing-open" style="display:none"></span>
+      </div>
+    </div>
+
+    <div class="sb-box">
       <div class="sb-box-label">Wards & Beds</div>
       <div class="ni" onclick="showPage('wards')">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke-width="1.5"/><polyline points="9 22 9 12 15 12 15 22" stroke-width="1.5"/></svg>
@@ -2388,6 +2396,7 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
     </div>
     <div class="user-menu" id="sidebar-user-menu">
       <button class="user-menu-btn" onclick="showPage('settings');closeUserMenu()">⚙ Settings</button>
+      <button class="user-menu-btn" onclick="openLocalAccountModal();closeUserMenu()">🔑 Local Admin Sign-In</button>
       <button class="user-menu-btn danger" onclick="logoutCurrentUser()">↪ Log Out</button>
     </div>
   </div>
@@ -3270,6 +3279,155 @@ Waiting for data…</pre>
               <tbody id="exec-mort-province-table-body"></tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BILLING & PAYMENTS ═══ -->
+  <div class="page" id="page-billing">
+    <button class="back-btn" onclick="showPage('dashboard')"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 12H5M5 12l7 7M5 12l7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Back to Dashboard</button>
+    <div class="sec-t">💳 Billing &amp; Payments</div>
+    <div class="sec-s">Patient invoicing, VAT and payment tracking — administrator access only</div>
+
+    <div class="mGrid4">
+      <div class="mc crit">
+        <div class="mc-label">Total Outstanding</div>
+        <div class="mc-val crit" id="bill-kpi-outstanding">$0.00</div>
+        <div class="mc-sub" id="bill-kpi-outstanding-sub">Across all open invoices</div>
+        <div class="mc-ic">⏳</div>
+      </div>
+      <div class="mc stable">
+        <div class="mc-label">Collected This Month</div>
+        <div class="mc-val stable" id="bill-kpi-collected">$0.00</div>
+        <div class="mc-sub">All payment methods</div>
+        <div class="mc-ic">✅</div>
+      </div>
+      <div class="mc info">
+        <div class="mc-label">Open Invoices</div>
+        <div class="mc-val info" id="bill-kpi-open">0</div>
+        <div class="mc-sub">Unpaid or partially paid</div>
+        <div class="mc-ic">🧾</div>
+      </div>
+      <div class="mc purple">
+        <div class="mc-label">Government-Subsidized</div>
+        <div class="mc-val purple" id="bill-kpi-subsidized">0</div>
+        <div class="mc-sub">Invoices flagged subsidized</div>
+        <div class="mc-ic">🏛</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:9px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <input class="fi" style="max-width:260px" placeholder="🔍 Search patient or invoice #…" oninput="renderBillingTable()" id="billing-search">
+      <select class="fsel" style="width:160px" onchange="renderBillingTable()" id="billing-status-filter">
+        <option value="">All Statuses</option>
+        <option value="open">Open</option>
+        <option value="partial">Partially Paid</option>
+        <option value="paid">Paid</option>
+        <option value="waived">Waived</option>
+      </select>
+      <button class="btn btn-p" onclick="openInvoicePatientPicker()">+ New Invoice</button>
+    </div>
+
+    <div class="card">
+      <div class="ch"><div class="ct">Invoices</div><div style="font-size:10px;color:var(--text3)" id="billing-count-note"></div></div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th>Invoice #</th><th>Patient</th><th>Facility</th><th>Date</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th><th></th></tr></thead>
+          <tbody id="billing-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ INVOICE PATIENT PICKER ═══ -->
+  <div id="invoice-picker-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)">
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.5)">
+      <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:16px;font-weight:700;color:var(--text)">Select Patient</div>
+        <button onclick="closeInvoicePatientPicker()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px;padding:4px">✕</button>
+      </div>
+      <div style="padding:16px 24px">
+        <input class="fi" placeholder="Search by name or ID…" oninput="renderInvoicePatientPicker(this.value)" id="invoice-picker-search" style="margin-bottom:12px">
+        <div id="invoice-picker-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ INVOICE EDITOR ═══ -->
+  <div id="invoice-editor-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)">
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;max-width:760px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.5)">
+      <div style="padding:22px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);z-index:10">
+        <div>
+          <div style="font-size:18px;font-weight:700;color:var(--text)" id="inv-editor-title">Invoice</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px" id="inv-editor-subtitle">Patient · Facility</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge" id="inv-status-badge">Open</span>
+          <button onclick="closeInvoiceEditor()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px;padding:4px">✕</button>
+        </div>
+      </div>
+
+      <div style="padding:24px 28px;display:flex;flex-direction:column;gap:18px">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text2);cursor:pointer">
+            <input type="checkbox" id="inv-subsidized" onchange="saveCurrentInvoice()"> Government-subsidized care — exclude from patient-billed collection totals
+          </label>
+          <button class="btn btn-g btn-sm" onclick="toggleInvoiceWaived()" id="inv-waive-btn">Mark as Waived</button>
+        </div>
+
+        <!-- Line items -->
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">🧾 Line Items</div>
+          <div style="overflow-x:auto">
+            <table class="tbl">
+              <thead><tr><th>Description</th><th style="width:90px">Amount</th><th style="width:120px">VAT</th><th style="width:90px">Line Total</th><th style="width:36px"></th></tr></thead>
+              <tbody id="invoice-lineitems-body"></tbody>
+            </table>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+            <input class="fi" style="flex:2;min-width:160px" placeholder="e.g. Ward bed-day, Consultation, X-ray" id="inv-new-desc">
+            <input class="fi" style="width:100px" type="number" step="0.01" placeholder="Amount" id="inv-new-amount">
+            <select class="fsel" style="width:140px" id="inv-new-vat">
+              <option value="15">Standard 15%</option>
+              <option value="0">Zero-rated</option>
+              <option value="exempt">Exempt</option>
+            </select>
+            <button class="btn btn-g btn-sm" onclick="addInvoiceLineItem()">+ Add Line</button>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:20px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:13px">
+            <div>Subtotal: <strong id="inv-subtotal" class="mono">$0.00</strong></div>
+            <div>VAT: <strong id="inv-vat-total" class="mono">$0.00</strong></div>
+            <div>Total: <strong id="inv-grand-total" class="mono" style="color:var(--blue)">$0.00</strong></div>
+          </div>
+        </div>
+
+        <!-- Payments -->
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">💵 Payments</div>
+          <div style="overflow-x:auto">
+            <table class="tbl">
+              <thead><tr><th>Date</th><th>Method</th><th>Reference</th><th style="width:90px">Amount</th></tr></thead>
+              <tbody id="invoice-payments-body"></tbody>
+            </table>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+            <select class="fsel" style="width:150px" id="inv-pay-method">
+              <option>Cash</option><option>EcoCash</option><option>OneMoney</option><option>Card</option><option>Medical Aid</option><option>Government Subsidy</option>
+            </select>
+            <input class="fi" style="width:100px" type="number" step="0.01" placeholder="Amount" id="inv-pay-amount">
+            <input class="fi" style="flex:1;min-width:140px" placeholder="Reference (optional)" id="inv-pay-ref">
+            <button class="btn btn-g btn-sm" onclick="recordInvoicePayment()">+ Record Payment</button>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:14px">
+            Balance Due: <strong id="inv-balance-due" class="mono" style="margin-left:8px;color:var(--crit)">$0.00</strong>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:9px">
+          <button class="btn btn-p" onclick="exportInvoicePDF()">📄 Export PDF</button>
+          <button class="btn btn-g" onclick="closeInvoiceEditor()">Close</button>
         </div>
       </div>
     </div>
@@ -5727,7 +5885,7 @@ let pendingWardTransferId = null;
 // ═══════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════
-const pageTitles = {dashboard:'Dashboard Overview',monitoring:'Live Monitoring',patients:'Patient Registry',discharge:'Discharge Management',records:'Patient Records Database',beds:'Ward Monitor & Bed Management',analytics:'Analytics Overview',ai:'AI Predictions',alerts:'Alert Management',register:'Register Patient',wards:'Ward Monitor & Bed Management',outpatient:'Outpatient Management','ai-hub':'AI Clinical Hub','ai-clinical':'AI Clinical Intelligence',xray:'X-ray AI Scanner — Radiology Intelligence',settings:'Settings & API Configuration',admin:'Admin Panel — System Control',exec:'Ministerial Executive Portal — National Overview'};
+const pageTitles = {dashboard:'Dashboard Overview',monitoring:'Live Monitoring',patients:'Patient Registry',discharge:'Discharge Management',records:'Patient Records Database',beds:'Ward Monitor & Bed Management',analytics:'Analytics Overview',ai:'AI Predictions',alerts:'Alert Management',register:'Register Patient',wards:'Ward Monitor & Bed Management',outpatient:'Outpatient Management','ai-hub':'AI Clinical Hub','ai-clinical':'AI Clinical Intelligence',xray:'X-ray AI Scanner — Radiology Intelligence',settings:'Settings & API Configuration',admin:'Admin Panel — System Control',exec:'Ministerial Executive Portal — National Overview',billing:'Billing & Payments'};
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -7312,6 +7470,15 @@ function showPage(id){
     }
     try { SmartCareLog.audit('ADMIN_PAGE_OPENED', { role }); } catch(e) {}
   }
+  if(id==='billing'){
+    const role = (getSession()?.role || SmartCareSecurity.getSession()?.role || '').toLowerCase();
+    if(!role.includes('admin')){
+      try { SmartCareLog.audit('BILLING_PAGE_DENIED', { role }); } catch(e) {}
+      showToast('Billing & Payments is restricted to administrator accounts.', true, '🔒 Access Denied');
+      return;
+    }
+    try { SmartCareLog.audit('BILLING_PAGE_OPENED', { role }); } catch(e) {}
+  }
   // Register and records are now embedded panes — route to their parent pages
   if(id==='register'){
     showPage('patients');
@@ -7333,7 +7500,7 @@ function showPage(id){
   const _contentEl = document.querySelector('.content');
   if(_contentEl) _contentEl.scrollTop = 0;
   window.scrollTo(0, 0);
-  const inits = {monitoring:initMonitoring,analytics:initAnalytics,ai:initAIPage,discharge:initDischarge,wards:initWards,outpatient:initOutpatient,'ai-hub':initAIHub,'ai-clinical':initAIClinical,xray:initXray,settings:initSettings,admin:initAdminPage,exec:initExecPortal};
+  const inits = {monitoring:initMonitoring,analytics:initAnalytics,ai:initAIPage,discharge:initDischarge,wards:initWards,outpatient:initOutpatient,'ai-hub':initAIHub,'ai-clinical':initAIClinical,xray:initXray,settings:initSettings,admin:initAdminPage,exec:initExecPortal,billing:initBilling};
   if(inits[id]) inits[id]();
   if(id==='register'){ _scInitNationalityPickers(); _scSyncAllNationalityPickers(); }
   if(id==='patients'){ renderPatientTable(patients); showPatPane('registry'); }
@@ -10699,6 +10866,369 @@ function enterExecutivePortal(){
 function exitExecutivePortal(){
   goToLanding();
   showToast('Exited Executive Portal', false, '🏛');
+}
+
+// ═══════════════════════════════════════════════════
+// BILLING & PAYMENTS
+// ═══════════════════════════════════════════════════
+const BILLING_STORAGE_KEY = 'smartcare_billing_v1';
+
+function loadPersistedInvoices(){
+  try {
+    const stored = JSON.parse(localStorage.getItem(BILLING_STORAGE_KEY) || 'null');
+    if (Array.isArray(stored)) return stored;
+  } catch (e) {}
+  return [];
+}
+function persistInvoices(){
+  try { localStorage.setItem(BILLING_STORAGE_KEY, JSON.stringify(invoices)); } catch (e) {}
+}
+
+let invoices = loadPersistedInvoices();
+let currentInvoiceId = null;
+
+function generateInvoiceId(){
+  const year = new Date().getFullYear();
+  const n = invoices.filter(i => i.id && i.id.startsWith('INV-'+year)).length + 1;
+  return 'INV-' + year + '-' + String(n).padStart(5,'0');
+}
+
+function computeInvoiceTotals(inv){
+  let subtotal = 0, vatTotal = 0;
+  (inv.lineItems||[]).forEach(li => { subtotal += li.amount; vatTotal += li.vatAmount; });
+  const total = Math.round((subtotal + vatTotal) * 100) / 100;
+  const paid = Math.round((inv.payments||[]).reduce((s,p)=>s+p.amount,0) * 100) / 100;
+  const balance = Math.max(0, Math.round((total - paid) * 100) / 100);
+  let status = 'open';
+  if (inv.waived) status = 'waived';
+  else if (total > 0 && paid >= total) status = 'paid';
+  else if (paid > 0) status = 'partial';
+  return { subtotal: Math.round(subtotal*100)/100, vatTotal: Math.round(vatTotal*100)/100, total, paid, balance, status };
+}
+
+function initBilling(){
+  renderBillingTable();
+}
+
+function openInvoicePatientPicker(){
+  const search = document.getElementById('invoice-picker-search');
+  if (search) search.value = '';
+  renderInvoicePatientPicker('');
+  document.getElementById('invoice-picker-overlay').style.display = 'flex';
+}
+function closeInvoicePatientPicker(){
+  document.getElementById('invoice-picker-overlay').style.display = 'none';
+}
+function renderInvoicePatientPicker(query){
+  const q = (query||'').toLowerCase().trim();
+  const pool = [
+    ...(Array.isArray(patients)?patients:[]).map(p => ({ ...p, _status:'Admitted' })),
+    ...(Array.isArray(dischargedPatients)?dischargedPatients:[]).filter(d => d.condition !== 'Deceased').map(p => ({ ...p, _status:'Discharged' }))
+  ];
+  const filtered = pool.filter(p => !q ||
+    (p.name||'').toLowerCase().includes(q) ||
+    (p.id||'').toLowerCase().includes(q) ||
+    (p.nationalId||'').toLowerCase().includes(q)
+  ).slice(0,40);
+  const list = document.getElementById('invoice-picker-list');
+  if (!list) return;
+  list.innerHTML = filtered.map(p => `
+    <div onclick="createInvoiceForPatient('${p.id}')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer">
+      <div><div style="font-weight:600;color:var(--text);font-size:13px">${_scEsc(p.name)}</div><div style="font-size:11px;color:var(--text3)">${_scEsc(p.ward||'')} · ${_scEsc(p._status)}</div></div>
+      <span style="font-size:10px;color:var(--text3)">${_scEsc(p.id)}</span>
+    </div>`).join('') || '<div style="color:var(--text3);text-align:center;padding:16px;font-size:12px">No matching patients</div>';
+}
+
+function createInvoiceForPatient(pid){
+  const p = (patients.find(x=>x.id===pid)) || (dischargedPatients.find(x=>x.id===pid));
+  if (!p) { showToast('Patient not found', true); return; }
+  const inv = {
+    id: generateInvoiceId(),
+    patientId: p.id,
+    patientName: p.name,
+    province: p.province || '',
+    facility: p.facility || '',
+    createdAt: new Date().toISOString(),
+    lineItems: [],
+    payments: [],
+    subsidized: false,
+    waived: false
+  };
+  invoices.unshift(inv);
+  persistInvoices();
+  closeInvoicePatientPicker();
+  openInvoiceEditor(inv.id);
+  renderBillingTable();
+  showToast(`Invoice ${inv.id} created for ${p.name}`, false, '🧾 New Invoice');
+}
+
+function openInvoiceEditor(invId){
+  currentInvoiceId = invId;
+  document.getElementById('invoice-editor-overlay').style.display = 'flex';
+  renderInvoiceEditor();
+}
+function closeInvoiceEditor(){
+  document.getElementById('invoice-editor-overlay').style.display = 'none';
+  currentInvoiceId = null;
+  renderBillingTable();
+}
+
+function addInvoiceLineItem(){
+  const inv = invoices.find(i=>i.id===currentInvoiceId);
+  if (!inv) return;
+  const desc = document.getElementById('inv-new-desc').value.trim();
+  const amount = parseFloat(document.getElementById('inv-new-amount').value);
+  const vatSel = document.getElementById('inv-new-vat').value;
+  if (!desc) { showToast('Enter a description for the line item.', true, '⚠ Validation'); return; }
+  if (!amount || amount <= 0) { showToast('Enter a valid amount.', true, '⚠ Validation'); return; }
+  const vatRate = vatSel === 'exempt' ? 0 : parseFloat(vatSel);
+  const vatAmount = Math.round(amount * (vatRate/100) * 100) / 100;
+  inv.lineItems.push({
+    id: 'LI-' + Date.now() + '-' + Math.floor(Math.random()*1000),
+    description: desc,
+    amount: Math.round(amount*100)/100,
+    vatLabel: vatSel === 'exempt' ? 'Exempt' : (vatRate + '%'),
+    vatAmount,
+    addedAt: new Date().toISOString()
+  });
+  document.getElementById('inv-new-desc').value = '';
+  document.getElementById('inv-new-amount').value = '';
+  saveCurrentInvoice();
+}
+
+function removeInvoiceLineItem(liId){
+  const inv = invoices.find(i=>i.id===currentInvoiceId);
+  if (!inv) return;
+  inv.lineItems = inv.lineItems.filter(li => li.id !== liId);
+  saveCurrentInvoice();
+}
+
+function recordInvoicePayment(){
+  const inv = invoices.find(i=>i.id===currentInvoiceId);
+  if (!inv) return;
+  const method = document.getElementById('inv-pay-method').value;
+  const amount = parseFloat(document.getElementById('inv-pay-amount').value);
+  const ref = document.getElementById('inv-pay-ref').value.trim();
+  if (!amount || amount <= 0) { showToast('Enter a valid payment amount.', true, '⚠ Validation'); return; }
+  inv.payments.push({
+    id: 'PMT-' + Date.now() + '-' + Math.floor(Math.random()*1000),
+    method, amount: Math.round(amount*100)/100, reference: ref, date: new Date().toISOString()
+  });
+  document.getElementById('inv-pay-amount').value = '';
+  document.getElementById('inv-pay-ref').value = '';
+  saveCurrentInvoice();
+  showToast(`Payment of $${amount.toFixed(2)} recorded via ${method}`, false, '✅ Payment Recorded');
+}
+
+function toggleInvoiceWaived(){
+  const inv = invoices.find(i=>i.id===currentInvoiceId);
+  if (!inv) return;
+  inv.waived = !inv.waived;
+  saveCurrentInvoice();
+  showToast(inv.waived ? 'Invoice marked as waived' : 'Waived status removed', false, inv.waived ? '✓ Waived' : 'ℹ Updated');
+}
+
+function saveCurrentInvoice(){
+  const inv = invoices.find(i=>i.id===currentInvoiceId);
+  if (!inv) return;
+  const subChk = document.getElementById('inv-subsidized');
+  if (subChk) inv.subsidized = subChk.checked;
+  persistInvoices();
+  renderInvoiceEditor();
+  renderBillingTable();
+}
+
+const INVOICE_STATUS_META = { open:['Open','high'], partial:['Partially Paid','moderate'], paid:['Paid','stable'], waived:['Waived','discharge'] };
+
+function renderInvoiceEditor(){
+  const inv = invoices.find(i=>i.id===currentInvoiceId);
+  if (!inv) return;
+  const t = computeInvoiceTotals(inv);
+
+  document.getElementById('inv-editor-title').textContent = inv.id;
+  document.getElementById('inv-editor-subtitle').textContent = `${inv.patientName} · ${inv.facility || 'Facility not set'} · ${inv.province || 'Province not set'}`;
+
+  const badge = document.getElementById('inv-status-badge');
+  const [label, cls] = INVOICE_STATUS_META[t.status] || ['Open','high'];
+  badge.textContent = label;
+  badge.className = 'badge ' + cls;
+
+  document.getElementById('inv-subsidized').checked = !!inv.subsidized;
+  const waiveBtn = document.getElementById('inv-waive-btn');
+  if (waiveBtn) waiveBtn.textContent = inv.waived ? '↺ Remove Waived Status' : 'Mark as Waived';
+
+  const liBody = document.getElementById('invoice-lineitems-body');
+  liBody.innerHTML = (inv.lineItems||[]).map(li => `
+    <tr>
+      <td>${_scEsc(li.description)}</td>
+      <td class="mono">$${li.amount.toFixed(2)}</td>
+      <td class="mono" style="color:var(--text3);font-size:11px">${li.vatLabel}${li.vatAmount ? ' ($'+li.vatAmount.toFixed(2)+')' : ''}</td>
+      <td class="mono">$${(li.amount+li.vatAmount).toFixed(2)}</td>
+      <td><button onclick="removeInvoiceLineItem('${li.id}')" style="background:none;border:none;color:var(--crit);cursor:pointer;font-size:14px">✕</button></td>
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:12px">No line items yet</td></tr>';
+
+  document.getElementById('inv-subtotal').textContent = '$' + t.subtotal.toFixed(2);
+  document.getElementById('inv-vat-total').textContent = '$' + t.vatTotal.toFixed(2);
+  document.getElementById('inv-grand-total').textContent = '$' + t.total.toFixed(2);
+
+  const payBody = document.getElementById('invoice-payments-body');
+  payBody.innerHTML = (inv.payments||[]).map(p => `
+    <tr>
+      <td style="color:var(--text3);font-size:11.5px">${new Date(p.date).toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})}</td>
+      <td>${_scEsc(p.method)}</td>
+      <td style="color:var(--text3)">${_scEsc(p.reference || '—')}</td>
+      <td class="mono">$${p.amount.toFixed(2)}</td>
+    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:12px">No payments recorded yet</td></tr>';
+
+  const balEl = document.getElementById('inv-balance-due');
+  balEl.textContent = '$' + t.balance.toFixed(2);
+  balEl.style.color = t.balance > 0 ? 'var(--crit)' : 'var(--green)';
+}
+
+function renderBillingTable(){
+  const q = (document.getElementById('billing-search')?.value || '').toLowerCase().trim();
+  const statusFilter = document.getElementById('billing-status-filter')?.value || '';
+
+  const rows = invoices.map(inv => ({ inv, t: computeInvoiceTotals(inv) })).filter(({inv,t}) => {
+    if (statusFilter && t.status !== statusFilter) return false;
+    if (q && !(inv.patientName||'').toLowerCase().includes(q) && !(inv.id||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('billing-table-body');
+  if (tbody) {
+    tbody.innerHTML = rows.map(({inv,t}) => {
+      const [label, cls] = INVOICE_STATUS_META[t.status] || ['Open','high'];
+      return `
+      <tr style="cursor:pointer" onclick="openInvoiceEditor('${inv.id}')">
+        <td class="mono">${inv.id}</td>
+        <td style="font-weight:600;color:var(--text)">${_scEsc(inv.patientName)}</td>
+        <td style="color:var(--text3)">${_scEsc(inv.facility || '—')}</td>
+        <td style="color:var(--text3);font-size:11.5px">${new Date(inv.createdAt).toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})}</td>
+        <td class="mono">$${t.total.toFixed(2)}</td>
+        <td class="mono">$${t.paid.toFixed(2)}</td>
+        <td class="mono" style="color:${t.balance>0?'var(--crit)':'var(--green)'}">$${t.balance.toFixed(2)}</td>
+        <td><span class="badge ${cls}">${label}</span></td>
+        <td><button onclick="event.stopPropagation();exportInvoicePDFById('${inv.id}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px" title="Export PDF">📄</button></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px">No invoices yet — click + New Invoice to create one</td></tr>';
+  }
+
+  const countNote = document.getElementById('billing-count-note');
+  if (countNote) countNote.textContent = `${rows.length} of ${invoices.length} invoice${invoices.length===1?'':'s'}`;
+
+  const allTotals = invoices.map(inv => ({ inv, t: computeInvoiceTotals(inv) }));
+  const outstanding = allTotals.filter(({t}) => t.status==='open'||t.status==='partial').reduce((s,{t})=>s+t.balance,0);
+  const now = new Date();
+  const collectedThisMonth = invoices.reduce((sum, inv) => sum + (inv.payments||[]).filter(p => {
+    const d = new Date(p.date);
+    return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
+  }).reduce((s,p)=>s+p.amount,0), 0);
+  const openCount = allTotals.filter(({t}) => t.status==='open'||t.status==='partial').length;
+  const subsidizedCount = invoices.filter(inv => inv.subsidized).length;
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('bill-kpi-outstanding', '$' + outstanding.toFixed(2));
+  set('bill-kpi-collected', '$' + collectedThisMonth.toFixed(2));
+  set('bill-kpi-open', openCount);
+  set('bill-kpi-subsidized', subsidizedCount);
+
+  const navBadge = document.getElementById('nb-billing-open');
+  if (navBadge) {
+    if (openCount > 0) { navBadge.style.display = 'inline-flex'; navBadge.textContent = openCount; navBadge.className = 'nb amber'; }
+    else navBadge.style.display = 'none';
+  }
+}
+
+function exportInvoicePDFById(invId){
+  const inv = invoices.find(i=>i.id===invId);
+  if (inv) _buildInvoicePDF(inv);
+}
+function exportInvoicePDF(){
+  const inv = invoices.find(i=>i.id===currentInvoiceId);
+  if (inv) _buildInvoicePDF(inv);
+}
+function _buildInvoicePDF(inv){
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) { showToast('PDF library not loaded.', true); return; }
+  const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+  const t = computeInvoiceTotals(inv);
+  const pw = doc.internal.pageSize.getWidth();
+  const mg = 16;
+  let y = 20;
+
+  const hospName = document.getElementById('hosp-name')?.value?.trim() || 'SmartCare Hospital';
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(20,60,110);
+  doc.text(pdfSanitise(hospName), mg, y); y += 7;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(90,100,115);
+  doc.text('INVOICE', mg, y); y += 8;
+  doc.setDrawColor(220,225,232); doc.line(mg, y, pw-mg, y); y += 8;
+
+  doc.setFontSize(10); doc.setTextColor(40,45,55);
+  doc.text(`Invoice #: ${pdfSanitise(inv.id)}`, mg, y);
+  doc.text(`Date: ${new Date(inv.createdAt).toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})}`, pw-mg, y, {align:'right'});
+  y += 6;
+  doc.text(`Patient: ${pdfSanitise(inv.patientName)}`, mg, y);
+  doc.text(`Status: ${t.status.charAt(0).toUpperCase()+t.status.slice(1)}`, pw-mg, y, {align:'right'});
+  y += 6;
+  doc.text(`Facility: ${pdfSanitise(inv.facility||'Not specified')}`, mg, y); y += 6;
+  doc.text(`Province: ${pdfSanitise(inv.province||'Not specified')}`, mg, y); y += 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(255,255,255);
+  doc.setFillColor(30,80,160);
+  doc.rect(mg, y, pw-2*mg, 8, 'F');
+  doc.text('Description', mg+3, y+5.5);
+  doc.text('Amount', pw-mg-52, y+5.5);
+  doc.text('VAT', pw-mg-30, y+5.5);
+  doc.text('Total', pw-mg-3, y+5.5, {align:'right'});
+  y += 8;
+
+  doc.setFont('helvetica','normal'); doc.setTextColor(40,45,55); doc.setFontSize(9);
+  (inv.lineItems||[]).forEach((li,i) => {
+    if (y > 265) { doc.addPage(); y = 20; }
+    if (i % 2 === 1) { doc.setFillColor(246,248,251); doc.rect(mg, y, pw-2*mg, 7, 'F'); }
+    doc.text(pdfSanitise(li.description).slice(0,55), mg+3, y+5);
+    doc.text('$'+li.amount.toFixed(2), pw-mg-52, y+5);
+    doc.text(li.vatLabel, pw-mg-30, y+5);
+    doc.text('$'+(li.amount+li.vatAmount).toFixed(2), pw-mg-3, y+5, {align:'right'});
+    y += 7;
+  });
+  y += 4;
+  doc.setDrawColor(220,225,232); doc.line(mg, y, pw-mg, y); y += 7;
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(40,45,55);
+  doc.text('Subtotal:', pw-mg-45, y); doc.text('$'+t.subtotal.toFixed(2), pw-mg-3, y, {align:'right'}); y += 6;
+  doc.text('VAT:', pw-mg-45, y); doc.text('$'+t.vatTotal.toFixed(2), pw-mg-3, y, {align:'right'}); y += 6;
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,60,110);
+  doc.text('Total:', pw-mg-45, y); doc.text('$'+t.total.toFixed(2), pw-mg-3, y, {align:'right'}); y += 10;
+
+  if ((inv.payments||[]).length) {
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(30,120,80);
+    doc.text('Payments Received', mg, y); y += 6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(40,45,55);
+    inv.payments.forEach(p => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.text(`${new Date(p.date).toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})} - ${pdfSanitise(p.method)}${p.reference ? ' (Ref: '+pdfSanitise(p.reference)+')' : ''}`, mg, y);
+      doc.text('$'+p.amount.toFixed(2), pw-mg-3, y, {align:'right'});
+      y += 5.5;
+    });
+    y += 4;
+  }
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(12);
+  if (t.balance > 0) doc.setTextColor(190,60,50); else doc.setTextColor(40,150,80);
+  doc.text('Balance Due: $' + t.balance.toFixed(2), mg, y); y += 10;
+
+  if (inv.subsidized) {
+    doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(120,90,20);
+    doc.text('This invoice is flagged as government-subsidized care.', mg, y); y += 6;
+  }
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(150,155,165);
+  doc.text('Generated by SmartCare AI - ' + new Date().toLocaleString('en-ZA'), mg, 287);
+
+  doc.save(`Invoice_${inv.id}_${(inv.patientName||'patient').replace(/\s+/g,'_')}.pdf`);
+  showToast('Invoice PDF downloaded', false, '📄 Exported');
 }
 
 // ═══════════════════════════════════════════════════
@@ -20198,6 +20728,26 @@ function closeAuthModal(){
   if(ov){ ov.style.display='none'; }
   if(mc){ mc.style.display='none'; }
   if(ms){ ms.style.display='none'; }
+}
+
+// Device-local account modal — no server/proxy required. This is the only
+// path that lets a user pick a role (incl. Admin, via the bootstrap-first-
+// admin rule in _canAssignRole) since the OAuth-based Create Account flow
+// talks to the local proxy and has no role field.
+function openLocalAccountModal(mode){
+  const ov = document.getElementById('auth-overlay');
+  const mc = document.getElementById('auth-modal-create');
+  const ms = document.getElementById('auth-modal-signin');
+  if(!ov || !mc || !ms) return;
+  ov.style.display = 'flex';
+  const showCreate = mode !== 'signin';
+  mc.style.display = showCreate ? 'block' : 'none';
+  ms.style.display = showCreate ? 'none' : 'block';
+  const errEl = document.getElementById('auth-error');
+  if(errEl) errEl.textContent = '';
+  const signinErrEl = document.getElementById('auth-signin-error');
+  if(signinErrEl) signinErrEl.textContent = '';
+  if(showCreate) _refreshCreateAccountRoleAccess();
 }
 
 
