@@ -759,6 +759,9 @@ html{scroll-behavior:smooth}
 .ai-model-tab[data-model="chatgpt"].active{background:linear-gradient(135deg,#10a37f,#0d8b6b)}
 .ai-model-tab[data-model="qwen"].active{background:linear-gradient(135deg,#a855f7,#7c3aed)}
 .ai-model-tab[data-model="phi3local"].active{background:linear-gradient(135deg,#0ea5a4,#0f766e)}
+/* Full-page mode for an AI response card — toggled by toggleAIFullscreen() */
+.ai-fullscreen-card{position:fixed!important;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;max-height:100vh;margin:0!important;border-radius:0!important;z-index:9999;overflow-y:auto;display:flex;flex-direction:column}
+.ai-fullscreen-card>div:first-child{flex-shrink:0}
 
 /* PATIENT JOURNEY */
 .journey-step{display:flex;gap:10px;padding:8px 0;position:relative}
@@ -3439,12 +3442,13 @@ Waiting for data…</pre>
             </div>
           </div>
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-g btn-sm" id="exec-ai-response-card-fullscreen-btn" onclick="toggleAIFullscreen('exec-ai-chat','exec-ai-response-card')">⛶ Full Page</button>
             <button class="btn btn-g btn-sm" onclick="copyExecAIResponse()">📋 Copy</button>
             <button class="btn btn-g btn-sm" onclick="printExecAIResponse()">🖨 Print</button>
             <button class="btn btn-g btn-sm" onclick="clearExecAIResponse()" style="color:var(--text3)">✕ Clear</button>
           </div>
         </div>
-        <div id="exec-ai-chat" style="max-height:580px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;padding:2px 0"></div>
+        <div id="exec-ai-chat" style="display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;padding:2px 0"></div>
       </div>
 
       <div class="card" style="border:1px solid var(--border2);position:sticky;bottom:0;background:var(--bg2);z-index:10;box-shadow:0 -2px 12px rgba(30,80,160,.08)">
@@ -4081,6 +4085,7 @@ Waiting for data…</pre>
           </div>
         </div>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-g btn-sm" id="ai-hub-response-card-fullscreen-btn" onclick="toggleAIFullscreen('ai-hub-chat','ai-hub-response-card')">⛶ Full Page</button>
           <button class="btn btn-g btn-sm" onclick="copyHubResponse()">📋 Copy</button>
           <button class="btn btn-g btn-sm" onclick="printHubResponse()">🖨 Print</button>
           <button class="btn btn-p btn-sm" onclick="exportHubResponsePDF()" style="background:linear-gradient(135deg,var(--blue2),var(--blue));border:none">⬇ Export PDF</button>
@@ -4099,7 +4104,7 @@ Waiting for data…</pre>
         <button class="btn btn-g btn-sm" onclick="hubAsk('Calculate antibiotic dosing for sepsis patients.')">💊 Antibiotics</button>
       </div>
       <!-- Scrollable chat messages -->
-      <div id="ai-hub-chat" style="max-height:580px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;padding:2px 0"></div>
+      <div id="ai-hub-chat" style="display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;padding:2px 0"></div>
     </div>
 
     <!-- ASK AI INPUT — sticky at bottom -->
@@ -4172,13 +4177,14 @@ Waiting for data…</pre>
           </div>
         </div>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-g btn-sm" id="ai-clinical-response-card-fullscreen-btn" onclick="toggleAIFullscreen('ai-clinical-chat','ai-clinical-response-card')">⛶ Full Page</button>
           <button class="btn btn-g btn-sm" onclick="copyHubResponse()">📋 Copy</button>
           <button class="btn btn-g btn-sm" onclick="printHubResponse()">🖨 Print</button>
           <button class="btn btn-p btn-sm" onclick="exportHubResponsePDF()" style="background:linear-gradient(135deg,var(--blue2),var(--blue));border:none">⬇ Export PDF</button>
           <button class="btn btn-g btn-sm" onclick="clearHubResponse()" style="color:var(--text3)">✕ Clear</button>
         </div>
       </div>
-      <div id="ai-clinical-chat" style="max-height:520px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;padding:2px 0"></div>
+      <div id="ai-clinical-chat" style="display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;padding:2px 0"></div>
     </div>
 
     <div class="card" style="border:1px solid var(--border2);position:sticky;bottom:0;background:var(--bg2);z-index:10;box-shadow:0 -2px 12px rgba(30,80,160,.08)">
@@ -21508,6 +21514,35 @@ function reAdmitFromActive(pid) {
 // ═══════════════════════════════════════════════════════════════
 // AI HUB RESPONSE HELPERS
 // ═══════════════════════════════════════════════════════════════
+
+// Toggles an AI response card into a full-viewport overlay so a long answer
+// (charts, tables, multi-section briefings) can be read/presented without
+// the small in-page card. Used by the AI Clinical Hub, the clinical AI page
+// and the Ministerial "Ask AI" panel — same behaviour everywhere, just
+// pointed at each panel's own card/chat element IDs.
+function toggleAIFullscreen(chatId, cardId){
+  const card = document.getElementById(cardId);
+  const chat = document.getElementById(chatId);
+  if (!card) return;
+  const goingFullscreen = !card.classList.contains('ai-fullscreen-card');
+  card.classList.toggle('ai-fullscreen-card', goingFullscreen);
+  if (chat) {
+    chat.style.flex = goingFullscreen ? '1' : '';
+    chat.style.maxHeight = goingFullscreen ? '' : '';
+    chat.style.overflowY = goingFullscreen ? 'auto' : '';
+  }
+  document.body.style.overflow = goingFullscreen ? 'hidden' : '';
+  const btn = document.getElementById(cardId + '-fullscreen-btn');
+  if (btn) btn.textContent = goingFullscreen ? '✕ Exit Full Page' : '⛶ Full Page';
+  if (goingFullscreen) card.scrollIntoView({behavior:'auto', block:'start'});
+}
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const openCard = document.querySelector('.ai-fullscreen-card');
+  if (!openCard) return;
+  const chat = openCard.querySelector('[id$="-chat"]');
+  toggleAIFullscreen(chat?.id || '', openCard.id);
+});
 
 function clearHubResponse(){
   const aiCtx = getCurrentAIContext();
