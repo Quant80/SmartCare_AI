@@ -8,6 +8,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.3/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
@@ -1355,6 +1357,18 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
 .camera-status{font-size:13px;color:var(--text2);text-align:center;padding:8px 0}
 .patient-profile-camera-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:6px;background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.25);color:var(--cyan);cursor:pointer;transition:all .15s;margin:0 4px;font-size:16px}
 .patient-profile-camera-btn:hover{background:rgba(34,211,238,.25);border-color:rgba(34,211,238,.4)}
+
+/* SCAN PATIENT CARD FEATURE — staff camera scan of the barcode/QR on a
+   Patient ID Card, decoded in-browser (no photo capture, no upload) via
+   ZXing, straight into that patient's live profile. Reuses the camera
+   modal's chrome classes for visual consistency; only the video framing
+   (square rather than 3:4 portrait — better for aiming at a card) is its
+   own. */
+#scan-card-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:101;align-items:center;justify-content:center;flex-direction:column}
+#scan-card-modal.active{display:flex}
+.scan-video-container{width:100%;aspect-ratio:1/1;background:#000;border-radius:10px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;max-height:420px}
+#scan-card-video{width:100%;height:100%;object-fit:cover}
+.scan-video-container::after{content:'';position:absolute;inset:15%;border:2px solid rgba(79,168,232,.65);border-radius:10px;pointer-events:none}
 .modal-profile-photo-container{display:inline-flex;align-items:center;justify-content:center;margin-left:8px;vertical-align:middle}
 .modal-profile-photo{width:28px;height:28px;border-radius:8px;object-fit:cover;object-position:center top;border:1px solid rgba(255,255,255,.14);box-shadow:0 0 0 1px rgba(255,255,255,.08);vertical-align:middle}
 .modal-header-avatar{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#25d366,#128c7e);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;overflow:hidden;flex-shrink:0}
@@ -1399,6 +1413,34 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
   height: 16px; width: 16px; border-radius: 50%; background: var(--blue);
   cursor: pointer; border: 2px solid var(--bg2); box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
+
+/* ═══ Invoice Editor — redesigned components ═══ */
+.inv-card{background:var(--bg4);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.inv-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.inv-patient-strip{display:flex;flex-wrap:wrap;background:linear-gradient(135deg,rgba(79,168,232,.08),rgba(79,168,232,.02));border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.inv-patient-field{flex:1;min-width:96px;padding:11px 16px;border-right:1px solid var(--border)}
+.inv-patient-field:last-child{border-right:none}
+.inv-patient-field-label{color:var(--text3);font-size:9px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;font-weight:600}
+.inv-patient-field-value{font-weight:700;color:var(--text);font-size:13.5px}
+.inv-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.inv-toggle-text{display:flex;flex-direction:column;gap:3px;min-width:0}
+.inv-toggle-title{font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px}
+.inv-toggle-desc{font-size:11px;color:var(--text3);line-height:1.55}
+.inv-switch{position:relative;display:inline-block;width:42px;height:23px;flex-shrink:0;cursor:pointer}
+.inv-switch input{opacity:0;width:0;height:0;position:absolute}
+.inv-switch-track{position:absolute;inset:0;background:var(--border2);border-radius:24px;transition:background .18s}
+.inv-switch-track:before{content:'';position:absolute;height:17px;width:17px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .18s;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.inv-switch input:checked + .inv-switch-track{background:var(--blue)}
+.inv-switch input:checked + .inv-switch-track:before{transform:translateX(19px)}
+.inv-qa-wrap{position:relative;display:inline-block}
+.inv-qa-menu{display:none;position:absolute;bottom:calc(100% + 6px);left:0;min-width:290px;max-width:380px;max-height:280px;overflow-y:auto;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;box-shadow:0 18px 42px rgba(0,0,0,.35);padding:6px;z-index:30}
+.inv-qa-menu.open{display:block}
+.inv-qa-row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:9px 10px;border:none;background:transparent;border-radius:9px;color:var(--text2);font-size:12.5px;font-weight:600;cursor:pointer;text-align:left;transition:background .14s,color .14s;font-family:inherit}
+.inv-qa-row:hover{background:var(--bg4);color:var(--text)}
+.inv-qa-row-price{color:var(--blue);font-weight:700;font-size:11.5px;white-space:nowrap;font-family:var(--mono)}
+.inv-lineitem-auto{background:linear-gradient(90deg,rgba(79,168,232,.08),transparent);border-left:3px solid var(--blue)}
+.inv-live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:6px;flex-shrink:0;box-shadow:0 0 0 0 rgba(16,163,110,.5);animation:invLivePulse 1.8s infinite}
+@keyframes invLivePulse{0%{box-shadow:0 0 0 0 rgba(16,163,110,.45)}70%{box-shadow:0 0 0 6px rgba(16,163,110,0)}100%{box-shadow:0 0 0 0 rgba(16,163,110,0)}}
 </style>
 </head>
 <body>
@@ -2786,6 +2828,7 @@ Waiting for data…</pre>
     <div id="pat-pane-registry">
       <div style="display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
         <input class="fi" style="max-width:260px" placeholder="🔍  Search name, ID, ward…" oninput="filterPatients()" id="psearch">
+        <button class="btn btn-g btn-sm" onclick="openScanCardModal()" title="Scan a patient's ID card barcode/QR with the camera">📷 Scan Card</button>
         <select class="fsel" style="width:140px" onchange="filterPatients()" id="prisk">
           <option value="">All Risk Levels</option><option value="critical">Critical</option>
           <option value="high">High</option><option value="moderate">Moderate</option><option value="stable">Stable</option>
@@ -3131,6 +3174,7 @@ Waiting for data…</pre>
     <div style="display:flex;gap:8px;margin-bottom:18px;border-bottom:1px solid var(--border)">
       <button class="btn" id="exec-tab-burden" onclick="switchExecView('burden')" style="border-radius:8px 8px 0 0;border-bottom:2px solid var(--cyan);background:var(--bg4);font-weight:700">📊 National Burden</button>
       <button class="btn" id="exec-tab-mortality" onclick="switchExecView('mortality')" style="border-radius:8px 8px 0 0;border-bottom:2px solid transparent;background:transparent">⚰ Mortality &amp; Disease Burden</button>
+      <button class="btn" id="exec-tab-discharge" onclick="switchExecView('discharge')" style="border-radius:8px 8px 0 0;border-bottom:2px solid transparent;background:transparent">📤 Discharges</button>
       <button class="btn" id="exec-tab-report" onclick="switchExecView('report')" style="border-radius:8px 8px 0 0;border-bottom:2px solid transparent;background:transparent">📋 National Report</button>
       <button class="btn" id="exec-tab-ai" onclick="switchExecView('ai')" style="border-radius:8px 8px 0 0;border-bottom:2px solid transparent;background:transparent">🤖 Ask AI</button>
     </div>
@@ -3349,6 +3393,93 @@ Waiting for data…</pre>
       </div>
     </div>
 
+    <div id="exec-view-discharge" style="display:none">
+      <div class="mGrid4">
+        <div class="mc cyan">
+          <div class="mc-label">Total Discharged</div>
+          <div class="mc-val cyan" id="exec-disch-kpi-total">0</div>
+          <div class="mc-sub" id="exec-disch-kpi-total-sub">All recorded, this deployment</div>
+          <div class="mc-ic">📤</div>
+        </div>
+        <div class="mc info">
+          <div class="mc-label">Average Length of Stay</div>
+          <div class="mc-val info" id="exec-disch-kpi-avglos">0<span style="font-size:13px;color:var(--text3)"> days</span></div>
+          <div class="mc-sub" id="exec-disch-kpi-avglos-sub">From admission to discharge</div>
+          <div class="mc-ic">🛏️</div>
+        </div>
+        <div class="mc stable">
+          <div class="mc-label">Fully Recovered Rate</div>
+          <div class="mc-val stable" id="exec-disch-kpi-recovered">0<span style="font-size:13px;color:var(--text3)">%</span></div>
+          <div class="mc-sub" id="exec-disch-kpi-recovered-sub">Of all discharges</div>
+          <div class="mc-ic">✅</div>
+        </div>
+        <div class="mc purple">
+          <div class="mc-label">Provinces w/ Discharges</div>
+          <div class="mc-val purple" id="exec-disch-kpi-provinces">0<span style="font-size:13px;color:var(--text3)"> / 10</span></div>
+          <div class="mc-sub">Reporting at least one discharge</div>
+          <div class="mc-ic">🗺️</div>
+        </div>
+      </div>
+
+      <div class="callout-note" style="font-size:11px;color:var(--text3);margin:-6px 0 14px">
+        💡 Average length of stay and discharge volume together show how efficiently facilities are moving patients through care — a low LOS with a low recovery rate can mean patients are being discharged too early.
+      </div>
+
+      <div class="g32">
+        <div class="card">
+          <div class="ch"><div class="ct">Top Diagnoses at Discharge</div><div style="font-size:10px;color:var(--text3)">Discharge count by diagnosis</div></div>
+          <div class="cw" style="height:230px"><canvas id="execDischDxChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Length of Stay Distribution</div><div style="font-size:10px;color:var(--text3)">Days from admission to discharge</div></div>
+          <div class="cw" style="height:230px"><canvas id="execDischLosChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="g32">
+        <div class="card">
+          <div class="ch"><div class="ct">Discharges by Province</div><div style="font-size:10px;color:var(--text3)">Where discharge volume is concentrated</div></div>
+          <div class="cw" style="height:210px"><canvas id="execDischProvinceChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Monthly Trend<span id="exec-disch-trend-scope-note"></span></div><div style="font-size:10px;color:var(--text3)">Discharges per month — use the province filter above to isolate one province</div></div>
+          <div class="cw" style="height:210px"><canvas id="execDischTrendChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="g32">
+        <div class="card">
+          <div class="ch"><div class="ct">Discharge Condition</div><div style="font-size:10px;color:var(--text3)">Fully Recovered / Improved / Transferred / other</div></div>
+          <div class="cw" style="height:190px"><canvas id="execDischConditionChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Gender Distribution</div><div style="font-size:10px;color:var(--text3)">Discharges by gender</div></div>
+          <div class="cw" style="height:190px"><canvas id="execDischGenderChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="g32" style="margin-top:0">
+        <div class="card">
+          <div class="ch"><div class="ct">Distribution by Facility</div><div style="font-size:10px;color:var(--text3)">Discharges recorded per facility</div></div>
+          <div style="overflow-x:auto">
+            <table class="tbl">
+              <thead><tr><th>Facility</th><th>Discharges</th><th>Avg LOS (days)</th></tr></thead>
+              <tbody id="exec-disch-facility-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Discharges by Province — Table</div><div style="font-size:10px;color:var(--text3)">Full breakdown for reporting</div></div>
+          <div style="overflow-x:auto">
+            <table class="tbl">
+              <thead><tr><th>Province</th><th>Discharges</th><th>Leading Diagnosis</th></tr></thead>
+              <tbody id="exec-disch-province-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══ NATIONAL REPORT VIEW ═══ -->
     <div id="exec-view-report" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
@@ -3513,8 +3644,17 @@ Waiting for data…</pre>
 
     <div style="display:flex;gap:9px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
       <input class="fi" style="max-width:260px" placeholder="🔍 Search patient or invoice #…" oninput="renderBillingTable()" id="billing-search">
+      <select class="fsel" style="width:170px" onchange="renderBillingTable()" id="billing-facility-filter">
+        <option value="">All Hospitals</option>
+      </select>
+      <select class="fsel" style="width:150px" onchange="renderBillingTable()" id="billing-patient-status-filter">
+        <option value="">All Patients</option>
+        <option value="admitted">Admitted</option>
+        <option value="discharged">Discharged</option>
+        <option value="deceased">Deceased</option>
+      </select>
       <select class="fsel" style="width:160px" onchange="renderBillingTable()" id="billing-status-filter">
-        <option value="">All Statuses</option>
+        <option value="">All Payment Statuses</option>
         <option value="open">Open</option>
         <option value="partial">Partially Paid</option>
         <option value="paid">Paid</option>
@@ -3527,7 +3667,7 @@ Waiting for data…</pre>
       <div class="ch"><div class="ct">Invoices</div><div style="font-size:10px;color:var(--text3)" id="billing-count-note"></div></div>
       <div style="overflow-x:auto">
         <table class="tbl">
-          <thead><tr><th>Invoice #</th><th>Patient</th><th>Facility</th><th>Date</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Invoice #</th><th>Patient ID</th><th>Patient</th><th>Patient Status</th><th>Facility</th><th>Date</th><th>Total</th><th>Paid</th><th>Balance</th><th>Payment Status</th><th></th></tr></thead>
           <tbody id="billing-table-body"></tbody>
         </table>
       </div>
@@ -3735,42 +3875,33 @@ Waiting for data…</pre>
   </div>
 
   <!-- ═══ PRESCRIBE MEDICATION (doctor-only) ═══ -->
-  <div id="prescribe-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)">
-    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;max-width:540px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.5)">
-      <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-size:16px;font-weight:700;color:var(--text)">💊 Prescribe Medication</div>
-          <div style="font-size:11.5px;color:var(--text3);margin-top:2px" id="rx-modal-patient-name">—</div>
+  <div id="prescribe-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(5px)">
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;max-width:620px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 40px 90px rgba(0,0,0,.55)">
+      <div style="padding:22px 26px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(79,168,232,.08),rgba(167,139,250,.05));border-radius:18px 18px 0 0">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--blue),#7c9cf0);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 6px 16px rgba(79,168,232,.35)">💊</div>
+          <div>
+            <div style="font-size:16.5px;font-weight:700;color:var(--text);letter-spacing:-.2px">Prescribe Medication</div>
+            <div style="font-size:11.5px;color:var(--text3);margin-top:1px" id="rx-modal-patient-name">—</div>
+          </div>
         </div>
-        <button onclick="closePrescribeModal()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px;padding:4px">✕</button>
+        <button onclick="closePrescribeModal()" style="background:rgba(255,255,255,.06);border:none;border-radius:8px;cursor:pointer;color:var(--text3);font-size:16px;width:30px;height:30px;display:flex;align-items:center;justify-content:center">✕</button>
       </div>
-      <div style="padding:16px 24px;display:flex;flex-direction:column;gap:12px">
-        <div class="fg">
-          <label class="fl">Drug — search the formulary, or scan a barcode</label>
-          <div id="rx-drug-selected-chip" style="display:none;align-items:center;justify-content:space-between;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;margin-bottom:6px">
-            <span id="rx-drug-selected-label" style="font-size:12.5px;font-weight:600;color:var(--text)"></span>
-            <button type="button" class="btn btn-g btn-sm" onclick="clearPrescribeDrugSelection()">Change</button>
-          </div>
-          <div id="rx-drug-picker">
-            <input class="fi" id="rx-drug-search" placeholder="Type a drug name, or scan its barcode…" oninput="renderPrescribeDrugOptions(this.value)">
-            <div id="rx-drug-results" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-top:6px"></div>
-            <button type="button" class="btn btn-g btn-sm" style="margin-top:6px" onclick="selectPrescribeDrug('__other__')">Can't find it? Prescribe as "Other / not yet catalogued"</button>
-          </div>
-          <input class="fi" id="rx-adhoc-name" placeholder="Drug name (not yet catalogued)" style="display:none;margin-top:6px">
+      <div style="padding:20px 26px;display:flex;flex-direction:column;gap:14px">
+        <div id="rx-lines-container" style="display:flex;flex-direction:column;gap:12px"></div>
+
+        <button type="button" onclick="_scAddRxLine()" style="width:100%;padding:10px;border-radius:10px;border:1.5px dashed var(--border2);background:transparent;color:var(--text2);font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:border-color .15s,color .15s" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+          <span style="font-size:15px">＋</span> Add Another Medicine
+        </button>
+
+        <div class="fg"><label class="fl">Notes (optional)</label><input class="fi" id="rx-notes" placeholder="Clinical notes for the pharmacist — applies to this whole prescription"></div>
+
+        <div id="rx-estimated-total-wrap" style="display:none;padding:12px 14px;border-radius:10px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25);display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:11.5px;color:var(--text2);font-weight:600">💰 Estimated Total <span id="rx-estimated-total-count" style="font-weight:400;color:var(--text3)"></span></div>
+          <div style="font-size:16px;font-weight:700;color:var(--green)" id="rx-estimated-total-value">$0.00</div>
         </div>
-        <div class="fg"><label class="fl">Dosage Instructions</label><input class="fi" id="rx-dosage" placeholder="e.g. 1 tablet twice daily for 5 days"></div>
-        <div class="fg"><label class="fl">Quantity to Prescribe</label><input class="fi" type="number" min="1" step="1" id="rx-quantity" placeholder="e.g. 10"></div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text2);cursor:pointer;user-select:none">
-          <input type="checkbox" id="rx-chronic" onchange="_scToggleChronicRxFields(this.checked)" style="width:16px;height:16px;accent-color:var(--blue)">
-          Chronic / long-term medication (enables WhatsApp refill reminders)
-        </label>
-        <div class="fg" id="rx-doses-day-wrap" style="display:none">
-          <label class="fl">Doses per day</label>
-          <input class="fi" type="number" min="1" step="1" id="rx-doses-day" placeholder="e.g. 2 (for twice daily)">
-          <div style="font-size:10.5px;color:var(--text3);margin-top:3px">Used to calculate the expected refill date — quantity ÷ doses per day.</div>
-        </div>
-        <div class="fg"><label class="fl">Notes (optional)</label><input class="fi" id="rx-notes" placeholder="Clinical notes for the pharmacist"></div>
-        <button class="btn btn-p btn-sm" onclick="savePrescription()">💊 Save Prescription</button>
+
+        <button class="btn btn-p" style="padding:12px;font-size:13px;font-weight:700;border-radius:10px" onclick="savePrescription()">💊 Save Prescription<span id="rx-save-btn-suffix"></span></button>
       </div>
     </div>
   </div>
@@ -3804,44 +3935,52 @@ Waiting for data…</pre>
 
   <!-- ═══ INVOICE EDITOR ═══ -->
   <div id="invoice-editor-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)">
-    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;max-width:760px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.5)">
-      <div style="padding:22px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);z-index:10">
-        <div>
-          <div style="font-size:18px;font-weight:700;color:var(--text)" id="inv-editor-title">Invoice</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:2px" id="inv-editor-subtitle">Patient · Facility</div>
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:18px;max-width:780px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.5)">
+      <div style="padding:22px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:linear-gradient(135deg,var(--bg2),rgba(79,168,232,.06));z-index:10;backdrop-filter:blur(6px)">
+        <div style="display:flex;align-items:center;gap:14px;min-width:0">
+          <div style="width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,var(--blue),#7c9cf0);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;box-shadow:0 6px 16px rgba(79,168,232,.35)">🧾</div>
+          <div style="min-width:0">
+            <div style="font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.2px" id="inv-editor-title">Invoice</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="inv-editor-subtitle">Patient · Facility</div>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
           <span class="badge" id="inv-status-badge">Open</span>
-          <button onclick="closeInvoiceEditor()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px;padding:4px">✕</button>
+          <button onclick="closeInvoiceEditor()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px;padding:4px;line-height:1" title="Close">✕</button>
         </div>
       </div>
 
       <div style="padding:24px 28px;display:flex;flex-direction:column;gap:18px">
 
         <!-- Patient details -->
-        <div style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:12px 16px">
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:12px">
-            <div><div style="color:var(--text3);font-size:9.5px;text-transform:uppercase;letter-spacing:.4px">Patient ID</div><div id="inv-detail-id" class="mono" style="font-weight:600;color:var(--text);font-size:12.5px">—</div></div>
-            <div><div style="color:var(--text3);font-size:9.5px;text-transform:uppercase;letter-spacing:.4px">Age</div><div id="inv-detail-age" style="font-weight:600;color:var(--text);font-size:12.5px">—</div></div>
-            <div><div style="color:var(--text3);font-size:9.5px;text-transform:uppercase;letter-spacing:.4px">Gender</div><div id="inv-detail-gender" style="font-weight:600;color:var(--text);font-size:12.5px">—</div></div>
-            <div><div style="color:var(--text3);font-size:9.5px;text-transform:uppercase;letter-spacing:.4px">Ward</div><div id="inv-detail-ward" style="font-weight:600;color:var(--text);font-size:12.5px">—</div></div>
-            <div><div style="color:var(--text3);font-size:9.5px;text-transform:uppercase;letter-spacing:.4px">Bed</div><div id="inv-detail-bed" style="font-weight:600;color:var(--text);font-size:12.5px">—</div></div>
-          </div>
+        <div class="inv-patient-strip">
+          <div class="inv-patient-field"><div class="inv-patient-field-label">Patient ID</div><div id="inv-detail-id" class="mono inv-patient-field-value">—</div></div>
+          <div class="inv-patient-field"><div class="inv-patient-field-label">Age</div><div id="inv-detail-age" class="inv-patient-field-value">—</div></div>
+          <div class="inv-patient-field"><div class="inv-patient-field-label">Gender</div><div id="inv-detail-gender" class="inv-patient-field-value">—</div></div>
+          <div class="inv-patient-field"><div class="inv-patient-field-label">Ward</div><div id="inv-detail-ward" class="inv-patient-field-value">—</div></div>
+          <div class="inv-patient-field"><div class="inv-patient-field-label">Bed</div><div id="inv-detail-bed" class="inv-patient-field-value">—</div></div>
         </div>
 
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text2);cursor:pointer">
-            <input type="checkbox" id="inv-subsidized" onchange="saveCurrentInvoice()"> Government-subsidized care — exclude from patient-billed collection totals
+          <label style="display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text2);cursor:pointer">
+            <input type="checkbox" id="inv-subsidized" onchange="saveCurrentInvoice()" style="width:15px;height:15px;accent-color:var(--blue);cursor:pointer"> Government-subsidized care — exclude from patient-billed collection totals
           </label>
           <button class="btn btn-g btn-sm" onclick="toggleInvoiceWaived()" id="inv-waive-btn">Mark as Waived</button>
         </div>
 
         <!-- Ward bed-day accrual -->
-        <div style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
-          <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text2);cursor:pointer;margin-bottom:8px">
-            <input type="checkbox" id="inv-ward-accrual-enabled" onchange="saveWardAccrualSettings()"> Auto-charge ward bed-days — accrues daily from admission, extends automatically if the stay runs past the expected LOS
-          </label>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <div class="inv-card">
+          <div class="inv-toggle-row" style="margin-bottom:10px">
+            <div class="inv-toggle-text">
+              <div class="inv-toggle-title">🔁 Auto Charge</div>
+              <div class="inv-toggle-desc">Auto-charge ward bed-days — accrues daily from admission, extends automatically if the stay runs past the expected LOS</div>
+            </div>
+            <label class="inv-switch">
+              <input type="checkbox" id="inv-ward-accrual-enabled" onchange="saveWardAccrualSettings()">
+              <span class="inv-switch-track"></span>
+            </label>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding-top:10px;border-top:1px solid var(--border)">
             <span style="font-size:11.5px;color:var(--text3)">Daily Rate ($)</span>
             <input class="fi" type="number" step="0.01" style="width:100px" id="inv-ward-daily-rate" placeholder="0.00" onchange="saveWardAccrualSettings()">
             <span style="font-size:11.5px;color:var(--text3)" id="inv-ward-accrual-summary"></span>
@@ -3850,16 +3989,18 @@ Waiting for data…</pre>
 
         <!-- Line items -->
         <div>
-          <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">🧾 Line Items</div>
-          <div style="overflow-x:auto">
+          <div class="inv-section-label" style="color:var(--blue)">🧾 Line Items</div>
+          <div style="overflow-x:auto;border:1px solid var(--border);border-radius:10px">
             <table class="tbl">
               <thead><tr><th>Description</th><th style="width:90px">Amount</th><th style="width:120px">VAT</th><th style="width:90px">Line Total</th><th style="width:36px"></th></tr></thead>
               <tbody id="invoice-lineitems-body"></tbody>
             </table>
           </div>
-          <div style="font-size:10.5px;color:var(--text3);margin-top:10px;margin-bottom:4px">Quick-add from the standard fee schedule (set in Admin → Billing Rates):</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap" id="inv-quickadd-chips"></div>
-          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center">
+            <div class="inv-qa-wrap">
+              <button class="btn btn-g btn-sm" onclick="toggleInvQuickAddMenu(event)" id="inv-qa-trigger">Quick-add ▾</button>
+              <div class="inv-qa-menu" id="inv-quickadd-chips"></div>
+            </div>
             <input class="fi" style="flex:2;min-width:160px" placeholder="Or type any other charge…" id="inv-new-desc">
             <input class="fi" style="width:100px" type="number" step="0.01" placeholder="Amount" id="inv-new-amount">
             <select class="fsel" style="width:140px" id="inv-new-vat">
@@ -3878,8 +4019,8 @@ Waiting for data…</pre>
 
         <!-- Payments -->
         <div>
-          <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">💵 Payments</div>
-          <div style="overflow-x:auto">
+          <div class="inv-section-label" style="color:var(--green)">💵 Payments</div>
+          <div style="overflow-x:auto;border:1px solid var(--border);border-radius:10px">
             <table class="tbl">
               <thead><tr><th>Date</th><th>Method</th><th>Reference</th><th style="width:90px">Amount</th></tr></thead>
               <tbody id="invoice-payments-body"></tbody>
@@ -3898,7 +4039,7 @@ Waiting for data…</pre>
           </div>
         </div>
 
-        <div style="display:flex;gap:9px">
+        <div style="display:flex;gap:9px;flex-wrap:wrap">
           <button class="btn btn-g" onclick="previewInvoicePDF()">👁 View PDF</button>
           <button class="btn btn-p" onclick="exportInvoicePDF()">📄 Download PDF</button>
           <button class="btn btn-g" onclick="notifyInvoiceNOK()">📤 Notify NOK</button>
@@ -5463,15 +5604,14 @@ Waiting for data…</pre>
 <div class="moverlay" id="patient-modal">
   <div class="modal">
     <div class="mh">
-      <div>
-        <div style="font-size:17px;font-weight:600" id="modal-name">Patient Name</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:3px" id="modal-meta">ID · Ward · Doctor</div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <div id="modal-facility-badge" style="display:none;align-items:center;gap:6px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:3px 10px 3px 3px">
-          <img id="modal-facility-logo" style="width:22px;height:22px;border-radius:50%;object-fit:cover;background:#fff" alt="">
-          <span id="modal-facility-name" style="font-size:10.5px;font-weight:600;color:var(--text2)"></span>
+      <div style="display:flex;align-items:center;gap:11px;min-width:0">
+        <img id="modal-facility-logo" style="display:none;width:40px;height:40px;border-radius:50%;object-fit:cover;background:#fff;border:2px solid var(--border2);flex-shrink:0;box-shadow:0 3px 10px rgba(0,0,0,.25)" alt="" title="">
+        <div style="min-width:0">
+          <div style="font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="modal-name">Patient Name</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px" id="modal-meta">ID · Ward · Doctor</div>
         </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
         <button class="patient-profile-camera-btn" id="modal-camera-btn" onclick="capturePatientProfilePhoto(window._modalCurrentPid)" title="Capture/Update profile photo">📸</button>
         <div id="patient-profile-avatar" class="modal-header-avatar">👤</div>
         <span id="modal-disch-badge"></span>
@@ -5520,14 +5660,14 @@ Waiting for data…</pre>
         </div>
       </div>
       <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">💳 Financial Status</div>
-          <span id="mv-billing-link" style="display:none;font-size:10.5px;color:var(--blue);cursor:pointer" onclick="openPatientBillingFromProfile()">View Invoices →</span>
-        </div>
-        <div class="ai-mc">
-          <div class="ai-ml">Outstanding Balance</div>
-          <div class="ai-mv" id="mv-billing-balance" style="color:var(--green)">$0.00</div>
-          <div class="ai-ms" id="mv-billing-status">No invoices on record</div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">💳 Financial Status</div>
+        <div class="ai-mc" id="mv-billing-card" style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border-left:3px solid var(--border2);transition:border-color .15s">
+          <div>
+            <div class="ai-ml">Outstanding Balance</div>
+            <div class="ai-mv" id="mv-billing-balance" style="color:var(--green)">$0.00</div>
+            <div class="ai-ms" id="mv-billing-status">No invoices on record</div>
+          </div>
+          <button type="button" id="mv-billing-action-btn" onclick="openPatientBillingFromProfile()" style="display:none;flex-shrink:0;padding:10px 18px;border-radius:10px;border:none;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;transition:transform .1s" onmousedown="this.style.transform='scale(.96)'" onmouseup="this.style.transform='scale(1)'" onmouseleave="this.style.transform='scale(1)'"></button>
         </div>
       </div>
     </div>
@@ -8773,7 +8913,7 @@ function dischBadge(s){
   if (s === 'due') return '<span class="badge discharge">Due Today</span>';
   if (s === 'pending') return '<span class="badge discharge">Pending Discharge</span>';
   if (s === 'discharged') return '<span class="badge stable">Discharged</span>';
-  if (s === 'deceased') return '<span class="badge crit">Deceased</span>';
+  if (s === 'deceased') return '<span class="badge critical">Deceased</span>'; // was "badge crit" — that class was never defined, so this rendered unstyled
   return '<span class="badge stable">Admitted</span>';
 }
 
@@ -11289,9 +11429,11 @@ function clearExecFilters(){
 }
 let execCauseChart, execCfrChart, execDeathsProvinceChart, execTrendChart, execMortAgeChart, execMortGenderChart;
 let execMortalityInit = false;
+let execDischDxChart, execDischLosChart, execDischProvinceChart, execDischTrendChart, execDischConditionChart, execDischGenderChart;
+let execDischargeInit = false;
 
 function switchExecView(view){
-  ['burden','mortality','report','ai'].forEach(v => {
+  ['burden','mortality','discharge','report','ai'].forEach(v => {
     const el = document.getElementById('exec-view-'+v);
     if (el) el.style.display = v === view ? 'block' : 'none';
     const tab = document.getElementById('exec-tab-'+v);
@@ -11305,6 +11447,10 @@ function switchExecView(view){
   if (view === 'mortality' && !execMortalityInit) {
     execMortalityInit = true;
     initExecMortalityCharts();
+  }
+  if (view === 'discharge' && !execDischargeInit) {
+    execDischargeInit = true;
+    initExecDischargeCharts();
   }
   if (view === 'report') renderExecNationalReport();
   if (view === 'ai') {
@@ -12184,6 +12330,81 @@ function computeMortalityStats(provinceFilter, facilityFilter){
   return { total, topCauses, leadingCause, cfrList, highestCfr, provinceCounts, provincesReporting, ageLabels, ageCounts, genderCounts, monthlyLabels, monthlyCounts, facilityTable, provinceTable };
 }
 
+// Mirrors computeMortalityStats()'s shape/approach exactly, sourced from
+// dischargedPatients instead of deceasedPatients. Excludes condition ===
+// 'Deceased' the same way generateEstimatedInvoices() does, in case a
+// deceased-flagged record ever ends up in this array too — today's seed
+// data keeps them fully separate (deceasedPatients), but this stays
+// correct either way. No age field exists on discharge records, so unlike
+// Mortality's age chart, this reports length-of-stay distribution instead
+// — a more directly useful discharge metric anyway.
+function computeDischargeStats(provinceFilter, facilityFilter){
+  const matchesFilters = rec => (!provinceFilter || rec.province === provinceFilter) && (!facilityFilter || String(rec.facility||'').trim() === facilityFilter);
+  const disch = (Array.isArray(dischargedPatients) ? dischargedPatients : []).filter(d => d.condition !== 'Deceased').filter(matchesFilters);
+  const total = disch.length;
+
+  const avgLos = total ? Math.round((disch.reduce((s,d) => s + (Number(d.los) || 0), 0) / total) * 10) / 10 : 0;
+
+  const dxCounts = {};
+  disch.forEach(d => { const dx = String(d.diagnosis || 'Unknown').trim() || 'Unknown'; dxCounts[dx] = (dxCounts[dx] || 0) + 1; });
+  const topDx = Object.entries(dxCounts).sort((a,b)=>b[1]-a[1]);
+
+  const conditionCounts = {};
+  disch.forEach(d => { const c = String(d.condition || 'Unknown').trim() || 'Unknown'; conditionCounts[c] = (conditionCounts[c] || 0) + 1; });
+  const recoveredCount = conditionCounts['Fully Recovered'] || 0;
+  const recoveredRate = total ? Math.round((recoveredCount / total) * 1000) / 10 : 0;
+
+  const losLabels = ['1 day','2-3 days','4-7 days','8-14 days','15+ days'];
+  const losBucket = los => los <= 1 ? 0 : los <= 3 ? 1 : los <= 7 ? 2 : los <= 14 ? 3 : 4;
+  const losCounts = losLabels.map(() => 0);
+  disch.forEach(d => { losCounts[losBucket(Number(d.los) || 0)]++; });
+
+  const provinceCounts = {};
+  ZW_PROVINCES.forEach(pv => provinceCounts[pv] = 0);
+  disch.forEach(d => { if (d.province && ZW_PROVINCES.includes(d.province)) provinceCounts[d.province] += 1; });
+  const provincesReporting = Object.values(provinceCounts).filter(c => c > 0).length;
+
+  const genderCounts = {
+    Male: disch.filter(d => String(d.gender||'').toLowerCase()==='male').length,
+    Female: disch.filter(d => String(d.gender||'').toLowerCase()==='female').length,
+    Other: disch.filter(d => !['male','female'].includes(String(d.gender||'').toLowerCase())).length
+  };
+
+  // Monthly trend, last 6 months — reuses _scParseDateFlexible() since
+  // discharge dates are a mix of relative ("Today, 09:14"/"Yesterday") and
+  // absolute ("12 Mar 2026") strings, same as deceasedPatients.date.
+  const monthlyLabels = [];
+  const monthlyCounts = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const dt = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthKey = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+    monthlyLabels.push(dt.toLocaleDateString('en-ZA', { month: 'short', year: '2-digit' }));
+    monthlyCounts.push(disch.filter(d => {
+      const ddt = _scParseDateFlexible(d.date);
+      return ddt && `${ddt.getFullYear()}-${String(ddt.getMonth()+1).padStart(2,'0')}` === monthKey;
+    }).length);
+  }
+
+  const facilityCounts = {};
+  disch.forEach(d => { const f = String(d.facility||'').trim() || 'Not specified'; facilityCounts[f] = (facilityCounts[f]||0) + 1; });
+  const facilityTable = Object.entries(facilityCounts).sort((a,b)=>b[1]-a[1]).map(([facility,count]) => {
+    const facDisch = disch.filter(d => (String(d.facility||'').trim() || 'Not specified') === facility);
+    const facAvgLos = facDisch.length ? Math.round((facDisch.reduce((s,d)=>s+(Number(d.los)||0),0) / facDisch.length) * 10) / 10 : 0;
+    return { facility, count, avgLos: facAvgLos };
+  });
+
+  const provinceTable = ZW_PROVINCES.map(pv => {
+    const provDisch = disch.filter(d => d.province === pv);
+    const provDxCounts = {};
+    provDisch.forEach(d => { const dx = String(d.diagnosis||'Unknown').trim()||'Unknown'; provDxCounts[dx] = (provDxCounts[dx]||0) + 1; });
+    const provLeading = Object.entries(provDxCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+    return { province: pv, count: provDisch.length, leadingDx: provDisch.length ? provLeading : '—' };
+  });
+
+  return { total, avgLos, topDx, conditionCounts, recoveredCount, recoveredRate, losLabels, losCounts, provinceCounts, provincesReporting, genderCounts, monthlyLabels, monthlyCounts, facilityTable, provinceTable };
+}
+
 function initExecMortalityCharts(){
   execCauseChart = new Chart(document.getElementById('execCauseChart'), {
     type:'bar',
@@ -12306,6 +12527,128 @@ function refreshExecMortality(){
   if (trendNote) {
     const scopeParts = [provinceFilter, facilityFilter].filter(Boolean);
     trendNote.textContent = scopeParts.length ? ` — ${scopeParts.join(' · ')}` : ' — all provinces';
+  }
+}
+
+// Mirrors initExecMortalityCharts() — same six-chart layout, adapted for
+// discharge metrics (length-of-stay and discharge condition in place of
+// age, since discharge records don't carry an age field).
+function initExecDischargeCharts(){
+  execDischDxChart = new Chart(document.getElementById('execDischDxChart'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{ label:'Discharges', data:[], backgroundColor:'rgba(34,211,238,.75)', borderRadius:4 }] },
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => `${ctx.parsed.x} discharges` } } },
+      scales:{ x:{ grid:{ color:'rgba(148,197,240,.07)' }, ticks:{ color:'#6b88a8', font:{size:9} } },
+               y:{ grid:{display:false}, ticks:{ color:'#8fa8c4', font:{size:10} } } } }
+  });
+
+  execDischLosChart = new Chart(document.getElementById('execDischLosChart'), {
+    type:'bar',
+    data:{ labels:['1 day','2-3 days','4-7 days','8-14 days','15+ days'], datasets:[{ label:'Discharges', data:[0,0,0,0,0], backgroundColor:['#34d399','#22d3ee','#4fa8e8','#fbbf24','#ff4d6d'], borderRadius:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => `${ctx.parsed.y} discharges` } } },
+      scales:{ x:{ grid:{display:false}, ticks:{ color:'#6b88a8', font:{size:9} } },
+               y:{ grid:{ color:'rgba(148,197,240,.07)' }, ticks:{ color:'#6b88a8', font:{size:10} } } } }
+  });
+
+  execDischProvinceChart = new Chart(document.getElementById('execDischProvinceChart'), {
+    type:'bar',
+    data:{ labels: ZW_PROVINCES, datasets:[{ label:'Discharges', data: ZW_PROVINCES.map(()=>0), backgroundColor:'#22d3ee', borderRadius:4 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => `${ctx.parsed.y} discharges` } } },
+      scales:{ x:{ grid:{display:false}, ticks:{ color:'#6b88a8', font:{size:9}, maxRotation:40, minRotation:40 } },
+               y:{ grid:{ color:'rgba(148,197,240,.07)' }, ticks:{ color:'#6b88a8', font:{size:10} } } } }
+  });
+
+  execDischTrendChart = new Chart(document.getElementById('execDischTrendChart'), {
+    type:'line',
+    data:{ labels:[], datasets:[{ label:'Discharges', data:[], borderColor:'#22d3ee', backgroundColor:'rgba(34,211,238,.08)', fill:true, tension:.4, borderWidth:2, pointRadius:3 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ mode:'index', intersect:false } },
+      scales:{ x:{ grid:{display:false}, ticks:{ color:'#6b88a8', font:{size:10} } },
+               y:{ grid:{ color:'rgba(148,197,240,.07)' }, ticks:{ color:'#6b88a8', font:{size:10}, precision:0 } } } }
+  });
+
+  execDischConditionChart = new Chart(document.getElementById('execDischConditionChart'), {
+    type:'doughnut',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor:['#34d399','#22d3ee','#a78bfa','#fbbf24','#ff4d6d'], borderWidth:0, spacing:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
+      plugins:{ legend:{display:true, position:'bottom', labels:{ color:'#8fa8c4', font:{size:10}, boxWidth:10, padding:12 } },
+                tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${ctx.parsed}` } } } }
+  });
+
+  execDischGenderChart = new Chart(document.getElementById('execDischGenderChart'), {
+    type:'doughnut',
+    data:{ labels:['Male','Female','Other'], datasets:[{ data:[0,0,0], backgroundColor:['#4fa8e8','#a78bfa','#34d399'], borderWidth:0, spacing:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
+      plugins:{ legend:{display:true, position:'bottom', labels:{ color:'#8fa8c4', font:{size:10}, boxWidth:10, padding:12 } },
+                tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${ctx.parsed}` } } } }
+  });
+}
+
+function refreshExecDischarge(){
+  const provinceFilter = document.getElementById('exec-province-filter')?.value || '';
+  const facilityFilter = document.getElementById('exec-facility-filter')?.value || '';
+  const s = computeDischargeStats(provinceFilter, facilityFilter);
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('exec-disch-kpi-total', s.total);
+  set('exec-disch-kpi-total-sub', [provinceFilter, facilityFilter].filter(Boolean).join(' · ') || 'All recorded, this deployment');
+  set('exec-disch-kpi-avglos', s.avgLos + ' days');
+  set('exec-disch-kpi-avglos-sub', s.total ? `Across ${s.total} discharge${s.total===1?'':'s'}` : 'No discharges recorded');
+  set('exec-disch-kpi-recovered', s.recoveredRate + '%');
+  set('exec-disch-kpi-recovered-sub', s.total ? `${s.recoveredCount} of ${s.total} discharges` : 'Of all discharges');
+  set('exec-disch-kpi-provinces', provinceFilter ? '—' : String(s.provincesReporting));
+
+  if (execDischDxChart) {
+    const top8 = s.topDx.slice(0,8);
+    execDischDxChart.data.labels = top8.map(([dx]) => dx.length > 26 ? dx.slice(0,24)+'…' : dx);
+    execDischDxChart.data.datasets[0].data = top8.map(([,c]) => c);
+    execDischDxChart.update();
+  }
+  if (execDischLosChart) {
+    execDischLosChart.data.datasets[0].data = s.losCounts;
+    execDischLosChart.update();
+  }
+  if (execDischProvinceChart) {
+    execDischProvinceChart.data.datasets[0].data = ZW_PROVINCES.map(pv => s.provinceCounts[pv]);
+    execDischProvinceChart.update();
+  }
+  if (execDischTrendChart) {
+    execDischTrendChart.data.labels = s.monthlyLabels;
+    execDischTrendChart.data.datasets[0].data = s.monthlyCounts;
+    execDischTrendChart.update();
+  }
+  if (execDischConditionChart) {
+    const entries = Object.entries(s.conditionCounts).sort((a,b)=>b[1]-a[1]);
+    execDischConditionChart.data.labels = entries.map(([c]) => c);
+    execDischConditionChart.data.datasets[0].data = entries.map(([,c]) => c);
+    execDischConditionChart.update();
+  }
+  if (execDischGenderChart) {
+    execDischGenderChart.data.datasets[0].data = [s.genderCounts.Male, s.genderCounts.Female, s.genderCounts.Other];
+    execDischGenderChart.update();
+  }
+
+  const facBody = document.getElementById('exec-disch-facility-table-body');
+  if (facBody) {
+    facBody.innerHTML = s.facilityTable.map(r => `
+      <tr><td style="font-weight:600;color:var(--text)">${r.facility}</td><td class="mono">${r.count}</td><td class="mono" style="color:var(--text3)">${r.avgLos}</td></tr>`).join('')
+      || '<tr><td colspan="3" style="color:var(--text3);text-align:center;padding:14px">No discharges recorded</td></tr>';
+  }
+
+  const provBody = document.getElementById('exec-disch-province-table-body');
+  if (provBody) {
+    provBody.innerHTML = s.provinceTable.map(r => `
+      <tr><td style="font-weight:600;color:var(--text)">${r.province}</td><td class="mono">${r.count}</td><td style="color:var(--text3)">${r.leadingDx}</td></tr>`).join('')
+      || '<tr><td colspan="3" style="color:var(--text3);text-align:center;padding:14px">No data yet</td></tr>';
+  }
+
+  const trendNoteD = document.getElementById('exec-disch-trend-scope-note');
+  if (trendNoteD) {
+    const scopeParts = [provinceFilter, facilityFilter].filter(Boolean);
+    trendNoteD.textContent = scopeParts.length ? ` — ${scopeParts.join(' · ')}` : ' — all provinces';
   }
 }
 
@@ -12576,6 +12919,7 @@ function refreshExecPortal(){
   if(townScopeEl) townScopeEl.textContent = ` · ${s.townTable.length} total`;
 
   if (execMortalityInit) refreshExecMortality();
+  if (execDischargeInit) refreshExecDischarge();
 }
 
 // Tracked so a hospital drill-down click (execDrilldownToHospital(), which
@@ -13288,36 +13632,83 @@ function printDrugLabel(drugId){
   win.document.close();
 }
 
-// Prints a scannable patient ID card — the first real output for the
-// existing "Card Generation" billing line, which previously had no
-// physical artifact behind it. Scanning the barcode is just "search by
-// Patient ID" via a wristband/card instead of typing.
+// Opens a print-ready, professionally-designed Patient ID Card PDF — the
+// real output for the existing "Card Generation" billing line. Delegates to
+// _buildPatientIDCardPDF() (see near _buildPaymentReceiptPDF) so this exact
+// same rendering is also what gets WhatsApped via sendPatientIDCard() —
+// one design, three destinations (print/download/WhatsApp), never drifting
+// out of sync with itself.
 function printPatientIDCard(patientId){
   const p = patients.find(x=>x.id===patientId) || dischargedPatients.find(x=>x.id===patientId);
   if (!p) { showToast('Patient not found.', true); return; }
-  const win = window.open('', '_blank');
-  const html = `<!DOCTYPE html><html><head><title>Patient ID Card — ${_scEsc(p.name)}</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.3/JsBarcode.all.min.js"><\/script>
-    <style>body{font-family:Arial,sans-serif;padding:20px;text-align:center}
-    .card{border:1px solid #1a3a6c;border-radius:10px;padding:16px 20px;display:inline-block;max-width:300px;background:#f4f7fb}
-    .facility{font-size:11px;color:#1a3a6c;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-    .name{font-size:16px;font-weight:700;margin-bottom:2px}
-    .meta{font-size:11px;color:#555;margin-bottom:10px}</style></head><body>
-    <div class="card">
-      <div class="facility">${_scEsc(p.facility||'SmartCare AI')}</div>
-      <div class="name">${_scEsc(p.name)}</div>
-      <div class="meta">${_scEsc(String(p.age??''))}y ${_scEsc(p.gender||'')} · ${_scEsc(p.province||'')}</div>
-      <svg id="barcode"></svg>
-    </div>
-    <script>
-      window.onload = function(){
-        try { JsBarcode("#barcode", ${JSON.stringify(p.id)}, {format:"CODE128", width:2, height:50, fontSize:12}); } catch(e) {}
-        setTimeout(function(){ window.print(); }, 200);
-      };
-    <\/script>
-    </body></html>`;
-  win.document.write(html);
-  win.document.close();
+  _buildPatientIDCardPDF(p, 'preview');
+}
+
+// ═══════════════════════════════════════════════════
+// SCAN PATIENT CARD — staff-side camera decode (works on desktop webcams
+// AND phone browsers, since it's just getUserMedia + a <video> element, no
+// native app needed). Decodes either code on the card:
+//   - the barcode/QR's raw value being a real Patient ID  → opens that
+//     patient's live, full in-app profile (openModal) — this is what
+//     "reveal patient data" means for staff, same access rules as any
+//     other in-app lookup, just triggered by camera instead of typing.
+//   - a scanned patient-card.html URL (i.e. staff scan the QR meant for
+//     the patient) → still resolved to the live in-app profile rather
+//     than following the link out to the static snapshot page, since a
+//     signed-in staff member should always see the real record, not a
+//     printed-at-issue-time copy of it.
+// ═══════════════════════════════════════════════════
+let _scScanCardControls = null;
+
+function openScanCardModal(){
+  if (typeof ZXing === 'undefined') { showToast('Barcode scanner library not loaded.', true); return; }
+  document.getElementById('scan-card-modal')?.classList.add('active');
+  document.getElementById('scan-card-status').textContent = '';
+  document.getElementById('scan-card-no-access').style.display = 'none';
+  document.querySelector('#scan-card-modal .scan-video-container').style.display = 'flex';
+
+  const reader = new ZXing.BrowserMultiFormatReader();
+  reader.decodeFromConstraints(
+    { video: { facingMode: 'environment' } },
+    'scan-card-video',
+    (result, err, controls) => {
+      _scScanCardControls = controls;
+      if (result) {
+        controls.stop();
+        _scHandleScannedPatientCode(result.getText());
+      }
+    }
+  ).catch(e => {
+    document.getElementById('scan-card-no-access').style.display = 'flex';
+    document.getElementById('scan-card-status').textContent = '❌ Camera access denied or unavailable';
+    console.warn('Scan camera start failed', e);
+  });
+}
+
+function closeScanCardModal(){
+  document.getElementById('scan-card-modal')?.classList.remove('active');
+  try { _scScanCardControls?.stop(); } catch (e) {}
+  _scScanCardControls = null;
+}
+
+function _scHandleScannedPatientCode(text){
+  const raw = String(text || '').trim();
+  // A scanned patient-card.html link — pull the pid param back out rather
+  // than following it, so staff land on the live profile, not the static
+  // snapshot page meant for the patient's own phone.
+  let pid = raw;
+  try {
+    if (/^https?:\/\//i.test(raw)) {
+      const url = new URL(raw);
+      pid = url.searchParams.get('pid') || raw;
+    }
+  } catch (e) {}
+
+  const p = patients.find(x => x.id === pid) || dischargedPatients.find(x => x.id === pid);
+  closeScanCardModal();
+  if (!p) { showToast(`No patient found for scanned code "${pid}".`, true, '❌ Not Found'); return; }
+  showToast(`${p.name} found — opening record`, false, '✓ Scanned');
+  openModal(p.id);
 }
 
 // Builds a starting set of estimated invoices for every seed patient (active,
@@ -13532,6 +13923,7 @@ function refreshAllNationalViews(){
   try { if (typeof refreshExecPortal === 'function') refreshExecPortal(); } catch (e) {}
   try { if (typeof renderExecNationalReport === 'function' && document.getElementById('exec-report-table-body')) renderExecNationalReport(); } catch (e) {}
   try { if (typeof execMortalityInit !== 'undefined' && execMortalityInit && typeof initExecMortalityCharts === 'function') initExecMortalityCharts(); } catch (e) {}
+  try { if (typeof execDischargeInit !== 'undefined' && execDischargeInit && typeof initExecDischargeCharts === 'function') initExecDischargeCharts(); } catch (e) {}
 }
 
 // Run once now against whatever loaded synchronously (fresh installs and
@@ -13614,7 +14006,38 @@ function computeInvoiceTotals(inv){
 }
 
 function initBilling(){
+  _scPopulateBillingFacilityFilter();
   renderBillingTable();
+}
+
+// Populates the Billing page's hospital filter from the real facility
+// registry — same "All Hospitals" + one option per facility idiom used
+// elsewhere (Pharmacy's facility tabs, Exec Portal's facility filter).
+function _scPopulateBillingFacilityFilter(){
+  const sel = document.getElementById('billing-facility-filter');
+  if (!sel) return;
+  const current = sel.value;
+  const opts = [{ name: '', label: 'All Hospitals' }, ...(Array.isArray(facilities) ? facilities : []).map(f => ({ name: f.name, label: f.code ? `${f.code} — ${f.name}` : f.name }))];
+  sel.innerHTML = opts.map(o => `<option value="${_scAttrSafe(o.name)}">${_scEsc(o.label)}</option>`).join('');
+  if (opts.some(o => o.name === current)) sel.value = current;
+}
+
+// An invoice's patient may currently be admitted, discharged, or deceased
+// — billing tracks the whole lifecycle (you still bill for care already
+// given after a patient leaves or passes away), which is exactly why the
+// Billing page's invoice count is naturally higher than a live "currently
+// admitted" census figure like the Ministerial Portal's patient count.
+function _scResolvePatientLifecycleStatus(patientId){
+  if ((Array.isArray(patients) ? patients : []).some(p => p.id === patientId)) return 'admitted';
+  if ((Array.isArray(dischargedPatients) ? dischargedPatients : []).some(p => p.id === patientId)) return 'discharged';
+  if ((Array.isArray(deceasedPatients) ? deceasedPatients : []).some(p => p.id === patientId)) return 'deceased';
+  return 'unknown';
+}
+function _scPatientLifecycleBadge(status){
+  if (status === 'admitted') return '<span class="badge stable">Admitted</span>';
+  if (status === 'discharged') return '<span class="badge discharge">Discharged</span>';
+  if (status === 'deceased') return '<span class="badge critical">Deceased</span>';
+  return '<span class="badge" style="color:var(--text3)">—</span>';
 }
 
 // ═══════════════════════════════════════════════════
@@ -14196,12 +14619,32 @@ function removeInvoiceLineItem(liId){
 }
 
 function renderInvoiceQuickAddChips(){
-  const wrap = document.getElementById('inv-quickadd-chips');
-  if (!wrap) return;
-  wrap.innerHTML = billingRates.map(r => `
-    <button class="btn btn-g btn-sm" onclick="quickAddInvoiceLineItem('${r.id}')" title="$${r.amount.toFixed(2)} + ${r.vat}% VAT">+ ${_scEsc(r.label)} ($${r.amount.toFixed(2)})</button>
-  `).join('') || '<span style="font-size:11px;color:var(--text3)">No standard charges configured yet — add some in Admin → Billing Rates.</span>';
+  const menu = document.getElementById('inv-quickadd-chips');
+  if (!menu) return;
+  menu.innerHTML = billingRates.map(r => `
+    <button type="button" class="inv-qa-row" onclick="quickAddInvoiceLineItem('${r.id}')">
+      <span>${_scEsc(r.label)}</span>
+      <span class="inv-qa-row-price">$${r.amount.toFixed(2)}${r.vat > 0 ? ' +' + r.vat + '%' : ''}</span>
+    </button>
+  `).join('') || '<div style="font-size:11px;color:var(--text3);padding:10px">No standard charges configured yet — add some in Admin → Billing Rates.</div>';
 }
+
+// Quick-add dropdown open/close — mirrors the sidebar hospital-scope menu's
+// own trigger/menu + outside-click-closes idiom for consistency.
+function toggleInvQuickAddMenu(event){
+  event?.stopPropagation();
+  document.getElementById('inv-quickadd-chips')?.classList.toggle('open');
+}
+function closeInvQuickAddMenu(){
+  document.getElementById('inv-quickadd-chips')?.classList.remove('open');
+}
+document.addEventListener('click', (event) => {
+  const trigger = document.getElementById('inv-qa-trigger');
+  const menu = document.getElementById('inv-quickadd-chips');
+  if (!trigger || !menu) return;
+  if (trigger.contains(event.target) || menu.contains(event.target)) return;
+  menu.classList.remove('open');
+});
 
 function quickAddInvoiceLineItem(rateId){
   const inv = invoices.find(i=>i.id===currentInvoiceId);
@@ -14218,6 +14661,7 @@ function quickAddInvoiceLineItem(rateId){
     addedAt: new Date().toISOString()
   });
   saveCurrentInvoice();
+  closeInvQuickAddMenu();
   showToast(`${rate.label} added`, false, '+ Line Added');
 }
 
@@ -14305,7 +14749,7 @@ function recomputeRxStatus(rx){
 }
 
 let _prescribeTargetPatientId = null;
-let _prescribeSelectedDrugId = null; // real drugId, '__other__', or null (nothing picked yet)
+let _rxLineSeq = 0; // monotonically increasing id source for prescription lines — never reused within a modal session, so stale onclick handlers from a removed line can never accidentally target a new one that reused its id
 function openPrescribeModal(patientId){
   const role = getCurrentSessionUser()?.role || '';
   if (!isDoctorLikeRole(role)) {
@@ -14317,35 +14761,130 @@ function openPrescribeModal(patientId){
   _prescribeTargetPatientId = patientId;
   const nameEl = document.getElementById('rx-modal-patient-name');
   if (nameEl) nameEl.textContent = `${p.name} — ${p.id}`;
-  ['rx-dosage','rx-quantity','rx-notes','rx-doses-day'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  const adhocEl = document.getElementById('rx-adhoc-name');
-  if (adhocEl) { adhocEl.value = ''; adhocEl.style.display = 'none'; }
-  const chronicEl = document.getElementById('rx-chronic');
-  if (chronicEl) chronicEl.checked = false;
-  _scToggleChronicRxFields(false);
-  clearPrescribeDrugSelection();
+  const notesEl = document.getElementById('rx-notes');
+  if (notesEl) notesEl.value = '';
+  const container = document.getElementById('rx-lines-container');
+  if (container) container.innerHTML = '';
+  _scAddRxLine(); // every prescribing session starts with exactly one medicine line
   const overlay = document.getElementById('prescribe-modal-overlay');
   if (overlay) overlay.style.display = 'flex';
-}
-// Doses-per-day is only meaningful (and only asked for) when the
-// prescriber has flagged the medication as chronic/long-term — that's the
-// only case SmartCare needs to calculate a refill date for.
-function _scToggleChronicRxFields(isChronic){
-  const wrap = document.getElementById('rx-doses-day-wrap');
-  if (wrap) wrap.style.display = isChronic ? 'block' : 'none';
 }
 function closePrescribeModal(){
   const overlay = document.getElementById('prescribe-modal-overlay');
   if (overlay) overlay.style.display = 'none';
   _prescribeTargetPatientId = null;
 }
+
+// ─── Multi-medicine prescribing ──────────────────────────────────────────
+// Each medicine gets its own self-contained "line" card (drug picker,
+// dosage, quantity, chronic toggle) so a doctor can write a full multi-drug
+// prescription in one sitting instead of reopening this modal per drug.
+// Every line is scoped by data-line-id rather than fixed element ids (ids
+// must be unique per the DOM, and there can now be any number of lines),
+// looked up via closest('.rx-line')/querySelector('[data-role=...]').
+
+function _scBuildRxLineHTML(lineId){
+  return `
+  <div class="rx-line" data-line-id="${lineId}" style="position:relative;background:var(--bg3,var(--bg4));border:1px solid var(--border2);border-radius:12px;padding:14px 16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="rx-line-badge" style="width:20px;height:20px;border-radius:50%;background:rgba(79,168,232,.18);color:var(--blue);font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+        <div class="rx-line-title" style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Medicine</div>
+      </div>
+      <button type="button" class="rx-line-remove-btn" onclick="_scRemoveRxLine('${lineId}')" title="Remove this medicine" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s" onmouseover="this.style.background='rgba(255,77,109,.12)';this.style.color='var(--crit)'" onmouseout="this.style.background='none';this.style.color='var(--text3)'">✕</button>
+    </div>
+
+    <div class="fg" style="margin-bottom:10px">
+      <label class="fl">Drug — search the formulary, or scan a barcode</label>
+      <div class="rx-line-selected-chip" data-role="chip" style="display:none;align-items:center;justify-content:space-between;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;margin-bottom:6px">
+        <span data-role="chip-label" style="font-size:12.5px;font-weight:600;color:var(--text)"></span>
+        <button type="button" class="btn btn-g btn-sm" onclick="_scClearRxLineDrug('${lineId}')">Change</button>
+      </div>
+      <div class="rx-line-picker" data-role="picker">
+        <input class="fi" data-role="drug-search" placeholder="Type a drug name, or scan its barcode…" oninput="_scRenderRxLineDrugOptions('${lineId}', this.value)">
+        <div data-role="drug-results" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-top:6px"></div>
+        <button type="button" class="btn btn-g btn-sm" style="margin-top:6px" onclick="_scSelectRxLineDrug('${lineId}','__other__')">Can't find it? Prescribe as "Other / not yet catalogued"</button>
+      </div>
+      <input class="fi" data-role="adhoc-name" placeholder="Drug name (not yet catalogued)" style="display:none;margin-top:6px">
+    </div>
+
+    <div class="fgrid" style="grid-template-columns:1fr 110px;gap:10px;margin-bottom:10px">
+      <div class="fg" style="margin-bottom:0"><label class="fl">Dosage Instructions</label><input class="fi" data-role="dosage" placeholder="e.g. 1 tablet twice daily for 5 days"></div>
+      <div class="fg" style="margin-bottom:0"><label class="fl">Quantity</label><input class="fi" data-role="quantity" type="number" min="1" step="1" placeholder="10" oninput="_scUpdateRxEstimatedTotal()"></div>
+    </div>
+
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;user-select:none">
+      <input type="checkbox" data-role="chronic" onchange="_scToggleRxLineChronicFields('${lineId}', this.checked)" style="width:15px;height:15px;accent-color:var(--blue)">
+      Chronic / long-term medication (enables WhatsApp refill reminders)
+    </label>
+    <div class="fg" data-role="doses-day-wrap" style="display:none;margin-top:8px;margin-bottom:0">
+      <label class="fl">Doses per day</label>
+      <input class="fi" data-role="doses-day" type="number" min="1" step="1" placeholder="e.g. 2 (for twice daily)">
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">Used to calculate the expected refill date — quantity ÷ doses per day.</div>
+    </div>
+  </div>`;
+}
+
+function _scAddRxLine(){
+  const container = document.getElementById('rx-lines-container');
+  if (!container) return;
+  const lineId = 'rxl' + (++_rxLineSeq);
+  container.insertAdjacentHTML('beforeend', _scBuildRxLineHTML(lineId));
+  const lineEl = container.querySelector(`.rx-line[data-line-id="${lineId}"]`);
+  _scRenderRxLineDrugOptions(lineId, '');
+  bindBarcodeScanner(lineEl?.querySelector('[data-role="drug-search"]'), lookupPrescribeDrugByCode, drugId => _scSelectRxLineDrug(lineId, drugId));
+  _scRenumberRxLines();
+}
+
+function _scRemoveRxLine(lineId){
+  const container = document.getElementById('rx-lines-container');
+  const lineEl = container?.querySelector(`.rx-line[data-line-id="${lineId}"]`);
+  if (!lineEl || !container) return;
+  // Always leave at least one medicine line — an empty prescription makes
+  // no sense, and this keeps savePrescription()'s validation simple (it
+  // never has to handle "zero lines" as a distinct case).
+  if (container.querySelectorAll('.rx-line').length <= 1) {
+    showToast('A prescription needs at least one medicine.', true);
+    return;
+  }
+  lineEl.remove();
+  _scRenumberRxLines();
+  _scUpdateRxEstimatedTotal();
+}
+
+// Keeps each line's "Medicine N" badge/number in sync after an add/remove,
+// and hides the remove button entirely when only one line is left (matches
+// _scRemoveRxLine's own floor of 1, but avoids the toast-then-nothing
+// experience of clicking a button that's guaranteed to refuse).
+function _scRenumberRxLines(){
+  const lines = document.querySelectorAll('#rx-lines-container .rx-line');
+  lines.forEach((lineEl, i) => {
+    const badge = lineEl.querySelector('.rx-line-badge');
+    const title = lineEl.querySelector('.rx-line-title');
+    const removeBtn = lineEl.querySelector('.rx-line-remove-btn');
+    if (badge) badge.textContent = String(i + 1);
+    if (title) title.textContent = `Medicine ${i + 1}`;
+    if (removeBtn) removeBtn.style.visibility = lines.length > 1 ? 'visible' : 'hidden';
+  });
+  const suffix = document.getElementById('rx-save-btn-suffix');
+  if (suffix) suffix.textContent = lines.length > 1 ? 's' : '';
+}
+
+function lookupPrescribeDrugByCode(code){
+  const c = String(code||'').trim().toLowerCase();
+  if (!c) return null;
+  const drug = drugFormulary.find(d => (d.barcode||'').toLowerCase() === c);
+  return drug ? drug.id : null;
+}
+
 // Searchable formulary picker — so a doctor can see name, form/strength,
 // category, price and stock at a glance while prescribing, instead of
 // scrolling a bare dropdown. Also scan-to-select via bindBarcodeScanner.
-function renderPrescribeDrugOptions(query){
-  const q = (query||'').toLowerCase().trim();
-  const results = document.getElementById('rx-drug-results');
+function _scRenderRxLineDrugOptions(lineId, query){
+  const lineEl = document.querySelector(`#rx-lines-container .rx-line[data-line-id="${lineId}"]`);
+  const results = lineEl?.querySelector('[data-role="drug-results"]');
   if (!results) return;
+  const q = (query||'').toLowerCase().trim();
   const matches = drugFormulary.filter(d => !q ||
     d.name.toLowerCase().includes(q) ||
     (d.category||'').toLowerCase().includes(q) ||
@@ -14360,7 +14899,7 @@ function renderPrescribeDrugOptions(query){
     const outOfStockEverywhere = total != null && total <= 0;
     const lowStock = total != null && total > 0 && total < 50;
     const stockLabel = total == null ? '' : (outOfStockEverywhere ? '<span style="color:var(--crit);font-weight:600">Out of stock nationally</span>' : lowStock ? `<span style="color:var(--amber);font-weight:600">${total} left nationally</span>` : `<span style="color:var(--text3)">${total} in stock nationally</span>`);
-    return `<div onclick="selectPrescribeDrug('${d.id}')" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:7px;cursor:pointer">
+    return `<div onclick="_scSelectRxLineDrug('${lineId}','${d.id}')" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:7px;cursor:pointer">
       <div>
         <div style="font-size:12.5px;font-weight:600;color:var(--text)">${_scEsc(d.name)} ${_scEsc(d.strength||'')} ${d.essential?'<span class="pill green" style="font-size:9px;padding:1px 6px;margin-left:4px">EDLIZ</span>':''}</div>
         <div style="font-size:10.5px;color:var(--text3)">${_scEsc(d.form||'')} · ${_scEsc(d.category||'')} · $${d.unitPrice.toFixed(2)}/${_scEsc(d.unit)}</div>
@@ -14369,18 +14908,15 @@ function renderPrescribeDrugOptions(query){
     </div>`;
   }).join('') || '<div style="color:var(--text3);font-size:12px;padding:8px;text-align:center">No matching drugs</div>';
 }
-function lookupPrescribeDrugByCode(code){
-  const c = String(code||'').trim().toLowerCase();
-  if (!c) return null;
-  const drug = drugFormulary.find(d => (d.barcode||'').toLowerCase() === c);
-  return drug ? drug.id : null;
-}
-function selectPrescribeDrug(drugId){
-  _prescribeSelectedDrugId = drugId;
-  const chip = document.getElementById('rx-drug-selected-chip');
-  const chipLabel = document.getElementById('rx-drug-selected-label');
-  const picker = document.getElementById('rx-drug-picker');
-  const adhocEl = document.getElementById('rx-adhoc-name');
+
+function _scSelectRxLineDrug(lineId, drugId){
+  const lineEl = document.querySelector(`#rx-lines-container .rx-line[data-line-id="${lineId}"]`);
+  if (!lineEl) return;
+  lineEl.dataset.selectedDrugId = drugId;
+  const chip = lineEl.querySelector('[data-role="chip"]');
+  const chipLabel = lineEl.querySelector('[data-role="chip-label"]');
+  const picker = lineEl.querySelector('[data-role="picker"]');
+  const adhocEl = lineEl.querySelector('[data-role="adhoc-name"]');
   if (drugId === '__other__') {
     if (chipLabel) chipLabel.textContent = 'Other / not yet catalogued';
     if (adhocEl) { adhocEl.style.display = 'block'; adhocEl.focus(); }
@@ -14392,20 +14928,61 @@ function selectPrescribeDrug(drugId){
   }
   if (chip) chip.style.display = 'flex';
   if (picker) picker.style.display = 'none';
+  _scUpdateRxEstimatedTotal();
 }
-function clearPrescribeDrugSelection(){
-  _prescribeSelectedDrugId = null;
-  const chip = document.getElementById('rx-drug-selected-chip');
-  const picker = document.getElementById('rx-drug-picker');
-  const searchEl = document.getElementById('rx-drug-search');
-  const adhocEl = document.getElementById('rx-adhoc-name');
+
+function _scClearRxLineDrug(lineId){
+  const lineEl = document.querySelector(`#rx-lines-container .rx-line[data-line-id="${lineId}"]`);
+  if (!lineEl) return;
+  lineEl.dataset.selectedDrugId = '';
+  const chip = lineEl.querySelector('[data-role="chip"]');
+  const picker = lineEl.querySelector('[data-role="picker"]');
+  const searchEl = lineEl.querySelector('[data-role="drug-search"]');
+  const adhocEl = lineEl.querySelector('[data-role="adhoc-name"]');
   if (chip) chip.style.display = 'none';
   if (picker) picker.style.display = 'block';
   if (searchEl) searchEl.value = '';
   if (adhocEl) adhocEl.style.display = 'none';
-  renderPrescribeDrugOptions('');
-  bindBarcodeScanner(searchEl, lookupPrescribeDrugByCode, selectPrescribeDrug);
+  _scRenderRxLineDrugOptions(lineId, '');
+  bindBarcodeScanner(searchEl, lookupPrescribeDrugByCode, drugId => _scSelectRxLineDrug(lineId, drugId));
+  _scUpdateRxEstimatedTotal();
 }
+
+// Doses-per-day is only meaningful (and only asked for) when the
+// prescriber has flagged that specific medicine as chronic/long-term —
+// that's the only case SmartCare needs to calculate a refill date for.
+function _scToggleRxLineChronicFields(lineId, isChronic){
+  const lineEl = document.querySelector(`#rx-lines-container .rx-line[data-line-id="${lineId}"]`);
+  const wrap = lineEl?.querySelector('[data-role="doses-day-wrap"]');
+  if (wrap) wrap.style.display = isChronic ? 'block' : 'none';
+}
+
+// Live running total across every line that has a real (catalogued) drug
+// selected — ad-hoc/uncatalogued entries have no known price, so they're
+// silently excluded from the total rather than treated as $0, which would
+// otherwise understate the estimate without any indication why.
+function _scUpdateRxEstimatedTotal(){
+  const wrap = document.getElementById('rx-estimated-total-wrap');
+  const valueEl = document.getElementById('rx-estimated-total-value');
+  const countEl = document.getElementById('rx-estimated-total-count');
+  if (!wrap || !valueEl) return;
+  let total = 0, pricedCount = 0, unpricedCount = 0;
+  document.querySelectorAll('#rx-lines-container .rx-line').forEach(lineEl => {
+    const drugId = lineEl.dataset.selectedDrugId;
+    const qty = parseInt(lineEl.querySelector('[data-role="quantity"]')?.value, 10) || 0;
+    if (!drugId || qty <= 0) return;
+    if (drugId === '__other__') { unpricedCount++; return; }
+    const drug = getDrugFormularyItem(drugId);
+    if (!drug) return;
+    total += drug.unitPrice * qty;
+    pricedCount++;
+  });
+  if (pricedCount === 0 && unpricedCount === 0) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'flex';
+  valueEl.textContent = '$' + total.toFixed(2);
+  if (countEl) countEl.textContent = unpricedCount ? `(${pricedCount} priced, ${unpricedCount} not yet catalogued)` : `across ${pricedCount} item${pricedCount===1?'':'s'}`;
+}
+
 function savePrescription(){
   // Defense-in-depth: the "Rx" button is already hidden for non-doctors,
   // but this action is re-checked here too, matching the pattern used
@@ -14418,50 +14995,72 @@ function savePrescription(){
   }
   const patientId = _prescribeTargetPatientId;
   if (!patientId) { showToast('No patient selected.', true); return; }
-  const drugSel = _prescribeSelectedDrugId || '';
-  const adhocName = document.getElementById('rx-adhoc-name')?.value.trim() || '';
-  const dosageInstructions = document.getElementById('rx-dosage')?.value.trim() || '';
-  const quantityPrescribed = parseInt(document.getElementById('rx-quantity')?.value, 10);
-  const notes = document.getElementById('rx-notes')?.value.trim() || '';
-  const chronic = !!document.getElementById('rx-chronic')?.checked;
-  const dosesPerDay = chronic ? parseInt(document.getElementById('rx-doses-day')?.value, 10) : 0;
-
-  if (!drugSel) { showToast('Select a drug (or "Other").', true, '⚠ Validation'); return; }
-  if (drugSel === '__other__' && !adhocName) { showToast('Enter the drug name.', true, '⚠ Validation'); return; }
-  if (!dosageInstructions) { showToast('Enter dosage instructions.', true, '⚠ Validation'); return; }
-  if (!quantityPrescribed || quantityPrescribed <= 0) { showToast('Enter a valid quantity.', true, '⚠ Validation'); return; }
-  if (chronic && (!dosesPerDay || dosesPerDay <= 0)) { showToast('Enter doses per day for this chronic medication (needed to calculate the refill date).', true, '⚠ Validation'); return; }
-
-  const adHoc = drugSel === '__other__';
-  const drug = adHoc ? null : getDrugFormularyItem(drugSel);
-  if (!adHoc && !drug) { showToast('Selected drug not found in formulary.', true); return; }
-
   const p = patients.find(x => x.id === patientId) || dischargedPatients.find(x => x.id === patientId);
-  const rx = {
-    id: 'RX-' + Date.now() + '-' + Math.floor(Math.random()*1000),
-    patientId, patientName: p?.name || '',
-    drugId: adHoc ? null : drug.id,
-    drugName: adHoc ? adhocName : drug.name,
-    form: adHoc ? '' : drug.form,
-    strength: adHoc ? '' : drug.strength,
-    unit: adHoc ? 'unit' : drug.unit,
-    dosageInstructions,
-    quantityPrescribed,
-    quantityDispensed: 0,
-    adHoc,
-    chronic,
-    dosesPerDay,
-    status: 'pending',
-    prescribedBy: getCurrentSessionUser()?.name || 'Unknown',
-    prescribedAt: new Date().toISOString(),
-    notes,
-    dispenseLog: []
-  };
-  addPrescriptionToPatientRecord(patientId, rx);
+  const notes = document.getElementById('rx-notes')?.value.trim() || '';
+
+  const lineEls = Array.from(document.querySelectorAll('#rx-lines-container .rx-line'));
+  if (!lineEls.length) { showToast('Add at least one medicine.', true, '⚠ Validation'); return; }
+
+  // Validate every line BEFORE creating any prescription — a doctor
+  // filling in a 3-drug script shouldn't end up with 2 silently saved and
+  // the 3rd rejected; either the whole prescription saves, or none of it
+  // does, so they can fix the one problem line and resubmit everything.
+  const parsed = [];
+  for (let i = 0; i < lineEls.length; i++) {
+    const lineEl = lineEls[i];
+    const n = i + 1;
+    const drugSel = lineEl.dataset.selectedDrugId || '';
+    const adhocName = lineEl.querySelector('[data-role="adhoc-name"]')?.value.trim() || '';
+    const dosageInstructions = lineEl.querySelector('[data-role="dosage"]')?.value.trim() || '';
+    const quantityPrescribed = parseInt(lineEl.querySelector('[data-role="quantity"]')?.value, 10);
+    const chronic = !!lineEl.querySelector('[data-role="chronic"]')?.checked;
+    const dosesPerDay = chronic ? parseInt(lineEl.querySelector('[data-role="doses-day"]')?.value, 10) : 0;
+
+    if (!drugSel) { showToast(`Medicine ${n}: select a drug (or "Other").`, true, '⚠ Validation'); return; }
+    if (drugSel === '__other__' && !adhocName) { showToast(`Medicine ${n}: enter the drug name.`, true, '⚠ Validation'); return; }
+    if (!dosageInstructions) { showToast(`Medicine ${n}: enter dosage instructions.`, true, '⚠ Validation'); return; }
+    if (!quantityPrescribed || quantityPrescribed <= 0) { showToast(`Medicine ${n}: enter a valid quantity.`, true, '⚠ Validation'); return; }
+    if (chronic && (!dosesPerDay || dosesPerDay <= 0)) { showToast(`Medicine ${n}: enter doses per day (needed to calculate the refill date).`, true, '⚠ Validation'); return; }
+
+    const adHoc = drugSel === '__other__';
+    const drug = adHoc ? null : getDrugFormularyItem(drugSel);
+    if (!adHoc && !drug) { showToast(`Medicine ${n}: selected drug not found in formulary.`, true); return; }
+
+    parsed.push({ adHoc, drug, adhocName, dosageInstructions, quantityPrescribed, chronic, dosesPerDay });
+  }
+
+  const created = parsed.map(line => {
+    const rx = {
+      id: 'RX-' + Date.now() + '-' + Math.floor(Math.random()*1000) + '-' + parsed.indexOf(line),
+      patientId, patientName: p?.name || '',
+      drugId: line.adHoc ? null : line.drug.id,
+      drugName: line.adHoc ? line.adhocName : line.drug.name,
+      form: line.adHoc ? '' : line.drug.form,
+      strength: line.adHoc ? '' : line.drug.strength,
+      unit: line.adHoc ? 'unit' : line.drug.unit,
+      dosageInstructions: line.dosageInstructions,
+      quantityPrescribed: line.quantityPrescribed,
+      quantityDispensed: 0,
+      adHoc: line.adHoc,
+      chronic: line.chronic,
+      dosesPerDay: line.dosesPerDay,
+      status: 'pending',
+      prescribedBy: getCurrentSessionUser()?.name || 'Unknown',
+      prescribedAt: new Date().toISOString(),
+      notes,
+      dispenseLog: []
+    };
+    addPrescriptionToPatientRecord(patientId, rx);
+    return rx;
+  });
+
   closePrescribeModal();
   if (_pharmacySelectedPatientId === patientId) renderPharmacyPatientPrescriptions(patientId);
   if (document.getElementById('page-pharmacy')?.classList.contains('active') && typeof initPharmacy === 'function') initPharmacy();
-  showToast(`Prescription for ${rx.drugName} added`, false, '💊 Prescribed');
+  showToast(
+    created.length === 1 ? `Prescription for ${created[0].drugName} added` : `${created.length} prescriptions added: ${created.map(r=>r.drugName).join(', ')}`,
+    false, '💊 Prescribed'
+  );
 }
 function addPrescriptionToPatientRecord(patientId, rx){
   const h = ensurePatientHistoryRecord(patientId);
@@ -14478,14 +15077,27 @@ function recordInvoicePayment(){
   const amount = parseFloat(document.getElementById('inv-pay-amount').value);
   const ref = document.getElementById('inv-pay-ref').value.trim();
   if (!amount || amount <= 0) { showToast('Enter a valid payment amount.', true, '⚠ Validation'); return; }
-  inv.payments.push({
+  const payment = {
     id: 'PMT-' + Date.now() + '-' + Math.floor(Math.random()*1000),
     method, amount: Math.round(amount*100)/100, reference: ref, date: new Date().toISOString()
-  });
+  };
+  inv.payments.push(payment);
   document.getElementById('inv-pay-amount').value = '';
   document.getElementById('inv-pay-ref').value = '';
   saveCurrentInvoice();
   showToast(`Payment of $${amount.toFixed(2)} recorded via ${method}`, false, '✅ Payment Recorded');
+
+  // Auto-send the receipt PDF + payment statement to the patient's own
+  // WhatsApp — best-effort: the payment is already fully recorded above
+  // regardless of whether a phone number is on file, sentWA is configured,
+  // or the send itself succeeds. This never blocks or reverses the actual
+  // payment; it just tries to notify, same principle as every other
+  // auto-notification in this app.
+  try {
+    if (typeof _scSendPatientWAPdf === 'function') {
+      _scSendPatientWAPdf('payment-receipt', inv.patientId, { inv, payment }).catch(()=>{});
+    }
+  } catch (e) {}
 }
 
 function toggleInvoiceWaived(){
@@ -14607,11 +15219,12 @@ function renderInvoiceEditor(){
   const liBody = document.getElementById('invoice-lineitems-body');
   liBody.innerHTML = getInvoiceLineItemsResolved(inv).map(li => {
     const isVirtual = li.id === '__ward_accrual__';
-    const marker = isVirtual ? '🔄 ' : (li.auto ? '⚡ ' : '');
+    const isOngoing = isVirtual && /,\s*ongoing$/i.test(li.description);
+    const marker = isVirtual ? (isOngoing ? '<span class="inv-live-dot" title="Still accruing"></span>' : '🔄 ') : (li.auto ? '⚡ ' : '');
     const deleteAction = isVirtual ? 'disableWardAccrual()' : `removeInvoiceLineItem('${li.id}')`;
     const deleteTitle = isVirtual ? 'Turn off auto ward accrual' : 'Remove line';
     return `
-    <tr${isVirtual ? ' style="font-style:italic;background:var(--bg4)"' : ''}>
+    <tr${isVirtual ? ' class="inv-lineitem-auto"' : ''}>
       <td>${marker}${_scEsc(li.description)}${li.auto && !isVirtual ? ' <span class="badge stable" style="font-size:9px;padding:1px 6px;vertical-align:middle">AUTO-CHARGED</span>' : ''}</td>
       <td class="mono">$${li.amount.toFixed(2)}</td>
       <td class="mono" style="color:var(--text3);font-size:11px">${li.vatLabel}${li.vatAmount ? ' ($'+li.vatAmount.toFixed(2)+')' : ''}</td>
@@ -14640,21 +15253,21 @@ function renderInvoiceEditor(){
   balEl.style.color = t.balance > 0 ? 'var(--crit)' : 'var(--green)';
 }
 
-// Shows the treating facility's logo on the patient profile header, when
-// that facility has one registered.
+// Shows the treating facility's logo in the top-left of the patient
+// profile header, right beside their name — logo only (no name pill) to
+// keep the header compact; the facility name is still available as a
+// tooltip on hover for anyone who wants it.
 function updateModalFacilityBadge(p){
-  const badge = document.getElementById('modal-facility-badge');
   const logoEl = document.getElementById('modal-facility-logo');
-  const nameEl = document.getElementById('modal-facility-name');
-  if (!badge) return;
+  if (!logoEl) return;
   const fac = getFacilityByName(p?.facility);
-  if (fac) {
-    logoEl.src = fac.logo || '';
-    logoEl.style.display = fac.logo ? 'block' : 'none';
-    nameEl.textContent = fac.name;
-    badge.style.display = 'flex';
+  if (fac?.logo) {
+    logoEl.src = fac.logo; // direct property assignment, not HTML — no escaping needed/wanted here
+    logoEl.title = fac.name || '';
+    logoEl.alt = fac.name || '';
+    logoEl.style.display = 'block';
   } else {
-    badge.style.display = 'none';
+    logoEl.style.display = 'none';
   }
 }
 
@@ -14663,17 +15276,27 @@ function updateModalFacilityBadge(p){
 function updateModalBillingStatus(pid){
   const balEl = document.getElementById('mv-billing-balance');
   const statusEl = document.getElementById('mv-billing-status');
-  const linkEl = document.getElementById('mv-billing-link');
+  const cardEl = document.getElementById('mv-billing-card');
+  const actionBtn = document.getElementById('mv-billing-action-btn');
   if (!balEl || !statusEl) return;
 
   const patInvoices = (Array.isArray(invoices)?invoices:[]).filter(i => i.patientId === pid);
-  const canSeeLink = typeof isAdminUser === 'function' && isAdminUser() && patInvoices.length > 0;
-  if (linkEl) linkEl.style.display = canSeeLink ? 'inline' : 'none';
+  // Visible to everyone with invoices on record, same as the header's own
+  // "💳 Pay Now" tab (openPatientBillingFromProfile(), also ungated) — the
+  // real access control already happens one click later, when
+  // showPage('billing') itself checks isAdminLikeRole() and blocks non-
+  // admins with a toast. Gating this button's visibility on top of that
+  // just meant the two Pay Now entry points disagreed with each other:
+  // the tab always showed, this button silently didn't for anyone whose
+  // role isAdminUser() didn't recognize.
+  const canSeeAction = patInvoices.length > 0;
 
   if (!patInvoices.length) {
     balEl.textContent = '$0.00';
     balEl.style.color = 'var(--text3)';
     statusEl.textContent = 'No invoices on record';
+    if (cardEl) cardEl.style.borderLeftColor = 'var(--border2)';
+    if (actionBtn) actionBtn.style.display = 'none';
     return;
   }
 
@@ -14688,6 +15311,28 @@ function updateModalBillingStatus(pid){
     : allSettled
       ? `${patInvoices.length} invoice${patInvoices.length===1?'':'s'} · fully settled`
       : `${patInvoices.length} invoice${patInvoices.length===1?'':'s'} on record`;
+
+  if (cardEl) cardEl.style.borderLeftColor = outstanding > 0 ? 'var(--crit)' : 'var(--green)';
+
+  // A live outstanding balance gets a real "Pay Now" call-to-action right
+  // next to the number that prompted it — clicking it goes straight into
+  // Billing already searched to this patient's invoice, same destination
+  // as the header's "💳 Pay Now" tab. Once settled there's nothing to pay,
+  // so the button becomes a plain "View Invoices" instead.
+  if (actionBtn) {
+    actionBtn.style.display = canSeeAction ? 'block' : 'none';
+    if (outstanding > 0) {
+      actionBtn.textContent = '💳 Pay Now';
+      actionBtn.style.background = 'linear-gradient(135deg,#ff4d6d,#ff7a8f)';
+      actionBtn.style.color = '#fff';
+      actionBtn.style.boxShadow = '0 4px 14px rgba(255,77,109,.3)';
+    } else {
+      actionBtn.textContent = '📄 View Invoices';
+      actionBtn.style.background = 'var(--bg4)';
+      actionBtn.style.color = 'var(--text2)';
+      actionBtn.style.boxShadow = 'none';
+    }
+  }
 }
 
 function openPatientBillingFromProfile(){
@@ -14703,21 +15348,27 @@ function openPatientBillingFromProfile(){
 function renderBillingTable(){
   const q = (document.getElementById('billing-search')?.value || '').toLowerCase().trim();
   const statusFilter = document.getElementById('billing-status-filter')?.value || '';
+  const facilityFilter = document.getElementById('billing-facility-filter')?.value || '';
+  const patientStatusFilter = document.getElementById('billing-patient-status-filter')?.value || '';
 
-  const rows = invoices.map(inv => ({ inv, t: computeInvoiceTotals(inv) })).filter(({inv,t}) => {
+  const rows = invoices.map(inv => ({ inv, t: computeInvoiceTotals(inv), lifecycle: _scResolvePatientLifecycleStatus(inv.patientId) })).filter(({inv,t,lifecycle}) => {
     if (statusFilter && t.status !== statusFilter) return false;
+    if (facilityFilter && String(inv.facility||'').trim() !== facilityFilter) return false;
+    if (patientStatusFilter && lifecycle !== patientStatusFilter) return false;
     if (q && !(inv.patientName||'').toLowerCase().includes(q) && !(inv.id||'').toLowerCase().includes(q) && !(inv.patientId||'').toLowerCase().includes(q)) return false;
     return true;
   });
 
   const tbody = document.getElementById('billing-table-body');
   if (tbody) {
-    tbody.innerHTML = rows.map(({inv,t}) => {
+    tbody.innerHTML = rows.map(({inv,t,lifecycle}) => {
       const [label, cls] = INVOICE_STATUS_META[t.status] || ['Open','high'];
       return `
       <tr style="cursor:pointer" onclick="openInvoiceEditor('${inv.id}')">
         <td class="mono">${inv.id}</td>
+        <td class="mono" style="color:var(--text3)">${_scEsc(inv.patientId)}</td>
         <td style="font-weight:600;color:var(--text)">${_scEsc(inv.patientName)}</td>
+        <td>${_scPatientLifecycleBadge(lifecycle)}</td>
         <td style="color:var(--text3)">${_scEsc(inv.facility || '—')}</td>
         <td style="color:var(--text3);font-size:11.5px">${new Date(inv.createdAt).toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})}</td>
         <td class="mono">$${t.total.toFixed(2)}</td>
@@ -14729,7 +15380,7 @@ function renderBillingTable(){
           <button onclick="event.stopPropagation();exportInvoicePDFById('${inv.id}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px" title="Download PDF">📄</button>
         </td>
       </tr>`;
-    }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px">No invoices yet — click + New Invoice to create one</td></tr>';
+    }).join('') || '<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:20px">No invoices yet — click + New Invoice to create one</td></tr>';
   }
 
   const countNote = document.getElementById('billing-count-note');
@@ -15035,6 +15686,455 @@ function _buildInvoicePDF(inv, mode){
   } else {
     doc.save(fileName);
     showToast('Invoice PDF downloaded', false, '📄 Exported');
+  }
+}
+
+// ─── Payment gateway (placeholder — no real merchant account wired up) ───
+// SmartCare doesn't have real EcoCash/card/online-payment processing
+// integrated yet (that needs a real merchant account with a provider like
+// Paynow Zimbabwe — EcoCash, cards and bank transfer through one API,
+// the standard local aggregator for this). Rather than block the payment
+// link on that, or fake a working checkout, this ships the link/page/PDF
+// embedding as real, working infrastructure NOW, with clearly-labeled
+// placeholder instructions per method — swap PAYMENT_GATEWAY_CONFIG's
+// values for real merchant details (or wire in a real API) whenever a
+// provider is chosen, with zero changes needed anywhere else that
+// consumes it.
+const PAYMENT_GATEWAY_CONFIG_KEY = 'sc_payment_gateway_v1';
+function getPaymentGatewayConfig(){
+  try {
+    const stored = JSON.parse(localStorage.getItem(PAYMENT_GATEWAY_CONFIG_KEY) || 'null');
+    if (stored && typeof stored === 'object') return stored;
+  } catch (e) {}
+  return {
+    ecocashMerchantCode: '000000',
+    ecocashInstructions: 'Dial *151# → Merchant Payment → Enter Merchant Code {code} → Enter Amount → Confirm with PIN.',
+    cardInstructions: 'Card payments are currently taken at the billing office, or by phone — see contact details below.',
+    onlinePaymentNote: 'Online card/bank payment portal — coming soon.',
+    merchantNote: 'Pay in person at the hospital billing office (cash, card, or EcoCash accepted).'
+  };
+}
+
+// The link a patient taps to see their payment options — see site/pay.html.
+// This app has no shared backend database (patient/billing data lives only
+// in the browser localStorage of whichever staff member is using it), so
+// there's nothing a link opened on the PATIENT's own phone could look up
+// live. Instead the essential display details (amount, invoice #, patient
+// name, hospital) are encoded directly into the URL itself — a snapshot
+// as of when the link was generated, not a live lookup. Good enough for a
+// placeholder/demo flow; a real deployment with a real backend would swap
+// this for a short opaque token the server resolves instead.
+function _scBuildPaymentLink(inv, balance){
+  const base = String(window.location.href).replace(/[^/]*$/, '') + 'pay.html';
+  const params = new URLSearchParams({
+    inv: inv.id || '',
+    pid: inv.patientId || '', // shown on pay.html as the payment reference to quote (EcoCash/bank transfer)
+    amt: (balance ?? 0).toFixed(2),
+    patient: inv.patientName || '',
+    hosp: _scGetPatientFacilityName({ facility: inv.facility }) || ''
+  });
+  return `${base}?${params.toString()}`;
+}
+
+// A generic, non-patient-specific payment link — e.g. for a poster/QR code
+// at reception, or a broad WhatsApp broadcast — where whoever opens it
+// fills in their own name/reference rather than it being pre-filled.
+// pay.html tells the two cases apart by whether ?inv=/?pid= are present at
+// all, not by a separate flag, so both links are just the same page.
+function _scBuildGeneralPaymentLink(){
+  const base = String(window.location.href).replace(/[^/]*$/, '') + 'pay.html';
+  const hosp = (typeof getHospitalSettings === 'function' ? getHospitalSettings()?.name : '') || '';
+  return hosp ? `${base}?hosp=${encodeURIComponent(hosp)}` : base;
+}
+
+function _scBuildPaymentReceiptCaption(patient, inv, payment){
+  const t = computeInvoiceTotals(inv);
+  const paidInFull = t.balance <= 0;
+  const firstName = String(patient?.name || '').trim().split(' ')[0] || 'there';
+  const hospName = _scGetPatientFacilityName(patient);
+  if (paidInFull) {
+    return `Dear ${firstName}, thank you! We've received your payment of $${payment.amount.toFixed(2)} for ${inv.id} at ${hospName}. Your account is now fully settled — receipt attached.`;
+  }
+  const payLink = _scBuildPaymentLink(inv, t.balance);
+  // WhatsApp has no markdown-style link syntax — it can only auto-linkify a
+  // raw URL as-is, it cannot swap in custom text like other platforms do.
+  // "Pay Here" is placed immediately before the link as the closest
+  // equivalent: a short, clear call-to-action right next to the tappable URL.
+  return `Dear ${firstName}, thank you! We've received your payment of $${payment.amount.toFixed(2)} for ${inv.id} at ${hospName}. Your new outstanding balance is $${t.balance.toFixed(2)}.\n\nPay Here: ${payLink}\n\nReceipt attached.`;
+}
+
+// A dedicated payment-confirmation receipt — deliberately its own design
+// rather than just re-sending the invoice PDF: a receipt is a completed-
+// transaction record ("here's proof of what you just paid"), so it leads
+// with a success-green hero amount and a before/after balance ledger
+// instead of an itemised charge breakdown. Auto-generated and WhatsApped
+// to the patient the moment a payment is recorded — see
+// recordInvoicePayment(). `mode:'whatsapp'` returns {fileName, base64}
+// exactly like _buildInvoicePDF's own whatsapp mode.
+function _buildPaymentReceiptPDF(inv, payment, mode){
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) { showToast('PDF library not loaded.', true); return; }
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const t = computeInvoiceTotals(inv);
+  const hs = getHospitalSettings();
+  const pw = doc.internal.pageSize.getWidth();
+  const ph = doc.internal.pageSize.getHeight();
+  const mg = 15;
+
+  // Same brand navy as every other SmartCare document, paired with a
+  // success green (not the invoice's teal) so a receipt reads at a glance
+  // as "this is confirmation of money already received," not a bill.
+  const NAVY = [20,64,122], NAVY_TINT = [230,238,248], BLUE = [26,111,196],
+        GREEN = [16,163,110], GREEN_TINT = [232,250,242],
+        GRAY = [110,120,135], GRAY_LT = [225,230,236], INK = [40,45,55];
+
+  const balanceBefore = Math.round((t.balance + payment.amount) * 100) / 100;
+  const balanceAfter = t.balance;
+  const paidInFull = balanceAfter <= 0;
+  const displayHospName = (inv.facility && inv.facility.trim()) ? inv.facility.trim() : hs.name;
+  const invFacility = getFacilityByName(inv.facility);
+
+  // ── Header: hospital mark + name, "PAYMENT RECEIPT" title ──
+  if (invFacility?.logo) {
+    const fmt = invFacility.logo.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+    try { doc.addImage(invFacility.logo, fmt, mg, 13, 12, 12); } catch (e) {
+      doc.setFillColor(...GREEN); doc.roundedRect(mg, 14, 10, 10, 2.5, 2.5, 'F');
+    }
+  } else {
+    doc.setFillColor(...GREEN);
+    doc.roundedRect(mg, 14, 10, 10, 2.5, 2.5, 'F');
+    doc.setFillColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text('$', mg+5, 20.5, { align: 'center' });
+  }
+  doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(...NAVY);
+  doc.text(pdfSanitise(displayHospName), mg + 15, 20);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
+  doc.text('Official Payment Receipt', mg + 15, 26);
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(...GREEN);
+  doc.text('✓ PAYMENT RECEIVED', pw - mg, 20, { align: 'right' });
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
+  doc.text(`Receipt for ${pdfSanitise(inv.id)} · ${new Date(payment.date).toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})}`, pw - mg, 26, { align: 'right' });
+
+  let y = 40;
+  doc.setDrawColor(...GRAY_LT); doc.line(mg, y, pw - mg, y); y += 10;
+
+  // ── Hero amount — the single most important number on the page ──
+  doc.setFillColor(...GREEN_TINT);
+  doc.roundedRect(mg, y, pw - 2*mg, 30, 4, 4, 'F');
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
+  doc.text('AMOUNT PAID', pw/2, y + 10, { align: 'center' });
+  doc.setFont('helvetica','bold'); doc.setFontSize(26); doc.setTextColor(...GREEN);
+  doc.text('$' + payment.amount.toFixed(2), pw/2, y + 23, { align: 'center' });
+  y += 40;
+
+  // ── Patient + payment details, side by side ──
+  const colW = (pw - 2*mg - 10) / 2;
+  const field = (x, label, value) => {
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text(label.toUpperCase(), x, y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(...INK);
+    doc.text(pdfSanitise(String(value || '—')), x, y + 5);
+  };
+  field(mg, 'Patient', `${inv.patientName || '—'}`);
+  field(mg + colW + 10, 'Patient ID', inv.patientId || '—');
+  y += 13;
+  field(mg, 'Payment Method', payment.method || '—');
+  field(mg + colW + 10, 'Reference', payment.reference || '—');
+  y += 16;
+
+  doc.setDrawColor(...GRAY_LT); doc.line(mg, y, pw - mg, y); y += 10;
+
+  // ── Balance ledger: before → paid → after ──
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+  doc.text('ACCOUNT BALANCE', mg, y); y += 7;
+  const ledgerRow = (label, value, color, bold) => {
+    doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(10.5); doc.setTextColor(...INK);
+    doc.text(label, mg, y);
+    doc.setTextColor(...color);
+    doc.text('$' + value.toFixed(2), pw - mg, y, { align: 'right' });
+    y += 7;
+  };
+  ledgerRow('Previous balance', balanceBefore, GRAY);
+  ledgerRow('Payment received', -payment.amount, GREEN);
+  doc.setDrawColor(...GRAY_LT); doc.line(mg, y-2, pw - mg, y-2); y += 3;
+  ledgerRow(paidInFull ? 'New balance — PAID IN FULL' : 'New balance due', balanceAfter, paidInFull ? GREEN : [220,38,38], true);
+  y += 8;
+
+  if (paidInFull) {
+    doc.setFillColor(...GREEN_TINT);
+    doc.roundedRect(mg, y, pw - 2*mg, 14, 3, 3, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...GREEN);
+    doc.text('✓ This account is fully settled. Thank you for your payment.', pw/2, y + 9, { align: 'center' });
+    y += 22;
+  } else {
+    // ── Ways to Pay — only shown while a balance remains ──
+    const payLink = _scBuildPaymentLink(inv, balanceAfter);
+    const gw = getPaymentGatewayConfig();
+    doc.setFillColor(...NAVY_TINT);
+    doc.roundedRect(mg, y, pw - 2*mg, 46, 4, 4, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...NAVY);
+    doc.text('💳 WAYS TO PAY THE REMAINING BALANCE', mg + 6, y + 9);
+
+    const methods = [
+      { icon: '📱', label: 'EcoCash', note: gw.ecocashInstructions.replace('{code}', gw.ecocashMerchantCode) },
+      { icon: '💳', label: 'Card', note: gw.cardInstructions },
+      { icon: '🌐', label: 'Online', note: gw.onlinePaymentNote },
+      { icon: '🏥', label: 'In Person', note: gw.merchantNote },
+    ];
+    const colWpay = (pw - 2*mg - 12) / 2;
+    methods.forEach((m, i) => {
+      const cx = mg + 6 + (i % 2) * (colWpay + 6);
+      const cy = y + 16 + Math.floor(i / 2) * 12;
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...INK);
+      doc.text(`${m.icon} ${m.label}`, cx, cy);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7);
+      doc.setTextColor(...GRAY);
+      const lines = doc.splitTextToSize(pdfSanitise(m.note), colWpay - 4);
+      doc.text(lines.slice(0, 2), cx, cy + 4);
+    });
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...BLUE);
+    doc.textWithLink('🔗 Tap here to pay online now →', mg + 6, y + 42, { url: payLink });
+    y += 54;
+  }
+
+  // ── Footer ──
+  const footY = ph - 16;
+  doc.setFillColor(...NAVY); doc.rect(0, footY, pw, 16, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+  doc.text(pdfSanitise(displayHospName), mg, footY + 6.5);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7);
+  doc.text([hs.phone, hs.email, hs.website].filter(Boolean).map(pdfSanitise).join('   |   '), mg, footY + 11);
+  doc.setFontSize(6.5); doc.setTextColor(200,208,220);
+  doc.text('This is a computer-generated receipt and does not require a signature.', pw - mg, footY + 11, { align: 'right' });
+
+  const fileName = `Receipt_${inv.id}_${(inv.patientName || 'patient').replace(/\s+/g,'_')}.pdf`;
+  if (mode === 'preview') {
+    window.open(doc.output('bloburl'), '_blank');
+    showToast('Payment receipt opened in a new tab', false, '👁 Preview');
+  } else if (mode === 'whatsapp') {
+    return { fileName, base64: doc.output('datauristring').split(',')[1] };
+  } else {
+    doc.save(fileName);
+    showToast('Payment receipt downloaded', false, '📄 Exported');
+  }
+}
+
+// Renders a CODE128 barcode to a PNG data URL via an off-DOM canvas — used
+// so the barcode can be dropped into a PDF with doc.addImage() at an
+// explicit mm width/height. That's the actual fix for "bars overflowing the
+// card": addImage always scales the whole raster into the box you give it,
+// so however many bars JsBarcode draws, they always land fully inside the
+// card — never wider than the space reserved for them.
+function _scRenderBarcodePNG(value, opts = {}){
+  try {
+    const canvas = document.createElement('canvas');
+    JsBarcode(canvas, String(value), Object.assign({ format: 'CODE128', displayValue: false, margin: 0, width: 3, height: 130 }, opts));
+    return canvas.toDataURL('image/png');
+  } catch (e) { return null; }
+}
+
+// Renders a QR code to a PNG data URL via an off-DOM <div> — QRCode.js
+// draws synchronously into whatever element you give it (a <canvas> child,
+// here never attached to the visible page), so no async/Promise plumbing
+// is needed to get a data URL straight back out, matching _scRenderBarcodePNG's
+// synchronous shape so _buildPatientIDCardPDF can stay synchronous too.
+function _scRenderQRPNG(text, opts = {}){
+  try {
+    const div = document.createElement('div');
+    new QRCode(div, Object.assign({ text: String(text), width: 240, height: 240, correctLevel: QRCode.CorrectLevel.M }, opts));
+    const canvas = div.querySelector('canvas');
+    return canvas ? canvas.toDataURL('image/png') : null;
+  } catch (e) { return null; }
+}
+
+// Builds the link encoded into the ID card's second QR code — opened by a
+// PATIENT'S OWN phone camera, completely unauthenticated. There is no
+// shared backend (patient data lives only in whichever browser's
+// localStorage staff are using — see _scBuildPaymentLink's own note on
+// this), so exactly like the payment link, this can only carry a snapshot
+// of data baked directly into the URL, not a live lookup.
+//
+// This snapshot deliberately includes full clinical + billing detail
+// (diagnosis, medications, allergies, balance) per an explicit,
+// twice-confirmed decision: anyone who scans, finds, or photographs this
+// QR code can read that data with no login at all. That's a real exposure
+// on a real, physical, government ID card — flagged clearly on
+// patient-card.html itself, and worth reconsidering before a genuine
+// production deployment in favour of the "identity only" alternative.
+function _scBuildPatientCardQRLink(p){
+  const base = String(window.location.href).replace(/[^/]*$/, '') + 'patient-card.html';
+  const fac = getFacilityByName(p.facility);
+  const invs = (typeof invoices !== 'undefined' ? invoices : []).filter(inv => inv.patientId === p.id);
+  const balance = Math.round(invs.map(inv => computeInvoiceTotals(inv)).filter(t => t.status === 'open' || t.status === 'partial').reduce((s, t) => s + t.balance, 0) * 100) / 100;
+  const isDischarged = (typeof dischargedPatients !== 'undefined' ? dischargedPatients : []).some(x => x.id === p.id);
+  const meds = (p.currentMeds || []).slice(0, 8).join(';');
+  // "None known" (and similar) is this app's normal way of recording that
+  // there ARE no allergies — patient-card.html renders each allergy as a
+  // red danger tag, so passing that string through as-is would show a
+  // misleading red "allergy" warning for a patient who has none. Filtering
+  // it out here lets the page's ordinary empty state ("None on file") apply.
+  const rawAllergies = Array.isArray(p.allergies) ? p.allergies : String(p.allergies || '').split(/[,;]/);
+  const allergies = rawAllergies.map(a => a.trim()).filter(a => a && !/^(none|none known|nil|n\/?a)$/i.test(a)).join(';');
+  const params = new URLSearchParams({
+    n: p.name || '', pid: p.id || '', a: p.age ?? '', g: p.gender || '',
+    hosp: fac?.name || p.facility || '', ward: p.ward || '', bed: p.bed || '',
+    stat: isDischarged ? 'discharged' : 'admitted',
+    dx: p.diagnosis || '', meds, allergies, bal: balance.toFixed(2)
+  });
+  return `${base}?${params.toString()}`;
+}
+
+// The Patient ID Card — issued immediately after registration (see
+// registerPatient()'s auto-send of sendPatientIDCard()) and re-generatable
+// any time after from the patient's WhatsApp tab. Renders fresh from live
+// patient data every single call, so there is no separate "update the
+// card" step: capture a photo later via the profile's 📸 button
+// (capturePatientProfilePhoto → savePatientPhoto sets p.profilePhoto) and
+// the very next card generated — printed, downloaded or WhatsApped —
+// automatically shows it instead of the placeholder silhouette.
+function _buildPatientIDCardPDF(patient, mode){
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) { showToast('PDF library not loaded.', true); return; }
+  if (typeof JsBarcode === 'undefined') { showToast('Barcode library not loaded.', true); return; }
+  const p = patient;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pw = doc.internal.pageSize.getWidth();
+  const fac = getFacilityByName(p.facility);
+  const hospName = _scGetPatientFacilityName(p);
+
+  const NAVY = [20,64,122], BLUE = [26,111,196], GRAY = [110,120,135],
+        GRAY_LT = [225,230,236], INK = [40,45,55], WATERMARK = [240,243,248];
+
+  const cardW = 155, cardH = 100, cardX = (pw - cardW) / 2, cardY = 40, pad = 9;
+
+  // ── Page heading — centred, sitting directly above the card's top edge ──
+  doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(...NAVY);
+  doc.text(pdfSanitise(`Patient ID Card — ${p.name || ''}`), pw / 2, cardY - 10, { align: 'center' });
+
+  // ── Card shell ──
+  doc.setFillColor(250,251,253);
+  doc.roundedRect(cardX, cardY, cardW, cardH, 5, 5, 'F');
+  doc.setDrawColor(...NAVY); doc.setLineWidth(0.6);
+  doc.roundedRect(cardX, cardY, cardW, cardH, 5, 5, 'S');
+  doc.setDrawColor(...BLUE); doc.setLineWidth(1.2);
+  doc.line(cardX + 6, cardY + 2.4, cardX + cardW - 6, cardY + 2.4);
+
+  // Faint diagonal watermark, drawn before everything else on the card so
+  // subsequent fills/text paint over it wherever they overlap.
+  doc.setFont('helvetica','bold'); doc.setFontSize(26); doc.setTextColor(...WATERMARK);
+  doc.text('SMARTCARE AI', cardX + cardW / 2, cardY + cardH / 2 + 6, { align: 'center', angle: 20 });
+
+  const rowTop = cardY + pad;
+  const logoSize = 12, logoX = cardX + pad, logoY = rowTop;
+  const photoW = 14, photoH = 18, photoX = cardX + cardW - pad - photoW, photoY = rowTop;
+
+  // ── Hospital logo (top-left) ──
+  if (fac?.logo) {
+    const fmt = fac.logo.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+    try { doc.addImage(fac.logo, fmt, logoX, logoY, logoSize, logoSize); } catch (e) {
+      doc.setFillColor(...BLUE); doc.roundedRect(logoX, logoY, logoSize, logoSize, 2.5, 2.5, 'F');
+      doc.setFillColor(255,255,255); doc.rect(logoX+5.1,logoY+2.6,1.8,6.8,'F'); doc.rect(logoX+2.6,logoY+5.1,6.8,1.8,'F');
+    }
+  } else {
+    doc.setFillColor(...BLUE); doc.roundedRect(logoX, logoY, logoSize, logoSize, 2.5, 2.5, 'F');
+    doc.setFillColor(255,255,255); doc.rect(logoX+5.1,logoY+2.6,1.8,6.8,'F'); doc.rect(logoX+2.6,logoY+5.1,6.8,1.8,'F');
+  }
+
+  // ── Patient photo (top-right) — placeholder silhouette until one is captured ──
+  doc.setDrawColor(...GRAY_LT); doc.setLineWidth(0.4);
+  doc.roundedRect(photoX, photoY, photoW, photoH, 1.5, 1.5, 'S');
+  if (p.profilePhoto && p.profilePhoto.startsWith('data:')) {
+    const fmt = p.profilePhoto.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+    try { doc.addImage(p.profilePhoto, fmt, photoX, photoY, photoW, photoH); } catch (e) {}
+  } else {
+    doc.setFillColor(242,245,250); doc.roundedRect(photoX+0.3, photoY+0.3, photoW-0.6, photoH-0.6, 1.3, 1.3, 'F');
+    doc.setFillColor(...GRAY_LT);
+    doc.circle(photoX + photoW/2, photoY + 6, 2.6, 'F');
+    doc.ellipse(photoX + photoW/2, photoY + 14.5, 5.2, 3.7, 'F');
+  }
+
+  // ── Hospital name — centred across the full card, auto-shrunk to fit ──
+  const availW = photoX - (logoX + logoSize) - 6;
+  let hospFont = 10.5;
+  doc.setFont('helvetica','bold'); doc.setTextColor(...NAVY);
+  doc.setFontSize(hospFont);
+  const hospUpper = pdfSanitise(hospName).toUpperCase();
+  while (hospFont > 6.5 && doc.getTextWidth(hospUpper) > availW) { hospFont -= 0.5; doc.setFontSize(hospFont); }
+  doc.text(hospUpper, cardX + cardW / 2, rowTop + 7, { align: 'center' });
+
+  let y = rowTop + logoSize + 12; // clears the taller of the two boxes (photo, 18mm) with room to spare
+
+  // ── Patient name ──
+  doc.setFont('helvetica','bold'); doc.setTextColor(...INK);
+  let nameFont = 15;
+  doc.setFontSize(nameFont);
+  const nameStr = pdfSanitise(p.name || '');
+  while (nameFont > 9 && doc.getTextWidth(nameStr) > cardW - 2*pad) { nameFont -= 0.5; doc.setFontSize(nameFont); }
+  doc.text(nameStr, cardX + cardW / 2, y, { align: 'center' });
+  y += 8;
+
+  // ── Meta line ──
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY);
+  // A literal "-", not a middle-dot — pdfSanitise() turns "·" into a
+  // stray "x" (its middle-dot rule fires before the base-14-safe fallback
+  // it likely intended to produce a dash ever gets a chance to match), so
+  // this writes the separator we actually want directly instead.
+  doc.text(pdfSanitise(`${p.age ?? ''}y ${p.gender || ''} - ${p.town || p.province || ''}`), cardX + cardW / 2, y, { align: 'center' });
+  y += 8;
+
+  doc.setDrawColor(...GRAY_LT); doc.setLineWidth(0.3);
+  doc.line(logoX, y, photoX + photoW, y);
+  y += 8;
+
+  // ── Two codes, two purposes: a CODE128 barcode for staff (physical
+  // scanners or the in-app camera scanner — see openScanCardModal — jump
+  // straight to this patient's live profile) and a QR code for the
+  // patient's own phone camera (opens patient-card.html, a standalone,
+  // unauthenticated page — see _scBuildPatientCardQRLink's comment on
+  // exactly what that trade-off means). Both scaled into fixed mm boxes so
+  // neither can ever overflow the card, however long the encoded value is.
+  const qrSize = 18, gap = 4;
+  const barcodeW = cardW - 2*pad - qrSize - gap, barcodeH = 16;
+  const qrX = cardX + cardW - pad - qrSize;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(5.5); doc.setTextColor(...GRAY);
+  doc.text('STAFF SCAN', cardX + pad, y, { align: 'left' });
+  doc.text('MY INFO', qrX + qrSize / 2, y, { align: 'center' });
+  y += 4;
+
+  const barcodePng = _scRenderBarcodePNG(p.id);
+  if (barcodePng) {
+    try { doc.addImage(barcodePng, 'PNG', cardX + pad, y, barcodeW, barcodeH); } catch (e) {}
+  }
+  const qrPng = (typeof QRCode !== 'undefined') ? _scRenderQRPNG(_scBuildPatientCardQRLink(p)) : null;
+  if (qrPng) {
+    try { doc.addImage(qrPng, 'PNG', qrX, y - 1, qrSize, qrSize); } catch (e) {}
+  }
+  y += barcodeH + 5;
+
+  doc.setFont('courier','bold'); doc.setFontSize(10.5); doc.setTextColor(...INK);
+  doc.text(pdfSanitise(p.id || ''), cardX + pad + barcodeW / 2, y, { align: 'center' });
+  y += 6;
+
+  // A literal "-", not "·" — pdfSanitise()'s middle-dot rule fires before
+  // its own later bullet-to-dash rule ever sees it (both target the same
+  // character; the first replace() call already consumed it), so a
+  // middle-dot here would come out as a stray "x", not a dash.
+  doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...GRAY);
+  doc.text(pdfSanitise(`Issued ${new Date().toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})} - SmartCare AI Patient Record System`), cardX + cardW / 2, y, { align: 'center' });
+
+  const fileName = `PatientIDCard_${p.id}_${(p.name || 'patient').replace(/\s+/g,'_')}.pdf`;
+  if (mode === 'preview') {
+    window.open(doc.output('bloburl'), '_blank');
+    showToast('Patient ID Card opened in a new tab — ready to print', false, '👁 Preview');
+  } else if (mode === 'whatsapp') {
+    return { fileName, base64: doc.output('datauristring').split(',')[1] };
+  } else {
+    doc.save(fileName);
+    showToast('Patient ID Card downloaded', false, '📄 Exported');
   }
 }
 
@@ -16064,6 +17164,12 @@ function registerPatient(triggerEl=null){
     console.warn('Admission WhatsApp notification failed', waErr);
     showToast('Patient registered, but WhatsApp notification failed.', true, '⚠ NOK Notify Error', 6000);
   }
+  // Issue the Patient ID Card immediately, to both the patient and next of
+  // kin — with a placeholder photo silhouette for now if the camera step
+  // above hasn't happened yet. Best-effort, fire-and-forget: sendPatientIDCard
+  // is async, so a synchronous try/catch here would never actually catch a
+  // rejected promise — .catch() is the correct guard, never blocks registration.
+  sendPatientIDCard(pid).catch(idErr => console.warn('Patient ID Card auto-send failed', idErr));
   if(isReturning){
     setTimeout(()=>showToast(`Prior records from ${priorDischarged[0].date} automatically linked to ${pid}`,false,'📂 History Linked'),3500);
   }
@@ -16814,6 +17920,10 @@ function _scGetPatientWAMenuItems(pid){
 
   const items = [];
   items.push({
+    label: '🪪 Patient ID Card', sub: p.profilePhoto ? 'Sent to patient + next of kin' : 'Sent to patient + next of kin — photo still pending',
+    run: () => sendPatientIDCard(pid)
+  });
+  items.push({
     label: '💰 Billing balance', sub: hasInvoices ? 'Current outstanding amount across all invoices' : 'No invoices yet — will tell the patient so',
     run: () => _scSendPatientWAInfo('billing', pid)
   });
@@ -16983,7 +18093,7 @@ function _scSimSendMessage(){
 // /api/sentwa/send-document endpoint: uploads the PDF to a short-lived
 // public host, then delivers it via SentWA's type=document API (confirmed
 // working end-to-end — see sentwa-proxy/server.js for the exact recipe).
-async function _scSendPatientWAPdf(type, patientId){
+async function _scSendPatientWAPdf(type, patientId, extra = {}){
   // A real send is happening — always exit any self-service chat
   // simulation state first (see closeWA()'s comment for why).
   window._scWASimPatientId = null;
@@ -17023,6 +18133,10 @@ async function _scSendPatientWAPdf(type, patientId){
     } else if (type === 'discharge') {
       built = _buildDischargeSummaryPDF(p, 'whatsapp');
       title = '📋 Discharge Summary PDF';
+    } else if (type === 'payment-receipt') {
+      if (!extra.inv || !extra.payment) { showToast('Missing payment details.', true); return; }
+      built = _buildPaymentReceiptPDF(extra.inv, extra.payment, 'whatsapp');
+      title = '✅ Payment Receipt PDF';
     } else {
       showToast('PDF delivery is not available for this option yet.', true);
       return;
@@ -17030,7 +18144,12 @@ async function _scSendPatientWAPdf(type, patientId){
     if (!built || !built.base64) { showToast('Could not generate the PDF.', true); return; }
 
     const now = new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
-    const caption = `${title.replace(/^[^\w]*/, '')} from ${_scGetPatientFacilityName(p)} — SmartCare AI`;
+    // Payment receipts get a real statement, not just a generic "here's
+    // your PDF" line — it names the amount, confirms the account status,
+    // and links straight to paying any remaining balance.
+    const caption = type === 'payment-receipt'
+      ? _scBuildPaymentReceiptCaption(p, extra.inv, extra.payment)
+      : `${title.replace(/^[^\w]*/, '')} from ${_scGetPatientFacilityName(p)} — SmartCare AI`;
 
     logNOKMessage(p.id, 'whatsapp', 'outbound', `[PDF attached] ${built.fileName}`, {
       recipient: p.name, phone, trigger: 'patient-pdf-' + type, patientName: p.name, priority: 'normal'
@@ -17059,43 +18178,110 @@ async function _scSendPatientWAPdf(type, patientId){
       if (bubbleTimeEl) bubbleTimeEl.textContent = '⏳ Still working — this can take a little longer on a slow connection…';
     }, 6000);
 
-    const configuredProxy = String(creds.proxyUrl || '').trim();
-    const docProxyCandidates = configuredProxy
-      ? [configuredProxy.replace(/\/send$/, '/send-document')]
-      : ['http://localhost:8787/api/sentwa/send-document', 'http://127.0.0.1:8787/api/sentwa/send-document'];
-
-    let lastErr = '';
-    for (const proxyUrl of docProxyCandidates) {
-      // Hard client-side ceiling so a genuinely hung proxy/network can
-      // never leave the UI waiting silently forever — 25s covers the
-      // proxy's own ~12s upload race plus the SentWA call with headroom.
-      const controller = new AbortController();
-      const abortTimer = setTimeout(() => controller.abort(), 25000);
-      try {
-        const r = await fetch(proxyUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            number: phone, pdfBase64: built.base64, fileName: built.fileName, caption,
-            instance_id: creds.instance, access_token: creds.token
-          }),
-          signal: controller.signal
-        });
-        const json = await r.json().catch(() => null);
-        if (json?.ok) {
-          showToast(`${title} delivered to ${p.name} via WhatsApp.`, false, '📱 PDF Delivered', 60000);
-          return;
-        }
-        lastErr = json?.error || json?.sentwa?.message || `HTTP ${r.status}`;
-      } catch (e) {
-        lastErr = e?.name === 'AbortError' ? 'Timed out waiting for a response (25s)' : (e?.message || 'proxy request failed');
-        if (configuredProxy) break;
-      } finally {
-        clearTimeout(abortTimer);
-      }
-    }
+    const result = await _scSendWADocumentTo(phone, built.base64, built.fileName, caption, creds);
     clearTimeout(stillWorkingTimer);
-    showToast(`Could not deliver the PDF to ${p.name}. ${lastErr}`, true, '⚠ WhatsApp Not Delivered', 60000);
+    if (result.ok) {
+      showToast(`${title} delivered to ${p.name} via WhatsApp.`, false, '📱 PDF Delivered', 60000);
+    } else {
+      showToast(`Could not deliver the PDF to ${p.name}. ${result.error}`, true, '⚠ WhatsApp Not Delivered', 60000);
+    }
+  } finally {
+    window._scWASendInFlight = false;
+    _scRenderPatientWATab(pid);
+  }
+}
+
+// The actual upload+send round trip to SentWA's document endpoint —
+// factored out of _scSendPatientWAPdf so sendPatientIDCard() (which needs
+// to send the very same PDF to two different numbers: patient + next of
+// kin) can reuse the exact same retry/timeout behaviour instead of a second,
+// independently-drifting copy of it.
+async function _scSendWADocumentTo(phone, base64, fileName, caption, creds){
+  const configuredProxy = String(creds.proxyUrl || '').trim();
+  const docProxyCandidates = configuredProxy
+    ? [configuredProxy.replace(/\/send$/, '/send-document')]
+    : ['http://localhost:8787/api/sentwa/send-document', 'http://127.0.0.1:8787/api/sentwa/send-document'];
+
+  let lastErr = '';
+  for (const proxyUrl of docProxyCandidates) {
+    // Hard client-side ceiling so a genuinely hung proxy/network can never
+    // leave the caller waiting silently forever — 25s covers the proxy's
+    // own ~12s upload race plus the SentWA call with headroom.
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), 25000);
+    try {
+      const r = await fetch(proxyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number: phone, pdfBase64: base64, fileName, caption, instance_id: creds.instance, access_token: creds.token }),
+        signal: controller.signal
+      });
+      const json = await r.json().catch(() => null);
+      if (json?.ok) return { ok: true };
+      lastErr = json?.error || json?.sentwa?.message || `HTTP ${r.status}`;
+    } catch (e) {
+      lastErr = e?.name === 'AbortError' ? 'Timed out waiting for a response (25s)' : (e?.message || 'proxy request failed');
+      if (configuredProxy) break;
+    } finally {
+      clearTimeout(abortTimer);
+    }
+  }
+  return { ok: false, error: lastErr };
+}
+
+// Sends the Patient ID Card to BOTH the patient's own WhatsApp number and
+// their next-of-kin's, each with its own short notification message —
+// "issued immediately after registration" (see registerPatient()'s
+// auto-call) and re-sendable any time after via the WhatsApp tab. Either
+// number missing just skips that leg with its own toast rather than
+// failing the whole thing — same best-effort philosophy as every other
+// auto-notification in the app.
+async function sendPatientIDCard(patientId){
+  const pid = patientId || window._modalCurrentPid;
+  const p = patients.find(x => x.id === pid) || dischargedPatients.find(x => x.id === pid);
+  if (!p) { showToast('Patient not found.', true); return; }
+  const creds = _sentwaGetCreds();
+  if (!creds.instance || !creds.token) {
+    showToast('Configure sentWA credentials in Settings before sending the ID card.', true, '⚠ Not Configured');
+    return;
+  }
+  const patientPhone = _scNormalizePhone(p.phone || '');
+  const nokPhone = _scNormalizePhone(p.nok?.phone || '');
+  if (!patientPhone && !nokPhone) {
+    showToast(`${p.name} has no patient or next-of-kin phone number on file.`, true, '⚠ No Contact Number');
+    return;
+  }
+
+  const built = _buildPatientIDCardPDF(p, 'whatsapp');
+  if (!built || !built.base64) { showToast('Could not generate the ID card.', true); return; }
+
+  if (window._scWASendInFlight) { showToast('A WhatsApp send is already in progress — please wait for it to finish.', true); return; }
+  window._scWASendInFlight = true;
+  _scRenderPatientWATab(pid);
+
+  try {
+    const hospName = _scGetPatientFacilityName(p);
+    const firstName = String(p.name || '').trim().split(' ')[0] || 'there';
+    const patientCaption = `Dear ${firstName}, your SmartCare AI Patient ID Card is attached. Please keep it safe and bring it to future visits at ${hospName}. Patient ID: ${p.id}.`;
+    const nokCaption = `Dear ${p.nok?.name || 'family'}, attached is the SmartCare AI Patient ID Card issued for ${p.name} at ${hospName} upon registration. Patient ID: ${p.id}.`;
+
+    const legs = [];
+    if (patientPhone) legs.push({ who: p.name, phone: patientPhone, caption: patientCaption, trigger: 'id-card-patient' });
+    if (nokPhone) legs.push({ who: p.nok?.name || 'Next of Kin', phone: nokPhone, caption: nokCaption, trigger: 'id-card-nok' });
+
+    const delivered = [], failed = [];
+    for (const leg of legs) {
+      logNOKMessage(p.id, 'whatsapp', 'outbound', `[PDF attached] ${built.fileName}`, {
+        recipient: leg.who, phone: leg.phone, trigger: leg.trigger, patientName: p.name, priority: 'normal'
+      });
+      const r = await _scSendWADocumentTo(leg.phone, built.base64, built.fileName, leg.caption, creds);
+      if (r.ok) delivered.push(leg.who); else failed.push({ who: leg.who, error: r.error });
+    }
+
+    if (delivered.length) showToast(`Patient ID Card delivered to ${delivered.join(' and ')} via WhatsApp.`, false, '📱 ID Card Sent', 60000);
+    failed.forEach(f => showToast(`Could not deliver the ID card to ${f.who}. ${f.error}`, true, '⚠ WhatsApp Not Delivered', 60000));
+    if (!patientPhone) showToast(`${p.name} has no phone on file — ID card only sent to next of kin.`, true, 'ℹ Partial Send');
+    if (!nokPhone) showToast(`No next-of-kin phone on file — ID card only sent to the patient.`, true, 'ℹ Partial Send');
   } finally {
     window._scWASendInFlight = false;
     _scRenderPatientWATab(pid);
@@ -28727,7 +29913,10 @@ function normalizeRole(v) {
 
 function isDoctorLikeRole(role) {
   const r = normalizeRole(role);
-  return r.includes('doctor') || r.includes('physician') || r.includes('registrar') || r.includes('medical officer') || r.includes('chief medical officer') || r.includes('clinician') || r.includes('radiologist');
+  // 'developer' included so the Developer role — already unrestricted
+  // everywhere else in the app (see isAdminLikeRole) — can also prescribe,
+  // for end-to-end testing without needing a separate doctor account.
+  return r.includes('doctor') || r.includes('physician') || r.includes('registrar') || r.includes('medical officer') || r.includes('chief medical officer') || r.includes('clinician') || r.includes('radiologist') || r.includes('developer');
 }
 
 function isAdminLikeRole(role) {
@@ -29638,6 +30827,30 @@ function getBedsForWard(ward) {
 }
 
 </script>
+
+<!-- ═══════════════════════════════════ SCAN PATIENT CARD MODAL ═══════════════════════════════════ -->
+<div id="scan-card-modal">
+  <div class="camera-container">
+    <div class="camera-header">
+      <div class="camera-header-title">📷 Scan Patient Card</div>
+      <div class="camera-header-close" onclick="closeScanCardModal()">✕</div>
+    </div>
+    <div class="camera-content">
+      <div class="camera-instruction">Point the camera at the barcode or QR code on the patient's card — it opens automatically the moment it's recognised.</div>
+      <div class="scan-video-container">
+        <video id="scan-card-video" playsinline autoplay muted></video>
+        <div id="scan-card-no-access" style="color:#fff;text-align:center;font-size:13px;display:none;padding:0 20px">
+          <div style="margin-bottom:10px">📹 Camera access required</div>
+          <div style="font-size:11px;color:#ccc">Please allow camera access when prompted, or use a device with a camera.</div>
+        </div>
+      </div>
+      <div class="camera-status" id="scan-card-status"></div>
+      <div class="camera-controls">
+        <button class="camera-btn" onclick="closeScanCardModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ═══ VIEW DISCHARGED PATIENT MODAL (full tabs) ═══ -->
 <!-- ═══════════════════════════════════ CAMERA CAPTURE MODAL ═══════════════════════════════════ -->
