@@ -15744,7 +15744,7 @@ function _buildInvoicePDF(inv, mode){
 
   // Palette
   const TEAL = [13,148,136], NAVY = [20,64,122], TEAL_TINT = [232,248,246],
-        GRAY = [110,120,135], GRAY_LT = [225,230,236], INK = [40,45,55];
+        GRAY = [110,120,135], GRAY_LT = [225,230,236], INK = [40,45,55], BLUE = [26,111,196];
 
   const created = new Date(inv.createdAt);
   const due = new Date(created.getTime() + 7*86400000);
@@ -15941,6 +15941,19 @@ function _buildInvoicePDF(inv, mode){
       m.lines.slice(0,3).forEach((l,li) => doc.text(pdfSanitise(l).slice(0,26), mx+3, y+9.5+li*3.6));
     });
     y += 24;
+  }
+
+  // Real tap-to-pay link — the "Online Payment" box above only ever had
+  // static text (a URL string or "Contact billing office"), never an actual
+  // clickable link. Same pay.html link + CTA phrasing as the Payment Receipt
+  // PDF and the WhatsApp billing notice, only shown when there's a balance
+  // left to settle.
+  if (t.balance > 0) {
+    if (y > 250) { doc.addPage(); y = 20; }
+    const payLink = _scBuildPaymentLink(inv, t.balance);
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...BLUE);
+    doc.textWithLink('Tap here to pay online now ->', mg, y, { url: payLink });
+    y += 8;
   }
 
   // Second thin rule, above the footer — Notes sits below it as requested.
