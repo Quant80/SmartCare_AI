@@ -275,6 +275,17 @@ body{
 .badge.discharge{background:var(--disch-bg);color:var(--cyan);border:1px solid rgba(34,211,238,.25)}
 .badge.due{background:rgba(251,191,36,.15);color:var(--amber);border:1px solid rgba(251,191,36,.3)}
 .badge.overdue{background:rgba(255,77,109,.15);color:var(--crit);border:1px solid rgba(255,77,109,.3);animation:pulseBadge 1.5s infinite}
+/* VAT eligibility toggle — Drug Formulary / Billing Rates. Replaces a
+   free-typed "15" or "0" per row with a single click: on = this item
+   uses the one shared Standard VAT Rate (see setStandardVATRate), off =
+   permanently zero-rated/exempt. Changing the standard rate re-applies
+   to every "on" item at once instead of hand-editing each row. */
+.vat-toggle{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.vat-toggle.on{background:rgba(5,150,105,.12);color:#059669;border-color:rgba(5,150,105,.3)}
+.vat-toggle.on:hover{background:rgba(5,150,105,.2)}
+.vat-toggle.off{background:var(--bg4);color:var(--text3);border-color:var(--border)}
+.vat-toggle.off:hover{background:var(--border)}
+:root[data-theme='dark'] .vat-toggle.on{background:rgba(52,211,153,.14);color:var(--green);border-color:rgba(52,211,153,.35)}
 @keyframes pulseBadge{0%,100%{opacity:1}50%{opacity:.6}}
 
 /* METRIC CARDS */
@@ -295,6 +306,23 @@ body{
 .mc-val.crit{color:var(--crit)}.mc-val.high{color:var(--amber)}.mc-val.stable{color:var(--green)}.mc-val.info{color:var(--blue)}.mc-val.cyan{color:var(--cyan)}.mc-val.purple{color:var(--purple)}
 .mc-sub{font-size:11px;color:var(--text3)}
 .mc-ic{position:absolute;top:12px;right:12px;font-size:21px;opacity:.22}
+
+/* REGISTRATION FORM — card section headers with an icon badge, used
+   throughout #pat-pane-register for visual consistency across its several
+   cards (Patient Information / Admission Details / Next of Kin /
+   Assignment & Care Team / Initial Vitals / Patient Photo). */
+.reg-card-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.reg-card-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--blue),#7c9cf0);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;box-shadow:0 4px 10px rgba(79,168,232,.3)}
+.reg-card-icon.cy{background:linear-gradient(135deg,#0891b2,#22d3ee)}
+.reg-card-icon.pu{background:linear-gradient(135deg,#7c3aed,#a78bfa)}
+.reg-card-icon.gr{background:linear-gradient(135deg,#0d9488,#2dd4bf)}
+.reg-card-title{font-size:13.5px;font-weight:700;color:var(--text)}
+.reg-card-sub{font-size:10.5px;color:var(--text3);margin-top:1px}
+.reg-subhead{font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 10px;padding-top:14px;border-top:1px solid var(--border)}
+.reg-subhead:first-child{margin-top:0;padding-top:0;border-top:none}
+.reg-bmi-box{background:var(--bg4);border:1px solid var(--border);border-radius:9px;padding:10px 13px;display:flex;align-items:center;justify-content:space-between}
+.reg-bmi-label{font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.reg-bmi-value{font-size:15px;font-weight:700}
 
 /* GRID LAYOUTS */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
@@ -551,39 +579,48 @@ body{
 .fl{font-size:11px;color:var(--text3);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.5px}
 .fi{width:100%;background:var(--bg4);border:1px solid var(--border);border-radius:7px;padding:8px 11px;color:var(--text);font-size:12.5px;font-family:var(--font);outline:none;transition:border-color .15s,box-shadow .15s}
 .fi:focus{border-color:var(--blue2);box-shadow:0 0 0 3px rgba(26,111,196,.1)}
-.fi[type="date"]{
-  color-scheme:light;
-  background:#ffffff !important;
-  border:1.5px solid rgba(46,107,191,.55) !important;
-  color:#1a2a4a !important;
+/* Date of Birth / Admission Date — a custom calendar dropdown (see
+   _scOpenDatePicker etc.) instead of the native <input type="date">
+   picker. The native popup only ever offers two fixed, browser-chosen
+   appearances (plain white, or near-black in dark mode) — color-scheme
+   is genuinely the only lever CSS has over it, no custom hue including
+   grey is possible there. Building our own gives full control over the
+   popup's actual colors while keeping the same Today/Clear convenience.
+   The closed field itself keeps its muted navy-blue look. */
+.fi.dpicker-input{
+  background:linear-gradient(135deg,#3a6bb0,#274d84);
+  border:1.5px solid rgba(46,107,191,.55);
+  color:#ffffff;
 }
-.fi[type="date"]:focus{
-  border-color:#2f8fe6 !important;
-  box-shadow:0 0 0 3px rgba(47,143,230,.2);
+.fi.dpicker-input::placeholder{color:rgba(255,255,255,.65)}
+.fi.dpicker-input:focus{
+  border-color:#7ec2f7;
+  box-shadow:0 0 0 3px rgba(80,184,240,.35);
 }
-.fi[type="date"]::-webkit-calendar-picker-indicator{
-  border-radius:5px;
-  padding:4px;
-  cursor:pointer;
-  background-color:rgba(37,99,235,.18);
-  font-size:15px;
-  opacity:1;
+:root[data-theme='dark'] .fi.dpicker-input{
+  background:linear-gradient(135deg,#304a77,#213a5f);
+  border-color:rgba(124,160,219,.45);
+  color:#ffffff;
 }
-.fi[type="date"]::-webkit-datetime-edit-fields-wrapper{color:#1a2a4a}
-.fi[type="date"]::-webkit-datetime-edit-text{color:#4a6fa5}
-.fi[type="date"]::-webkit-datetime-edit-year-field,
-.fi[type="date"]::-webkit-datetime-edit-month-field,
-.fi[type="date"]::-webkit-datetime-edit-day-field{color:#1a2a4a;background:transparent}
-:root[data-theme='dark'] .fi[type="date"]{
-  color-scheme:light;
-  background:#ffffff !important;
-  border-color:rgba(58,123,214,.65) !important;
-  color:#1a2a4a !important;
-}
-:root[data-theme='dark'] .fi[type="date"]::-webkit-calendar-picker-indicator{
-  background-color:rgba(37,99,235,.22);
-  opacity:1;
-}
+.sc-datepicker-panel{position:absolute;display:none;z-index:2000;background:linear-gradient(150deg,#eef0f3,#cfd3da);border:1px solid #aeb3bd;border-radius:11px;box-shadow:0 18px 44px rgba(0,0,0,.4);padding:13px;width:288px;font-family:var(--font);color:#262a33}
+.sc-dp-header{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:9px}
+.sc-dp-title-group{display:flex;gap:5px;flex:1;min-width:0}
+.sc-dp-mini-select{font-size:12px;font-weight:700;color:#20242e;background:rgba(255,255,255,.65);border:1px solid #b6bbc4;border-radius:6px;padding:4px 5px;cursor:pointer;outline:none;font-family:inherit}
+.sc-dp-mini-select:hover{background:#fff}
+.sc-dp-mini-select:first-child{flex:1.3;min-width:0}
+.sc-dp-year-select{flex:1}
+.sc-dp-nav{background:rgba(255,255,255,.6);border:1px solid #b6bbc4;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:14px;color:#2a2f3a;line-height:1;flex-shrink:0}
+.sc-dp-nav:hover{background:#fff}
+.sc-dp-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:9.5px;font-weight:700;color:#5c6273;margin-bottom:4px}
+.sc-dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.sc-dp-day{text-align:center;padding:6px 0;border-radius:6px;cursor:pointer;font-size:12px;color:#262a33}
+.sc-dp-day:hover{background:rgba(255,255,255,.75)}
+.sc-dp-day.sc-dp-empty{cursor:default}
+.sc-dp-day.sc-dp-today{font-weight:700;color:#155fa0}
+.sc-dp-day.sc-dp-selected{background:#2f6fc4;color:#ffffff;font-weight:700}
+.sc-dp-footer{display:flex;justify-content:space-between;margin-top:11px;padding-top:9px;border-top:1px solid #b6bbc4}
+.sc-dp-link{background:none;border:none;color:#1a6fc4;font-size:12px;font-weight:700;cursor:pointer;padding:2px}
+.sc-dp-link:hover{text-decoration:underline}
 .fsel{width:100%;background:var(--bg4);border:1px solid var(--border);border-radius:7px;padding:8px 11px;color:var(--text);font-size:12.5px;font-family:var(--font);outline:none;appearance:none;cursor:pointer;transition:border-color .15s}
 .fsel:focus{border-color:var(--blue2);box-shadow:0 0 0 3px rgba(26,111,196,.1)}
 .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
@@ -1343,6 +1380,27 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
 .camera-content{flex:1;display:flex;flex-direction:column;padding:20px;gap:14px;overflow-y:auto}
 .camera-video-container{width:100%;aspect-ratio:3/4;background:#000;border-radius:10px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;max-height:480px}
 #patient-camera-video{width:100%;height:100%;object-fit:cover}
+/* Green dotted alignment guide over the live preview — an oval "spotlight"
+   (the huge box-shadow spread dims everything outside its own rounded
+   shape, same square framing idiom as the staff card scanner's own guide
+   — see .scan-video-container::after — just green instead of blue) so
+   it's obvious where to frame the patient's head and shoulders. Green
+   dashed by default (works identically whether or not real face
+   detection is available — most desktop browsers don't ship the Shape
+   Detection API, so this is what most staff actually see); on browsers
+   that DO support it (see _scStartFaceDetection), it gently pulses while
+   searching and turns solid + glowing once a face is actually detected —
+   real feedback layered on top, never a fake "detecting" claim when the
+   API isn't there. */
+.camera-guide-frame{position:absolute;inset:10%;border:3px dashed #22c55e;border-radius:14px;pointer-events:none;transition:border-color .25s,box-shadow .25s;box-shadow:0 0 0 2000px rgba(0,0,0,.32)}
+.camera-guide-frame.detected{border-color:#22c55e;border-style:solid;box-shadow:0 0 0 2000px rgba(0,0,0,.2),0 0 18px 2px rgba(34,197,94,.6)}
+.camera-guide-frame.searching{border-color:#22c55e;border-style:dashed;animation:cameraGuidePulse 1.6s ease-in-out infinite}
+@keyframes cameraGuidePulse{0%,100%{opacity:1}50%{opacity:.55}}
+.camera-face-status{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(10,20,35,.72);color:#fff;font-size:11px;font-weight:600;padding:5px 13px;border-radius:20px;backdrop-filter:blur(3px);white-space:nowrap;pointer-events:none}
+.camera-adjust-panel{display:flex;flex-direction:column;gap:8px;background:var(--bg4);padding:10px 14px;border-radius:8px;border:1px solid var(--border)}
+.camera-adjust-row{display:flex;align-items:center;gap:10px}
+.camera-adjust-label{font-size:11px;font-weight:700;color:var(--text3);min-width:82px;text-transform:uppercase;letter-spacing:.03em}
+.camera-adjust-value{font-size:11px;font-family:var(--mono);color:var(--blue);font-weight:700;min-width:34px;text-align:right}
 .camera-canvas-preview{width:100%;aspect-ratio:3/4;background:#000;border-radius:10px;overflow:hidden;display:none;max-height:480px}
 #patient-camera-canvas{width:100%;height:100%;display:block;object-fit:contain}
 .camera-constraints-info{font-size:12px;color:var(--text3);background:rgba(34,211,238,.05);border:1px solid rgba(34,211,238,.15);border-radius:8px;padding:10px 14px;line-height:1.6}
@@ -2852,19 +2910,33 @@ Waiting for data…</pre>
 
     <!-- Register New Patient pane -->
     <div id="pat-pane-register" style="display:none">
-      <div class="g2">
+      <div class="g2" style="align-items:start">
+        <div style="display:flex;flex-direction:column;gap:16px">
         <div class="card">
-          <div class="ch"><div class="ct">Patient Information</div></div>
+          <div class="reg-card-head">
+            <div class="reg-card-icon">🧍</div>
+            <div><div class="reg-card-title">Patient Information</div><div class="reg-card-sub">Identity &amp; contact details</div></div>
+          </div>
           <div class="fgrid">
             <div class="fg"><label class="fl">First Name</label><input class="fi" placeholder="e.g. John" id="reg-fname"></div>
             <div class="fg"><label class="fl">Last Name</label><input class="fi" placeholder="e.g. Dlamini" id="reg-lname"></div>
-            <div class="fg"><label class="fl">Date of Birth</label><input class="fi" type="date" id="reg-dob"></div>
+            <div class="fg"><label class="fl">Date of Birth</label>
+              <div style="position:relative">
+                <input class="fi dpicker-input" type="text" id="reg-dob" placeholder="yyyy/mm/dd" readonly onclick="_scOpenDatePicker('reg-dob')" style="cursor:pointer;padding-right:32px">
+                <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:13px">📅</span>
+              </div>
+            </div>
             <div class="fg"><label class="fl">Gender</label><select class="fsel" id="reg-gender"><option>Male</option><option>Female</option><option>Other</option></select></div>
             <div class="fg"><label class="fl">ID / Passport</label><input class="fi" placeholder="National ID — type to check history" id="reg-id" oninput="lookupPatientID(this.value)"></div>
             <div class="fg"><label class="fl">Contact Number</label><input class="fi" placeholder="+27 82 000 0000" id="reg-phone"></div>
           </div>
           <!-- ID Lookup Result Panel -->
-          <div id="reg-id-lookup" style="display:none;margin:8px 0 12px;border-radius:9px;overflow:hidden"></div>
+          <div id="reg-id-lookup" style="display:none;margin:8px 0 0;border-radius:9px;overflow:hidden"></div>
+        </div>
+        <div class="card">
+          <div class="reg-card-head">
+            <div class="reg-card-icon cy">🩺</div>
+            <div><div class="reg-card-title">Admission Details</div><div class="reg-card-sub">Diagnosis &amp; medical background</div></div>
           </div>
           <div class="fg"><label class="fl">Admission Diagnosis</label><textarea class="fi" rows="3" placeholder="Primary diagnosis or reason for admission..." id="reg-diagnosis" style="resize:vertical"></textarea></div>
           <div class="fgrid" style="margin-top:8px">
@@ -2879,18 +2951,26 @@ Waiting for data…</pre>
             <div class="fg"><label class="fl">Chronic Conditions</label><textarea class="fi" rows="2" placeholder="e.g. Hypertension, Diabetes" id="reg-comorb" style="resize:vertical"></textarea></div>
             <div class="fg"><label class="fl">Current Medications</label><textarea class="fi" rows="2" placeholder="e.g. Metformin 500mg BD, Amlodipine 5mg" id="reg-meds" style="resize:vertical"></textarea></div>
           </div>
-          <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
-            <div style="font-size:11px;color:var(--cyan);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;font-weight:600">📱 Next of Kin Details</div>
-            <div class="fgrid">
-              <div class="fg"><label class="fl">NOK Full Name</label><input class="fi" placeholder="e.g. Sarah Dlamini" id="reg-nok-name"></div>
-              <div class="fg"><label class="fl">Relationship</label><select class="fsel" id="reg-nok-rel"><option>Spouse</option><option>Parent</option><option>Child</option><option>Sibling</option><option>Other</option></select></div>
-              <div class="fg"><label class="fl">WhatsApp / Mobile</label><input class="fi" placeholder="+27 83 000 0000" id="reg-nok-phone"></div>
-              <div class="fg"><label class="fl">Email (optional)</label><input class="fi" placeholder="nok@email.com" id="reg-nok-email"></div>
-            </div>
-          </div>
         </div>
         <div class="card">
-          <div class="ch"><div class="ct">Assignment &amp; Initial Vitals</div></div>
+          <div class="reg-card-head">
+            <div class="reg-card-icon pu">📱</div>
+            <div><div class="reg-card-title">Next of Kin</div><div class="reg-card-sub">Who to contact in an emergency</div></div>
+          </div>
+          <div class="fgrid">
+            <div class="fg"><label class="fl">NOK Full Name</label><input class="fi" placeholder="e.g. Sarah Dlamini" id="reg-nok-name"></div>
+            <div class="fg"><label class="fl">Relationship</label><select class="fsel" id="reg-nok-rel"><option>Spouse</option><option>Parent</option><option>Child</option><option>Sibling</option><option>Other</option></select></div>
+            <div class="fg"><label class="fl">WhatsApp / Mobile</label><input class="fi" placeholder="+27 83 000 0000" id="reg-nok-phone"></div>
+            <div class="fg"><label class="fl">Email (optional)</label><input class="fi" placeholder="nok@email.com" id="reg-nok-email"></div>
+          </div>
+        </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+          <div class="reg-card-head">
+            <div class="reg-card-icon cy">🏥</div>
+            <div><div class="reg-card-title">Assignment &amp; Care Team</div><div class="reg-card-sub">Facility, ward &amp; attending doctor</div></div>
+          </div>
           <div class="fgrid">
             <div class="fg"><label class="fl">Province</label><select class="fsel" id="reg-province"><option value="">— Select Province —</option><option>Harare</option><option>Bulawayo</option><option>Manicaland</option><option>Mashonaland Central</option><option>Mashonaland East</option><option>Mashonaland West</option><option>Masvingo</option><option>Matabeleland North</option><option>Matabeleland South</option><option>Midlands</option></select></div>
             <div class="fg"><label class="fl">Facility</label><select class="fsel facility-select" id="reg-facility" onchange="toggleFacilityOther(this)"></select><input class="fi facility-other-input" id="reg-facility-other" placeholder="Type facility name" style="display:none;margin-top:6px"></div>
@@ -2900,21 +2980,60 @@ Waiting for data…</pre>
             <div class="fg"><label class="fl">Assigned Doctor</label><select class="fsel" id="reg-doctor"><option>Dr. Radebe</option><option>Dr. Naidoo</option><option>Dr. Van der Merwe</option><option>Dr. Dlamini</option><option>Dr. Patel</option></select></div>
             <div class="fg"><label class="fl">Priority Level</label><select class="fsel" id="reg-priority"><option>Stable</option><option>Moderate</option><option>High</option><option>Critical</option></select></div>
             <div class="fg"><label class="fl">Expected LOS (days)</label><input class="fi" type="number" placeholder="e.g. 5" id="reg-los"></div>
-            <div class="fg"><label class="fl">Admission Date</label><input class="fi" type="date" id="reg-admdate"></div>
+            <div class="fg"><label class="fl">Admission Date</label>
+              <div style="position:relative">
+                <input class="fi dpicker-input" type="text" id="reg-admdate" placeholder="yyyy/mm/dd" readonly onclick="_scOpenDatePicker('reg-admdate')" style="cursor:pointer;padding-right:32px">
+                <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:13px">📅</span>
+              </div>
+            </div>
           </div>
-          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Initial Vitals</div>
+        </div>
+        <div class="card">
+          <div class="reg-card-head">
+            <div class="reg-card-icon gr">💓</div>
+            <div><div class="reg-card-title">Initial Vitals</div><div class="reg-card-sub">Measured at admission — defaults shown if left blank</div></div>
+          </div>
           <div class="fgrid">
             <div class="fg"><label class="fl">Heart Rate (bpm)</label><input class="fi" placeholder="72" type="number" id="reg-hr"></div>
             <div class="fg"><label class="fl">O₂ Saturation (%)</label><input class="fi" placeholder="98" type="number" id="reg-o2"></div>
             <div class="fg"><label class="fl">Blood Pressure</label><input class="fi" placeholder="120/80" id="reg-bp"></div>
             <div class="fg"><label class="fl">Temperature (°C)</label><input class="fi" placeholder="36.6" type="number" id="reg-temp"></div>
+            <div class="fg"><label class="fl">Weight (kg)</label><input class="fi" placeholder="70" type="number" step="0.1" id="reg-weight" oninput="updateRegBMI()"></div>
+            <div class="fg"><label class="fl">Height (cm)</label><input class="fi" placeholder="170" type="number" step="0.1" id="reg-height" oninput="updateRegBMI()"></div>
           </div>
-          <div style="display:flex;gap:9px;margin-top:14px">
-            <button class="btn btn-p" onclick="registerPatient(this)">✓ Register Patient</button>
-            <button class="btn btn-g" onclick="clearRegForm()">✕ Clear Form</button>
-            <button class="btn btn-g" onclick="showPatPane('registry')" style="margin-left:auto">← Back to Registry</button>
+          <div class="reg-bmi-box" style="margin-top:10px">
+            <div>
+              <div class="reg-bmi-label">Body Mass Index</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:1px">Calculated live from weight &amp; height above</div>
+            </div>
+            <div class="reg-bmi-value" id="reg-bmi-display">—</div>
           </div>
         </div>
+        <div class="card">
+          <div class="reg-card-head">
+            <div class="reg-card-icon">📸</div>
+            <div><div class="reg-card-title">Patient Photo</div><div class="reg-card-sub">Optional — can be added now or after registration</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:52px;height:68px;border-radius:8px;overflow:hidden;background:var(--bg4);border:1px dashed var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <span id="reg-photo-placeholder-icon" style="font-size:22px;color:var(--text3)">👤</span>
+              <img id="reg-photo-preview-img" style="display:none;width:100%;height:100%;object-fit:cover" alt="Captured patient photo">
+            </div>
+            <div style="flex:1;min-width:0">
+              <div id="reg-photo-status" style="font-size:11.5px;color:var(--text3);margin-bottom:7px">No photo captured yet — optional, can be added now or after registration.</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button type="button" class="btn btn-g btn-sm" onclick="openRegistrationPhotoCapture()" id="reg-photo-capture-btn">📸 Capture Photo</button>
+                <button type="button" class="btn btn-g btn-sm" onclick="clearRegistrationPhoto()" id="reg-photo-clear-btn" style="display:none">✕ Remove</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+      </div>
+      <div class="card" style="display:flex;gap:9px">
+        <button class="btn btn-p" onclick="registerPatient(this)">✓ Register Patient</button>
+        <button class="btn btn-g" onclick="clearRegForm()">✕ Clear Form</button>
+        <button class="btn btn-g" onclick="showPatPane('registry')" style="margin-left:auto">← Back to Registry</button>
       </div>
     </div>
   </div>
@@ -3771,7 +3890,7 @@ Waiting for data…</pre>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <input class="fi" style="width:100px" type="number" step="0.01" placeholder="Unit Price" id="pharm-newdrug-price">
-          <input class="fi" style="width:80px" type="number" step="1" placeholder="VAT %" id="pharm-newdrug-vat" value="15">
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)"><input type="checkbox" id="pharm-newdrug-vat" checked> VAT Eligible</label>
           <input class="fi" style="width:130px" type="number" step="1" placeholder="Initial stock (per facility)" id="pharm-newdrug-stock">
           <input class="fi" style="width:150px" placeholder="Barcode — scan or type" id="pharm-newdrug-barcode">
           <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)"><input type="checkbox" id="pharm-newdrug-essential"> Essential (EDLIZ)</label>
@@ -4004,7 +4123,7 @@ Waiting for data…</pre>
             <input class="fi" style="flex:2;min-width:160px" placeholder="Or type any other charge…" id="inv-new-desc">
             <input class="fi" style="width:100px" type="number" step="0.01" placeholder="Amount" id="inv-new-amount">
             <select class="fsel" style="width:140px" id="inv-new-vat">
-              <option value="15">Standard 15%</option>
+              <option value="standard" id="inv-new-vat-standard-opt">Standard 15%</option>
               <option value="0">Zero-rated</option>
               <option value="exempt">Exempt</option>
             </select>
@@ -5261,10 +5380,19 @@ Waiting for data…</pre>
         <div style="font-size:14px;font-weight:700;color:var(--text)">💳 Billing Rate Schedule</div>
         <div style="font-size:11.5px;color:var(--text3);margin-top:2px">Standard charges available as one-click quick-adds on every invoice — staff can still add anything else manually. X-ray charges apply automatically from the "X-Ray" rate below the moment a scan is attached to a patient's record.</div>
       </div>
+      <div class="card mb" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px">
+        <span style="font-size:12px;font-weight:700;color:var(--text2)">⚙ Standard VAT Rate</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input class="fi" type="number" step="0.5" min="0" style="width:75px" id="std-vat-rate-billing" value="15">
+          <span style="font-size:12px;color:var(--text3)">%</span>
+        </div>
+        <button class="btn btn-p btn-sm" onclick="applyStandardVATRate('std-vat-rate-billing')">Apply to all VAT-eligible charges</button>
+        <span style="font-size:10.5px;color:var(--text3);margin-left:auto">Toggle ✓/Exempt per charge below — one rate change updates every eligible row at once.</span>
+      </div>
       <div class="card mb">
         <div style="overflow-x:auto">
           <table class="tbl">
-            <thead><tr><th>Charge</th><th>Department</th><th style="width:110px">Amount ($)</th><th style="width:90px">VAT (%)</th><th style="width:50px"></th></tr></thead>
+            <thead><tr><th>Charge</th><th>Department</th><th style="width:110px">Amount ($)</th><th style="width:90px">VAT</th><th style="width:50px"></th></tr></thead>
             <tbody id="admin-billing-rates-body"></tbody>
           </table>
         </div>
@@ -5275,7 +5403,7 @@ Waiting for data…</pre>
           <input class="fi" style="flex:2;min-width:160px" placeholder="Charge name, e.g. Physiotherapy Session" id="admin-newrate-label">
           <input class="fi" style="width:140px" placeholder="Department" id="admin-newrate-dept">
           <input class="fi" style="width:100px" type="number" step="0.01" placeholder="Amount" id="admin-newrate-amount">
-          <input class="fi" style="width:80px" type="number" step="1" placeholder="VAT %" id="admin-newrate-vat" value="15">
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)"><input type="checkbox" id="admin-newrate-vat" checked> VAT Eligible</label>
           <button class="btn btn-p btn-sm" onclick="addBillingRate()">+ Add Charge</button>
         </div>
       </div>
@@ -5321,10 +5449,19 @@ Waiting for data…</pre>
         <div style="font-size:14px;font-weight:700;color:var(--text)">💊 Drug Formulary</div>
         <div style="font-size:11.5px;color:var(--text3);margin-top:2px">Every drug is catalogued once here with a unit price — dispensing in the Pharmacy module always charges quantity × this price, computed live, never hardcoded. Scan a barcode into the field below (or type it) to attach one to a drug.</div>
       </div>
+      <div class="card mb" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px">
+        <span style="font-size:12px;font-weight:700;color:var(--text2)">⚙ Standard VAT Rate</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input class="fi" type="number" step="0.5" min="0" style="width:75px" id="std-vat-rate-formulary" value="15">
+          <span style="font-size:12px;color:var(--text3)">%</span>
+        </div>
+        <button class="btn btn-p btn-sm" onclick="applyStandardVATRate('std-vat-rate-formulary')">Apply to all VAT-eligible drugs</button>
+        <span style="font-size:10.5px;color:var(--text3);margin-left:auto">Toggle ✓/Exempt per drug below — one rate change updates every eligible row at once.</span>
+      </div>
       <div class="card mb">
         <div style="overflow-x:auto">
           <table class="tbl">
-            <thead><tr><th>Drug</th><th>Form / Strength</th><th>Category</th><th style="width:90px">Unit Price ($)</th><th style="width:70px">VAT (%)</th><th style="width:80px">Stock</th><th style="width:110px">Barcode</th><th style="width:40px"></th><th style="width:40px"></th></tr></thead>
+            <thead><tr><th>Drug</th><th>Form / Strength</th><th>Category</th><th style="width:90px">Unit Price ($)</th><th style="width:70px">VAT</th><th style="width:80px">Stock</th><th style="width:110px">Barcode</th><th style="width:40px"></th><th style="width:40px"></th></tr></thead>
             <tbody id="admin-drugform-body"></tbody>
           </table>
         </div>
@@ -5340,7 +5477,7 @@ Waiting for data…</pre>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <input class="fi" style="width:100px" type="number" step="0.01" placeholder="Unit Price" id="admin-newdrug-price">
-          <input class="fi" style="width:80px" type="number" step="1" placeholder="VAT %" id="admin-newdrug-vat" value="15">
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)"><input type="checkbox" id="admin-newdrug-vat" checked> VAT Eligible</label>
           <input class="fi" style="width:90px" type="number" step="1" placeholder="Stock (optional)" id="admin-newdrug-stock">
           <input class="fi" style="width:150px" placeholder="Barcode — scan or type" id="admin-newdrug-barcode">
           <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)"><input type="checkbox" id="admin-newdrug-essential"> Essential (EDLIZ)</label>
@@ -8390,7 +8527,7 @@ function showPatPane(pane){
   const btnNew=document.getElementById('btn-register');
   if(btnReg){ btnReg.className=pane==='registry'?'btn btn-p':'btn btn-g'; }
   if(btnNew){ btnNew.className=pane==='register'?'btn btn-p':'btn btn-g'; }
-  if(pane==='register'){ _scInitNationalityPickers(); _scSyncAllNationalityPickers(); updateRegBeds(); _scApplyFacilityDefaults(); }
+  if(pane==='register'){ _scInitNationalityPickers(); _scSyncAllNationalityPickers(); updateRegBeds(); _scApplyFacilityDefaults(); if (typeof updateRegBMI === 'function') updateRegBMI(); }
   if(pane==='registry') renderPatientTable(getScopedPatients());
   document.getElementById('page-title').textContent = pane==='register'?'Register New Patient':'Patient Registry';
 }
@@ -8418,6 +8555,26 @@ function clearRegForm(){
   });
   _scSyncAllNationalityPickers();
   updateRegBeds();
+  window._scPendingRegPhoto = null;
+  if (typeof _scRenderRegistrationPhotoPreview === 'function') _scRenderRegistrationPhotoPreview();
+  if (typeof updateRegBMI === 'function') updateRegBMI();
+}
+
+// Live BMI preview on the registration form — reads straight from the
+// Weight/Height fields (falling back to the same 70kg/170cm defaults
+// registerPatient() itself falls back to when those are left blank), so
+// what's shown here always matches what actually gets saved.
+function updateRegBMI(){
+  const out = document.getElementById('reg-bmi-display');
+  if (!out) return;
+  const w = parseFloat(document.getElementById('reg-weight')?.value) || 70;
+  const hCm = parseFloat(document.getElementById('reg-height')?.value) || 170;
+  const hM = hCm / 100;
+  if (!hM) { out.textContent = '—'; return; }
+  const bmi = Math.round((w / (hM * hM)) * 10) / 10;
+  const cat = bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese';
+  const color = bmi < 18.5 ? 'var(--amber)' : bmi < 25 ? 'var(--green)' : bmi < 30 ? 'var(--amber)' : 'var(--crit)';
+  out.innerHTML = `<span style="color:${color}">${bmi.toFixed(1)}</span> <span style="font-size:11px;font-weight:500;color:var(--text3)">${cat}</span>`;
 }
 
 // ═══════════════════════════════════════════════════
@@ -13039,6 +13196,73 @@ let billingRates = loadBillingRates();
 function getBillingRate(id){ return billingRates.find(r => r.id === id); }
 
 // ═══════════════════════════════════════════════════
+// STANDARD VAT RATE — one shared rate for every VAT-eligible item across
+// both the Drug Formulary and Billing Rate Schedule, instead of typing a
+// "15" into dozens of individual rows. Each row keeps its real vat:<number>
+// exactly as before (so every existing billing/dispense/PDF calculation
+// that already reads .vat needs zero changes) — this just adds a single
+// source of truth for what that number should BE when an item is eligible,
+// plus a one-click bulk-apply, plus an on/off toggle per row instead of a
+// free-text field. A row with vat:0 is "exempt"; anything above 0 is
+// "eligible" and gets kept in sync with the standard rate.
+// ═══════════════════════════════════════════════════
+const SC_STANDARD_VAT_KEY = 'sc_standard_vat_rate_v1';
+function getStandardVATRate(){
+  try {
+    const v = parseFloat(localStorage.getItem(SC_STANDARD_VAT_KEY));
+    return isNaN(v) ? 15 : Math.max(0, v);
+  } catch (e) { return 15; }
+}
+function setStandardVATRate(rate){
+  const r = Math.max(0, Math.round((parseFloat(rate) || 0) * 100) / 100);
+  try { localStorage.setItem(SC_STANDARD_VAT_KEY, String(r)); } catch (e) {}
+  let updated = 0;
+  drugFormulary.forEach(d => { if (d.vat > 0 && d.vat !== r) { d.vat = r; updated++; } });
+  billingRates.forEach(br => { if (br.vat > 0 && br.vat !== r) { br.vat = r; updated++; } });
+  persistDrugFormulary();
+  persistBillingRates();
+  refreshAllFormularyPanels();
+  renderBillingRatesPanel();
+  _scSyncStandardVATInputs();
+  showToast(`Standard VAT rate set to ${r}% — applied to ${updated} VAT-eligible item${updated === 1 ? '' : 's'}.`, false, '💾 VAT Rate Updated');
+}
+// Reads whichever "Standard VAT Rate" input triggered this (Drug Formulary
+// tab and Billing Rates tab each have their own, both backed by the same
+// underlying setting) and applies it.
+function applyStandardVATRate(inputId){
+  const el = document.getElementById(inputId);
+  const rate = parseFloat(el?.value);
+  if (isNaN(rate) || rate < 0) { showToast('Enter a valid VAT percentage.', true, '⚠ Validation'); return; }
+  setStandardVATRate(rate);
+}
+// Keeps both tabs' "Standard VAT Rate" inputs showing the real current
+// value — called whenever either admin tab is opened, and after any bulk
+// apply, so neither ever goes stale relative to the other.
+function _scSyncStandardVATInputs(){
+  const rate = getStandardVATRate();
+  ['std-vat-rate-formulary', 'std-vat-rate-billing'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && document.activeElement !== el) el.value = rate;
+  });
+}
+function toggleDrugFormularyVAT(id){
+  const drug = drugFormulary.find(d => d.id === id);
+  if (!drug) return;
+  drug.vat = drug.vat > 0 ? 0 : getStandardVATRate();
+  persistDrugFormulary();
+  refreshAllFormularyPanels();
+  showToast(`${drug.name} is now ${drug.vat > 0 ? `VAT-eligible (${drug.vat}%)` : 'VAT-exempt'}`, false, 'ℹ Formulary Updated');
+}
+function toggleBillingRateVAT(id){
+  const rate = billingRates.find(r => r.id === id);
+  if (!rate) return;
+  rate.vat = rate.vat > 0 ? 0 : getStandardVATRate();
+  persistBillingRates();
+  renderBillingRatesPanel();
+  showToast(`${rate.label} is now ${rate.vat > 0 ? `VAT-eligible (${rate.vat}%)` : 'VAT-exempt'}`, false, '💾 Saved');
+}
+
+// ═══════════════════════════════════════════════════
 // FACILITY REGISTRY — admin adds a facility + logo here and its profile
 // exists everywhere the app shows facility identity: registration, patient
 // profiles, invoices, and staff-account branding.
@@ -13362,7 +13586,7 @@ function renderBillingRatesPanel(){
       <td style="font-weight:600;color:var(--text)">${_scEsc(r.label)}</td>
       <td style="color:var(--text3)">${_scEsc(r.department||'General')}</td>
       <td><input class="fi" style="width:90px;padding:4px 8px" type="number" step="0.01" value="${r.amount}" onchange="updateBillingRateField('${r.id}','amount',this.value)"></td>
-      <td><input class="fi" style="width:70px;padding:4px 8px" type="number" step="1" value="${r.vat}" onchange="updateBillingRateField('${r.id}','vat',this.value)"></td>
+      <td><button type="button" class="vat-toggle ${r.vat > 0 ? 'on' : 'off'}" onclick="toggleBillingRateVAT('${r.id}')" title="Click to toggle VAT eligibility">${r.vat > 0 ? `✓ ${r.vat}%` : 'Exempt'}</button></td>
       <td><button onclick="removeBillingRate('${r.id}')" style="background:none;border:none;color:var(--crit);cursor:pointer;font-size:14px" title="Remove charge type">✕</button></td>
     </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:14px">No charge types configured</td></tr>';
 }
@@ -13380,16 +13604,16 @@ function addBillingRate(){
   const label = document.getElementById('admin-newrate-label').value.trim();
   const dept = document.getElementById('admin-newrate-dept').value.trim() || 'General';
   const amount = parseFloat(document.getElementById('admin-newrate-amount').value);
-  const vat = parseFloat(document.getElementById('admin-newrate-vat').value);
+  const vatEligible = !!document.getElementById('admin-newrate-vat')?.checked;
   if (!label) { showToast('Enter a charge name.', true, '⚠ Validation'); return; }
   if (!amount || amount <= 0) { showToast('Enter a valid amount.', true, '⚠ Validation'); return; }
   const id = 'custom-' + label.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') + '-' + Date.now().toString(36);
-  billingRates.push({ id, label, department: dept, amount: Math.round(amount*100)/100, vat: isNaN(vat)?15:Math.max(0,vat) });
+  billingRates.push({ id, label, department: dept, amount: Math.round(amount*100)/100, vat: vatEligible ? getStandardVATRate() : 0 });
   persistBillingRates();
   document.getElementById('admin-newrate-label').value = '';
   document.getElementById('admin-newrate-dept').value = '';
   document.getElementById('admin-newrate-amount').value = '';
-  document.getElementById('admin-newrate-vat').value = '15';
+  document.getElementById('admin-newrate-vat').checked = true;
   renderBillingRatesPanel();
   showToast(`${label} added to the fee schedule`, false, '✅ Charge Added');
 }
@@ -13524,7 +13748,7 @@ function renderDrugFormularyPanel(targetId){
       <td style="color:var(--text3)">${_scEsc(d.form||'')} ${_scEsc(d.strength||'')}</td>
       <td style="color:var(--text3)">${_scEsc(d.category||'General')}</td>
       <td><input class="fi" type="number" step="0.01" min="0" style="width:80px" value="${d.unitPrice}" onchange="updateDrugFormularyField('${d.id}','unitPrice',this.value)"></td>
-      <td><input class="fi" type="number" step="1" min="0" style="width:60px" value="${d.vat}" onchange="updateDrugFormularyField('${d.id}','vat',this.value)"></td>
+      <td><button type="button" class="vat-toggle ${d.vat > 0 ? 'on' : 'off'}" onclick="toggleDrugFormularyVAT('${d.id}')" title="Click to toggle VAT eligibility">${d.vat > 0 ? `✓ ${d.vat}%` : 'Exempt'}</button></td>
       <td style="color:var(--text3);font-size:11px" title="Per-facility stock is managed in Pharmacy → Stock">${total==null?'—':total.toLocaleString()+' total'}</td>
       <td><input class="fi" type="text" style="width:100px" value="${_scEsc(d.barcode||'')}" placeholder="Scan or type" onchange="updateDrugFormularyField('${d.id}','barcode',this.value)"></td>
       <td><button class="btn btn-g btn-sm" onclick="printDrugLabel('${d.id}')" title="Print barcode label">🏷</button></td>
@@ -13560,7 +13784,7 @@ function addDrugFormularyItem(prefix){
   const unit = gid('unit')?.value.trim() || 'unit';
   const category = gid('category')?.value.trim() || 'General';
   const unitPrice = parseFloat(gid('price')?.value);
-  const vat = parseFloat(gid('vat')?.value);
+  const vatEligible = !!gid('vat')?.checked;
   const stockRaw = gid('stock')?.value;
   const barcode = gid('barcode')?.value.trim() || '';
   const essential = !!gid('essential')?.checked;
@@ -13578,14 +13802,15 @@ function addDrugFormularyItem(prefix){
     id, name, form, strength, unit,
     category: category || 'General',
     unitPrice: Math.round(unitPrice*100)/100,
-    vat: isNaN(vat) ? 15 : Math.max(0, vat),
+    vat: vatEligible ? getStandardVATRate() : 0,
     essential,
     stock,
     barcode: barcode || null,
     storageLocation: null
   });
   persistDrugFormulary();
-  ['name','form','strength','unit','category','price','vat','stock','barcode'].forEach(suffix => { const el = gid(suffix); if (el) el.value = ''; });
+  ['name','form','strength','unit','category','price','stock','barcode'].forEach(suffix => { const el = gid(suffix); if (el) el.value = ''; });
+  const vatEl = gid('vat'); if (vatEl) vatEl.checked = true;
   const essEl = gid('essential'); if (essEl) essEl.checked = false;
   refreshAllFormularyPanels();
   showToast(`${name} added to the drug formulary`, false, '💊 Drug Added');
@@ -13765,7 +13990,9 @@ function generateEstimatedInvoices(){
     let wardTotal = 0;
     if (wardAccrual.enabled) {
       const days = kind === 'active' ? Math.max(1, p.admDays || 1) : Math.max(1, p.admDays || p.los || 1);
-      wardTotal = Math.round(wardAccrual.dailyRate * days * 1.15 * 100) / 100;
+      // Same live ward-day VAT rate as everywhere else — was hardcoded to
+      // a flat 1.15 (i.e. always exactly 15%) multiplier before.
+      wardTotal = Math.round(wardAccrual.dailyRate * days * (1 + getRate('ward-day').vat / 100) * 100) / 100;
     }
     const estTotal = Math.round((subtotal + vatTotal + wardTotal) * 100) / 100;
 
@@ -13979,12 +14206,17 @@ function getInvoiceLineItemsResolved(inv){
     const info = getWardAccrualInfo(inv);
     const rate = inv.wardAccrual.dailyRate;
     const amount = Math.round(rate * info.days * 100) / 100;
-    const vatAmount = Math.round(amount * 0.15 * 100) / 100;
+    // Reads the SAME live "Bed Admission (per day)" billing rate's VAT %
+    // used everywhere else this charge appears — was hardcoded to 0.15/
+    // '15%' before, so it silently stopped matching the moment the admin
+    // set the Standard VAT Rate to anything other than 15%.
+    const wardVatRate = getBillingRate('ward-day')?.vat ?? 15;
+    const vatAmount = Math.round(amount * (wardVatRate/100) * 100) / 100;
     items.push({
       id: '__ward_accrual__',
       description: `Ward bed-day — ${info.ward || 'Ward'}${info.bed ? ' ('+info.bed+')' : ''} — ${info.days} day${info.days===1?'':'s'} @ $${rate.toFixed(2)}/day${info.ongoing ? ', ongoing' : ''}`,
       amount,
-      vatLabel: '15%',
+      vatLabel: wardVatRate > 0 ? `${wardVatRate}%` : 'Zero-rated',
       vatAmount,
       auto: true
     });
@@ -14596,7 +14828,10 @@ function addInvoiceLineItem(){
   const vatSel = document.getElementById('inv-new-vat').value;
   if (!desc) { showToast('Enter a description for the line item.', true, '⚠ Validation'); return; }
   if (!amount || amount <= 0) { showToast('Enter a valid amount.', true, '⚠ Validation'); return; }
-  const vatRate = vatSel === 'exempt' ? 0 : parseFloat(vatSel);
+  // "standard" resolves live at add-time — was hardcoded to 15 before, so a
+  // manually-typed charge never actually followed the admin's Standard VAT
+  // Rate setting the way Quick-add items already did (see getBillingRate).
+  const vatRate = vatSel === 'exempt' ? 0 : (vatSel === 'standard' ? getStandardVATRate() : parseFloat(vatSel));
   const vatAmount = Math.round(amount * (vatRate/100) * 100) / 100;
   inv.lineItems.push({
     id: 'LI-' + Date.now() + '-' + Math.floor(Math.random()*1000),
@@ -15147,14 +15382,19 @@ function disableWardAccrual(){
   saveCurrentInvoice();
 }
 
-function notifyInvoiceNOK(){
-  const inv = invoices.find(i=>i.id===currentInvoiceId);
-  if (!inv) return;
+// Core sender, independent of the Invoice Editor being open — lets
+// registerPatient() fire this automatically right after admission (see its
+// call site) using just the invoice id, not the editor's currentInvoiceId
+// global. The manual "📤 Notify NOK" button is a thin wrapper around this
+// exact same function, so both paths always send an identical message.
+function notifyInvoiceNOKById(invId){
+  const inv = invoices.find(i=>i.id===invId);
+  if (!inv) return false;
   const snap = getInvoicePatientSnapshot(inv);
   const nok = snap.nok;
   if (!nok || !nok.phone) {
     showToast('No next-of-kin phone number on record for this patient.', true, '⚠ Missing Contact');
-    return;
+    return false;
   }
   const t = computeInvoiceTotals(inv);
   const items = getInvoiceLineItemsResolved(inv);
@@ -15174,6 +15414,44 @@ function notifyInvoiceNOK(){
   _sentWASendDetailed(nok.phone, msg).then(result => {
     _sentWANotifyToast(result, nok.name, 'billing notice');
   });
+  // The text above is a summary; also attach the real itemized Invoice PDF
+  // ("quotation") as a document to the same NOK number, fire-and-forget,
+  // same as sendPatientIDCard() sends an actual PDF rather than just a
+  // description of one. Both the manual "📤 Notify NOK" button and the
+  // automatic post-registration trigger go through this one path, so both
+  // now always deliver text + PDF together.
+  _scSendInvoicePDFToNOK(inv, nok);
+  return true;
+}
+function notifyInvoiceNOK(){
+  if (!currentInvoiceId) return;
+  notifyInvoiceNOKById(currentInvoiceId);
+}
+async function _scSendInvoicePDFToNOK(inv, nok){
+  if (!nok || !nok.phone) return;
+  const creds = _sentwaGetCreds();
+  // Missing credentials is already surfaced once by the text send above
+  // (_sentWANotifyToast reports 'missing_credentials') — no need for a
+  // second identical warning here, just skip quietly.
+  if (!creds.instance || !creds.token) return;
+  try {
+    const built = _buildInvoicePDF(inv, 'whatsapp');
+    if (!built || !built.base64) return;
+    const hospName = document.getElementById('hosp-name')?.value?.trim() || 'SmartCare Hospital';
+    const caption = `Dear ${nok.name || 'family'}, attached is the itemized invoice (${inv.id}) for ${inv.patientName}'s care at ${hospName}.`;
+    logNOKMessage(inv.patientId || inv.id, 'whatsapp', 'outbound', `[PDF attached] ${built.fileName}`, {
+      recipient: nok.name || 'Next of Kin', phone: nok.phone, trigger: 'billing-notify-pdf',
+      patientName: inv.patientName || '', priority: 'normal'
+    });
+    const result = await _scSendWADocumentTo(nok.phone, built.base64, built.fileName, caption, creds);
+    if (result.ok) {
+      showToast(`Invoice PDF delivered to ${nok.name || 'next of kin'}.`, false, '📄 PDF Delivered', 8000);
+    } else {
+      showToast(`Billing notice sent, but the invoice PDF could not be delivered. ${result.error || ''}`, true, '⚠ PDF Not Delivered', 8000);
+    }
+  } catch (e) {
+    console.warn('Invoice PDF auto-send failed', e);
+  }
 }
 
 const INVOICE_STATUS_META = { open:['Open','high'], partial:['Partially Paid','moderate'], paid:['Paid','stable'], waived:['Waived','discharge'] };
@@ -15183,6 +15461,12 @@ function renderInvoiceEditor(){
   if (!inv) return;
   const t = computeInvoiceTotals(inv);
   const snap = getInvoicePatientSnapshot(inv);
+
+  // Keeps the manual "Add Line" VAT dropdown's label showing the real
+  // current rate — its value is the "standard" sentinel (resolved live by
+  // addInvoiceLineItem), only the displayed text needs refreshing here.
+  const standardOpt = document.getElementById('inv-new-vat-standard-opt');
+  if (standardOpt) standardOpt.textContent = `Standard ${getStandardVATRate()}%`;
 
   document.getElementById('inv-editor-title').textContent = inv.id;
   document.getElementById('inv-editor-subtitle').textContent = `${inv.patientName} · ${inv.facility || 'Facility not set'} · ${inv.province || 'Province not set'}`;
@@ -15342,6 +15626,17 @@ function openPatientBillingFromProfile(){
   setTimeout(() => {
     const search = document.getElementById('billing-search');
     if (search && pid) { search.value = pid; renderBillingTable(); }
+    // "Pay Now" means pay now — land straight in the actual invoice/payment
+    // editor instead of just a filtered list the patient still has to click
+    // into. Same invoice-selection rule as the WhatsApp "Invoice as PDF"
+    // send (_scSendPatientWAPdf): prefer whichever invoice still has a
+    // balance, most recent first; otherwise just the most recent invoice.
+    const patientInvoices = (typeof invoices !== 'undefined' ? invoices : []).filter(inv => inv.patientId === pid);
+    if (patientInvoices.length) {
+      const withBalance = patientInvoices.filter(inv => computeInvoiceTotals(inv).balance > 0);
+      const target = (withBalance.length ? withBalance : patientInvoices).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+      openInvoiceEditor(target.id);
+    }
   }, 60);
 }
 
@@ -15812,8 +16107,20 @@ function _buildPaymentReceiptPDF(inv, payment, mode){
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
   doc.text('Official Payment Receipt', mg + 15, 26);
 
+  // A hand-drawn checkmark, not the ✓ glyph — jsPDF's built-in fonts only
+  // cover WinAnsi/Latin-1, no Unicode symbols or emoji at all, so passing
+  // ✓ (or any emoji) straight to doc.text() renders as garbage bytes
+  // ("mojibake") instead of a checkmark. That corrupted string also threw
+  // off jsPDF's own width calculation for the right-aligned title, which
+  // is what was pushing "PAYMENT RECEIVED" past the page edge — this was
+  // one bug showing up as two visible symptoms, not two separate ones.
+  const drawCheckmark = (cx, cy, r, color) => {
+    doc.setDrawColor(...color); doc.setLineWidth(r * 0.35); doc.setLineCap('round'); doc.setLineJoin('round');
+    doc.lines([[r * 0.5, r * 0.5], [r * 0.9, -r * 1.3]], cx - r * 0.7, cy + r * 0.1, [1, 1], 'S', false);
+  };
   doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(...GREEN);
-  doc.text('✓ PAYMENT RECEIVED', pw - mg, 20, { align: 'right' });
+  doc.text('PAYMENT RECEIVED', pw - mg, 20, { align: 'right' });
+  drawCheckmark(pw - mg - doc.getTextWidth('PAYMENT RECEIVED') - 5, 17.3, 2.6, GREEN);
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
   doc.text(`Receipt for ${pdfSanitise(inv.id)} · ${new Date(payment.date).toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})}`, pw - mg, 26, { align: 'right' });
 
@@ -15866,37 +16173,49 @@ function _buildPaymentReceiptPDF(inv, payment, mode){
     doc.setFillColor(...GREEN_TINT);
     doc.roundedRect(mg, y, pw - 2*mg, 14, 3, 3, 'F');
     doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...GREEN);
-    doc.text('✓ This account is fully settled. Thank you for your payment.', pw/2, y + 9, { align: 'center' });
+    const fullMsg = 'This account is fully settled. Thank you for your payment.';
+    doc.text(fullMsg, pw/2 + 3, y + 9, { align: 'center' });
+    drawCheckmark(pw/2 - doc.getTextWidth(fullMsg)/2 - 3, y + 6.5, 2.2, GREEN);
     y += 22;
   } else {
-    // ── Ways to Pay — only shown while a balance remains ──
+    // ── Ways to Pay — only shown while a balance remains. Small drawn
+    // circle-letter badges instead of emoji per payment method, for the
+    // same reason as the header checkmark above — guaranteed to render
+    // correctly everywhere rather than risk mojibake. ──
     const payLink = _scBuildPaymentLink(inv, balanceAfter);
     const gw = getPaymentGatewayConfig();
     doc.setFillColor(...NAVY_TINT);
     doc.roundedRect(mg, y, pw - 2*mg, 46, 4, 4, 'F');
     doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(...NAVY);
-    doc.text('💳 WAYS TO PAY THE REMAINING BALANCE', mg + 6, y + 9);
+    doc.text('WAYS TO PAY THE REMAINING BALANCE', mg + 6, y + 9);
 
+    const drawMethodBadge = (cx, cy, letter, color) => {
+      doc.setFillColor(...color);
+      doc.circle(cx, cy, 2.8, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(255,255,255);
+      doc.text(letter, cx, cy + 0.1, { align: 'center', baseline: 'middle' });
+    };
     const methods = [
-      { icon: '📱', label: 'EcoCash', note: gw.ecocashInstructions.replace('{code}', gw.ecocashMerchantCode) },
-      { icon: '💳', label: 'Card', note: gw.cardInstructions },
-      { icon: '🌐', label: 'Online', note: gw.onlinePaymentNote },
-      { icon: '🏥', label: 'In Person', note: gw.merchantNote },
+      { letter: 'E', color: BLUE, label: 'EcoCash', note: gw.ecocashInstructions.replace('{code}', gw.ecocashMerchantCode) },
+      { letter: 'C', color: NAVY, label: 'Card', note: gw.cardInstructions },
+      { letter: 'O', color: GREEN, label: 'Online', note: gw.onlinePaymentNote },
+      { letter: 'P', color: GRAY, label: 'In Person', note: gw.merchantNote },
     ];
     const colWpay = (pw - 2*mg - 12) / 2;
     methods.forEach((m, i) => {
       const cx = mg + 6 + (i % 2) * (colWpay + 6);
       const cy = y + 16 + Math.floor(i / 2) * 12;
+      drawMethodBadge(cx + 2.8, cy - 1.6, m.letter, m.color);
       doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...INK);
-      doc.text(`${m.icon} ${m.label}`, cx, cy);
+      doc.text(m.label, cx + 8, cy);
       doc.setFont('helvetica','normal'); doc.setFontSize(7);
       doc.setTextColor(...GRAY);
-      const lines = doc.splitTextToSize(pdfSanitise(m.note), colWpay - 4);
-      doc.text(lines.slice(0, 2), cx, cy + 4);
+      const lines = doc.splitTextToSize(pdfSanitise(m.note), colWpay - 10);
+      doc.text(lines.slice(0, 2), cx + 8, cy + 4);
     });
 
     doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(...BLUE);
-    doc.textWithLink('🔗 Tap here to pay online now →', mg + 6, y + 42, { url: payLink });
+    doc.textWithLink('Tap here to pay online now ->', mg + 6, y + 42, { url: payLink });
     y += 54;
   }
 
@@ -15931,7 +16250,15 @@ function _buildPaymentReceiptPDF(inv, payment, mode){
 function _scRenderBarcodePNG(value, opts = {}){
   try {
     const canvas = document.createElement('canvas');
-    JsBarcode(canvas, String(value), Object.assign({ format: 'CODE128', displayValue: false, margin: 0, width: 3, height: 130 }, opts));
+    // height:80 (was 130) — the barcode is only ever embedded at ~16-18mm
+    // tall in the PDF; jsPDF's addImage() rescales whatever pixel size the
+    // source is into that fixed mm box regardless, so the extra height was
+    // pure dead weight bloating the PDF, not extra print quality. This one
+    // change plus _scRenderQRPNG's below took the Patient ID Card PDF from
+    // ~589KB down to a size the upload providers deliver reliably again —
+    // "WhatsApp delivered, PDF not delivered" was the file simply getting
+    // too big, not a real bug in the send logic.
+    JsBarcode(canvas, String(value), Object.assign({ format: 'CODE128', displayValue: false, margin: 0, width: 2, height: 80 }, opts));
     return canvas.toDataURL('image/png');
   } catch (e) { return null; }
 }
@@ -15944,7 +16271,14 @@ function _scRenderBarcodePNG(value, opts = {}){
 function _scRenderQRPNG(text, opts = {}){
   try {
     const div = document.createElement('div');
-    new QRCode(div, Object.assign({ text: String(text), width: 240, height: 240, correctLevel: QRCode.CorrectLevel.M }, opts));
+    // width/height:140 (was 240) — same rationale as the barcode above:
+    // embedded at ~22mm in the PDF regardless of source resolution, and a
+    // dense QR (this one's payload has grown with every field added —
+    // allergies, then weight/height/BMI — each growth step increases the
+    // QR's own module count/complexity, which multiplies PNG file size at
+    // a fixed canvas size far more than a barcode's simple parallel lines
+    // do) was the single biggest contributor to the oversized PDF.
+    new QRCode(div, Object.assign({ text: String(text), width: 140, height: 140, correctLevel: QRCode.CorrectLevel.M }, opts));
     const canvas = div.querySelector('canvas');
     return canvas ? canvas.toDataURL('image/png') : null;
   } catch (e) { return null; }
@@ -15982,7 +16316,8 @@ function _scBuildPatientCardQRLink(p){
     n: p.name || '', pid: p.id || '', a: p.age ?? '', g: p.gender || '',
     hosp: fac?.name || p.facility || '', ward: p.ward || '', bed: p.bed || '',
     stat: isDischarged ? 'discharged' : 'admitted',
-    dx: p.diagnosis || '', meds, allergies, bal: balance.toFixed(2)
+    dx: p.diagnosis || '', meds, allergies, bal: balance.toFixed(2),
+    w: p.weight ?? '', h: p.height ?? '', bmi: p.bmi ?? ''
   });
   return `${base}?${params.toString()}`;
 }
@@ -16000,50 +16335,58 @@ function _buildPatientIDCardPDF(patient, mode){
   if (!jsPDF) { showToast('PDF library not loaded.', true); return; }
   if (typeof JsBarcode === 'undefined') { showToast('Barcode library not loaded.', true); return; }
   const p = patient;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  // Landscape A5 (210 x 148mm) — a wide card on a wide page, sized to fill
+  // it edge-to-edge with just a uniform margin, rather than a portrait
+  // page with a lot of dead space top-to-bottom around a wide card.
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a5' });
   const pw = doc.internal.pageSize.getWidth();
+  const ph = doc.internal.pageSize.getHeight();
   const fac = getFacilityByName(p.facility);
   const hospName = _scGetPatientFacilityName(p);
 
   const NAVY = [20,64,122], BLUE = [26,111,196], GRAY = [110,120,135],
         GRAY_LT = [225,230,236], INK = [40,45,55], WATERMARK = [240,243,248];
 
-  const cardW = 155, cardH = 100, cardX = (pw - cardW) / 2, cardY = 40, pad = 9;
+  const cardW = pw - 16, cardH = ph - 27, cardX = (pw - cardW) / 2, cardY = 15, pad = 10;
 
-  // ── Page heading — centred, sitting directly above the card's top edge ──
-  doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(...NAVY);
-  doc.text(pdfSanitise(`Patient ID Card — ${p.name || ''}`), pw / 2, cardY - 10, { align: 'center' });
+  // ── Page heading — centred, sitting close against the card's top edge
+  // (no daylight between the text and the blue line) ──
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(...NAVY);
+  doc.text(pdfSanitise(`Patient ID Card — ${p.name || ''}`), pw / 2, cardY - 3, { align: 'center' });
 
   // ── Card shell ──
   doc.setFillColor(250,251,253);
-  doc.roundedRect(cardX, cardY, cardW, cardH, 5, 5, 'F');
-  doc.setDrawColor(...NAVY); doc.setLineWidth(0.6);
-  doc.roundedRect(cardX, cardY, cardW, cardH, 5, 5, 'S');
-  doc.setDrawColor(...BLUE); doc.setLineWidth(1.2);
-  doc.line(cardX + 6, cardY + 2.4, cardX + cardW - 6, cardY + 2.4);
+  doc.roundedRect(cardX, cardY, cardW, cardH, 6, 6, 'F');
+  doc.setDrawColor(...NAVY); doc.setLineWidth(0.7);
+  doc.roundedRect(cardX, cardY, cardW, cardH, 6, 6, 'S');
+  doc.setDrawColor(...BLUE); doc.setLineWidth(1.4);
+  doc.line(cardX + 7, cardY + 2.8, cardX + cardW - 7, cardY + 2.8);
 
   // Faint diagonal watermark, drawn before everything else on the card so
   // subsequent fills/text paint over it wherever they overlap.
-  doc.setFont('helvetica','bold'); doc.setFontSize(26); doc.setTextColor(...WATERMARK);
+  doc.setFont('helvetica','bold'); doc.setFontSize(28); doc.setTextColor(...WATERMARK);
   doc.text('SMARTCARE AI', cardX + cardW / 2, cardY + cardH / 2 + 6, { align: 'center', angle: 20 });
 
   const rowTop = cardY + pad;
-  const logoSize = 12, logoX = cardX + pad, logoY = rowTop;
-  const photoW = 14, photoH = 18, photoX = cardX + cardW - pad - photoW, photoY = rowTop;
+  const logoSize = 14, logoX = cardX + pad, logoY = rowTop;
+  const photoW = 16, photoH = 20, photoX = cardX + cardW - pad - photoW, photoY = rowTop;
 
   // ── Hospital logo (top-left) ──
   if (fac?.logo) {
     const fmt = fac.logo.startsWith('data:image/png') ? 'PNG' : 'JPEG';
     try { doc.addImage(fac.logo, fmt, logoX, logoY, logoSize, logoSize); } catch (e) {
-      doc.setFillColor(...BLUE); doc.roundedRect(logoX, logoY, logoSize, logoSize, 2.5, 2.5, 'F');
-      doc.setFillColor(255,255,255); doc.rect(logoX+5.1,logoY+2.6,1.8,6.8,'F'); doc.rect(logoX+2.6,logoY+5.1,6.8,1.8,'F');
+      doc.setFillColor(...BLUE); doc.roundedRect(logoX, logoY, logoSize, logoSize, 3, 3, 'F');
+      doc.setFillColor(255,255,255); doc.rect(logoX+5.9,logoY+3,2,7.6,'F'); doc.rect(logoX+3,logoY+5.9,7.6,2,'F');
     }
   } else {
-    doc.setFillColor(...BLUE); doc.roundedRect(logoX, logoY, logoSize, logoSize, 2.5, 2.5, 'F');
-    doc.setFillColor(255,255,255); doc.rect(logoX+5.1,logoY+2.6,1.8,6.8,'F'); doc.rect(logoX+2.6,logoY+5.1,6.8,1.8,'F');
+    doc.setFillColor(...BLUE); doc.roundedRect(logoX, logoY, logoSize, logoSize, 3, 3, 'F');
+    doc.setFillColor(255,255,255); doc.rect(logoX+5.9,logoY+3,2,7.6,'F'); doc.rect(logoX+3,logoY+5.9,7.6,2,'F');
   }
 
-  // ── Patient photo (top-right) — placeholder silhouette until one is captured ──
+  // ── Patient photo (top-right) — placeholder silhouette until one is
+  // captured (see openRegistrationPhotoCapture / capturePatientProfilePhoto)
+  // — the very next card generated automatically shows the real photo
+  // instead, no separate update step ──
   doc.setDrawColor(...GRAY_LT); doc.setLineWidth(0.4);
   doc.roundedRect(photoX, photoY, photoW, photoH, 1.5, 1.5, 'S');
   if (p.profilePhoto && p.profilePhoto.startsWith('data:')) {
@@ -16052,32 +16395,32 @@ function _buildPatientIDCardPDF(patient, mode){
   } else {
     doc.setFillColor(242,245,250); doc.roundedRect(photoX+0.3, photoY+0.3, photoW-0.6, photoH-0.6, 1.3, 1.3, 'F');
     doc.setFillColor(...GRAY_LT);
-    doc.circle(photoX + photoW/2, photoY + 6, 2.6, 'F');
-    doc.ellipse(photoX + photoW/2, photoY + 14.5, 5.2, 3.7, 'F');
+    doc.circle(photoX + photoW/2, photoY + 6.5, 3, 'F');
+    doc.ellipse(photoX + photoW/2, photoY + 15.5, 5.6, 4, 'F');
   }
 
   // ── Hospital name — centred across the full card, auto-shrunk to fit ──
   const availW = photoX - (logoX + logoSize) - 6;
-  let hospFont = 10.5;
+  let hospFont = 13;
   doc.setFont('helvetica','bold'); doc.setTextColor(...NAVY);
   doc.setFontSize(hospFont);
   const hospUpper = pdfSanitise(hospName).toUpperCase();
-  while (hospFont > 6.5 && doc.getTextWidth(hospUpper) > availW) { hospFont -= 0.5; doc.setFontSize(hospFont); }
-  doc.text(hospUpper, cardX + cardW / 2, rowTop + 7, { align: 'center' });
+  while (hospFont > 7.5 && doc.getTextWidth(hospUpper) > availW) { hospFont -= 0.5; doc.setFontSize(hospFont); }
+  doc.text(hospUpper, cardX + cardW / 2, rowTop + logoSize / 2 + 1.5, { align: 'center' });
 
-  let y = rowTop + logoSize + 12; // clears the taller of the two boxes (photo, 18mm) with room to spare
+  let y = rowTop + Math.max(logoSize, photoH) + 10;
 
   // ── Patient name ──
   doc.setFont('helvetica','bold'); doc.setTextColor(...INK);
-  let nameFont = 15;
+  let nameFont = 20;
   doc.setFontSize(nameFont);
   const nameStr = pdfSanitise(p.name || '');
-  while (nameFont > 9 && doc.getTextWidth(nameStr) > cardW - 2*pad) { nameFont -= 0.5; doc.setFontSize(nameFont); }
+  while (nameFont > 11 && doc.getTextWidth(nameStr) > cardW - 2*pad) { nameFont -= 0.5; doc.setFontSize(nameFont); }
   doc.text(nameStr, cardX + cardW / 2, y, { align: 'center' });
-  y += 8;
+  y += 9;
 
   // ── Meta line ──
-  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY);
+  doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(...GRAY);
   // A literal "-", not a middle-dot — pdfSanitise() turns "·" into a
   // stray "x" (its middle-dot rule fires before the base-14-safe fallback
   // it likely intended to produce a dash ever gets a chance to match), so
@@ -16096,14 +16439,14 @@ function _buildPatientIDCardPDF(patient, mode){
   // unauthenticated page — see _scBuildPatientCardQRLink's comment on
   // exactly what that trade-off means). Both scaled into fixed mm boxes so
   // neither can ever overflow the card, however long the encoded value is.
-  const qrSize = 18, gap = 4;
+  const qrSize = 20, gap = 5;
   const barcodeW = cardW - 2*pad - qrSize - gap, barcodeH = 16;
   const qrX = cardX + cardW - pad - qrSize;
 
-  doc.setFont('helvetica','bold'); doc.setFontSize(5.5); doc.setTextColor(...GRAY);
+  doc.setFont('helvetica','bold'); doc.setFontSize(6); doc.setTextColor(...GRAY);
   doc.text('STAFF SCAN', cardX + pad, y, { align: 'left' });
   doc.text('MY INFO', qrX + qrSize / 2, y, { align: 'center' });
-  y += 4;
+  y += 4.5;
 
   const barcodePng = _scRenderBarcodePNG(p.id);
   if (barcodePng) {
@@ -16111,11 +16454,11 @@ function _buildPatientIDCardPDF(patient, mode){
   }
   const qrPng = (typeof QRCode !== 'undefined') ? _scRenderQRPNG(_scBuildPatientCardQRLink(p)) : null;
   if (qrPng) {
-    try { doc.addImage(qrPng, 'PNG', qrX, y - 1, qrSize, qrSize); } catch (e) {}
+    try { doc.addImage(qrPng, 'PNG', qrX, y - 2, qrSize, qrSize); } catch (e) {}
   }
-  y += barcodeH + 5;
+  y += barcodeH + 6;
 
-  doc.setFont('courier','bold'); doc.setFontSize(10.5); doc.setTextColor(...INK);
+  doc.setFont('courier','bold'); doc.setFontSize(11); doc.setTextColor(...INK);
   doc.text(pdfSanitise(p.id || ''), cardX + pad + barcodeW / 2, y, { align: 'center' });
   y += 6;
 
@@ -16123,13 +16466,13 @@ function _buildPatientIDCardPDF(patient, mode){
   // its own later bullet-to-dash rule ever sees it (both target the same
   // character; the first replace() call already consumed it), so a
   // middle-dot here would come out as a stray "x", not a dash.
-  doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...GRAY);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...GRAY);
   doc.text(pdfSanitise(`Issued ${new Date().toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})} - SmartCare AI Patient Record System`), cardX + cardW / 2, y, { align: 'center' });
 
   const fileName = `PatientIDCard_${p.id}_${(p.name || 'patient').replace(/\s+/g,'_')}.pdf`;
   if (mode === 'preview') {
     window.open(doc.output('bloburl'), '_blank');
-    showToast('Patient ID Card opened in a new tab — ready to print', false, '👁 Preview');
+    showToast('Patient ID Card opened in a new tab — ready to print on A5', false, '👁 Preview');
   } else if (mode === 'whatsapp') {
     return { fileName, base64: doc.output('datauristring').split(',')[1] };
   } else {
@@ -16755,6 +17098,146 @@ function regField(scope, id){
   return scope.querySelector(`#${id}`) || document.getElementById(id);
 }
 
+// ═══════════════════════════════════════════════════
+// CUSTOM DATE PICKER — Date of Birth / Admission Date. A single shared
+// dropdown panel reused by both fields (only one can be open at a time),
+// created once and repositioned/re-rendered against whichever field
+// triggered it. Writes back a plain 'YYYY-MM-DD' string into the target
+// input's .value — the exact same shape the old native <input type="date">
+// always produced — so registerPatient()/clearRegForm() need no changes.
+// ═══════════════════════════════════════════════════
+let _scDatePickerOpenFor = null;
+let _scDatePickerViewDate = new Date();
+
+function _scOpenDatePicker(inputId){
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  _scDatePickerOpenFor = inputId;
+  // Day pinned to 1 — the view date only ever needs year+month, and
+  // leaving a day>28 in place risks setMonth/setFullYear silently
+  // rolling into the following month (e.g. Jan 31 + 1 month "becomes"
+  // Mar 2/3, skipping February entirely) further down in this component.
+  const base = input.value ? new Date(input.value + 'T00:00:00') : new Date();
+  _scDatePickerViewDate = new Date(base.getFullYear(), base.getMonth(), 1);
+  let panel = document.getElementById('sc-datepicker-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'sc-datepicker-panel';
+    panel.className = 'sc-datepicker-panel';
+    // Nav/day-cell clicks re-render the panel's innerHTML mid-bubble,
+    // detaching the exact node that was clicked — by the time the
+    // document-level outside-click closer (below) would check
+    // panel.contains(e.target), that node no longer belongs to anything
+    // and reads as "outside", closing the panel the instant you click
+    // inside it. Stopping propagation here at the source means every
+    // click genuinely inside the panel never reaches that check at all.
+    panel.addEventListener('click', e => e.stopPropagation());
+    document.body.appendChild(panel);
+  }
+  const rect = input.getBoundingClientRect();
+  panel.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+  panel.style.left = (rect.left + window.scrollX) + 'px';
+  panel.style.display = 'block';
+  _scRenderDatePicker();
+}
+
+function _scCloseDatePicker(){
+  const panel = document.getElementById('sc-datepicker-panel');
+  if (panel) panel.style.display = 'none';
+  _scDatePickerOpenFor = null;
+}
+
+function _scDatePickerNav(delta){
+  _scDatePickerViewDate = new Date(_scDatePickerViewDate.getFullYear(), _scDatePickerViewDate.getMonth() + delta, 1);
+  _scRenderDatePicker();
+}
+
+// Quick jump — the native date picker's own "click the month header to
+// drill into a year grid" trick doesn't exist here, but a direct Year
+// dropdown is faster anyway: one click straight to any year (useful for
+// an adult's Date of Birth, which can be 60-80 clicks of "next month"
+// away from today otherwise) instead of paging through a decade grid.
+// Always rebuilds the date fresh (day pinned to 1) rather than mutating
+// in place, for the same reason as _scOpenDatePicker's own comment above.
+function _scDatePickerSetMonth(monthIndex){
+  _scDatePickerViewDate = new Date(_scDatePickerViewDate.getFullYear(), parseInt(monthIndex), 1);
+  _scRenderDatePicker();
+}
+function _scDatePickerSetYear(year){
+  _scDatePickerViewDate = new Date(parseInt(year), _scDatePickerViewDate.getMonth(), 1);
+  _scRenderDatePicker();
+}
+
+function _scDatePickerPick(dateStr){
+  const input = document.getElementById(_scDatePickerOpenFor);
+  if (input) {
+    input.value = dateStr;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  _scCloseDatePicker();
+}
+
+function _scDatePickerToday(){
+  _scDatePickerPick(new Date().toISOString().slice(0, 10));
+}
+
+function _scDatePickerClear(){
+  const input = document.getElementById(_scDatePickerOpenFor);
+  if (input) input.value = '';
+  _scCloseDatePicker();
+}
+
+function _scRenderDatePicker(){
+  const panel = document.getElementById('sc-datepicker-panel');
+  if (!panel) return;
+  const view = _scDatePickerViewDate;
+  const year = view.getFullYear(), month = view.getMonth();
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const input = document.getElementById(_scDatePickerOpenFor);
+  const selected = input?.value || '';
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  let cells = '';
+  for (let i = 0; i < firstDay; i++) cells += '<div class="sc-dp-day sc-dp-empty"></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const cls = ['sc-dp-day'];
+    if (dateStr === selected) cls.push('sc-dp-selected');
+    if (dateStr === todayStr) cls.push('sc-dp-today');
+    cells += `<div class="${cls.join(' ')}" onclick="_scDatePickerPick('${dateStr}')">${d}</div>`;
+  }
+
+  const curYear = new Date().getFullYear();
+  const monthOpts = monthNames.map((m, i) => `<option value="${i}"${i === month ? ' selected' : ''}>${m}</option>`).join('');
+  const yearOpts = Array.from({ length: 121 }, (_, i) => curYear + 1 - i).map(y => `<option value="${y}"${y === year ? ' selected' : ''}>${y}</option>`).join('');
+
+  panel.innerHTML = `
+    <div class="sc-dp-header">
+      <button type="button" class="sc-dp-nav" onclick="_scDatePickerNav(-1)">‹</button>
+      <div class="sc-dp-title-group">
+        <select class="sc-dp-mini-select" onchange="_scDatePickerSetMonth(this.value)">${monthOpts}</select>
+        <select class="sc-dp-mini-select sc-dp-year-select" onchange="_scDatePickerSetYear(this.value)">${yearOpts}</select>
+      </div>
+      <button type="button" class="sc-dp-nav" onclick="_scDatePickerNav(1)">›</button>
+    </div>
+    <div class="sc-dp-weekdays">${['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => `<div>${d}</div>`).join('')}</div>
+    <div class="sc-dp-grid">${cells}</div>
+    <div class="sc-dp-footer">
+      <button type="button" class="sc-dp-link" onclick="_scDatePickerClear()">Clear</button>
+      <button type="button" class="sc-dp-link" onclick="_scDatePickerToday()">Today</button>
+    </div>`;
+}
+
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('sc-datepicker-panel');
+  if (!panel || panel.style.display !== 'block') return;
+  const input = document.getElementById(_scDatePickerOpenFor);
+  if (panel.contains(e.target) || (input && input.contains(e.target))) return;
+  _scCloseDatePicker();
+});
+
 function _scFlagEmojiToIso(flagText){
   const chars = [...String(flagText || '')];
   if(chars.length < 2) return '';
@@ -16982,6 +17465,9 @@ function registerPatient(triggerEl=null){
   const o2Val=parseInt(regField(scope,'reg-o2')?.value)||98;
   const bpVal=regField(scope,'reg-bp')?.value||'120/80';
   const tempVal=parseFloat(regField(scope,'reg-temp')?.value)||36.6;
+  const weightVal=parseFloat(regField(scope,'reg-weight')?.value)||70;
+  const heightVal=parseFloat(regField(scope,'reg-height')?.value)||170;
+  const bmiVal=Math.round((weightVal/((heightVal/100)**2))*10)/10;
   const rrVal=16;
   const genderVal=regField(scope,'reg-gender')?.value||'Other';
   const province=(regField(scope,'reg-province')?.value||'').trim();
@@ -17046,11 +17532,18 @@ function registerPatient(triggerEl=null){
     bp:bpVal,
     o2:o2Val,
     temp:tempVal, rr:rrVal,
+    weight:weightVal, height:heightVal, bmi:bmiVal,
     los, admDays:0, dischStatus:'admitted', dischDate:'In '+los+' days',
     nok:{name:nokName,rel:nokRel,phone:_scNormalizePhone(nokPhone),wa:_scNormalizePhone(nokPhone).startsWith('+'),email:regField(scope,'reg-nok-email')?.value||''},
     journey:['admitted','triage','ward-admit','treatment'], journeyStep:0,
     admissionReason:diagText,
-    returning: isReturning
+    returning: isReturning,
+    // Optional photo captured from the registration form itself (see
+    // openRegistrationPhotoCapture) — attached here, before any
+    // notification fires, so the first ID Card WhatsApp send below already
+    // carries the real photo instead of the placeholder when one exists.
+    profilePhoto: window._scPendingRegPhoto || null,
+    photoCaptureDatetime: window._scPendingRegPhoto ? new Date().toISOString() : null
   };
   const admittedPatient = normalizePatientAssignment(newPatient);
   admittedPatient.createdAt = new Date().toISOString();
@@ -17138,21 +17631,26 @@ function registerPatient(triggerEl=null){
   renderAllWardBeds();
 
   const returningMsg = isReturning ? ` · Returning patient — ${priorDischarged.length} prior admission(s) linked` : '';
-  // Store patient for camera capture (final registration step)
+  const hadPreRegPhoto = !!admittedPatient.profilePhoto;
+  // Store patient for camera capture — either a genuine "final step" (no
+  // photo taken yet, exactly as before) or a "retake" prompt when one was
+  // already captured pre-registration.
   window._pendingPatientPhotoCapture = {
     pid: pid,
     name: fullName,
     photo: null
   };
-  
+
   showRecordSuccessModal({
     title: 'Patient Registered',
     patient: fullName,
     headline: 'Patient enrolled successfully',
     subtitle: `${admittedPatient.ward} ward record is now active.`,
     details: `Patient ID: ${pid}`,
-    note: `SmartCare registration completed. Camera photo capture is the final step.`,
-    actionLabel: 'Capture Patient Photo (Final Step)',
+    note: hadPreRegPhoto
+      ? `SmartCare registration completed. Photo already attached — the ID Card and notifications sent just now already include it.`
+      : `SmartCare registration completed. Photo capture is optional and can be added any time.`,
+    actionLabel: hadPreRegPhoto ? '🔄 Retake Photo' : '📸 Capture Photo (Optional)',
     onAction: () => {
       openCameraModal();
     },
@@ -17165,15 +17663,42 @@ function registerPatient(triggerEl=null){
     showToast('Patient registered, but WhatsApp notification failed.', true, '⚠ NOK Notify Error', 6000);
   }
   // Issue the Patient ID Card immediately, to both the patient and next of
-  // kin — with a placeholder photo silhouette for now if the camera step
-  // above hasn't happened yet. Best-effort, fire-and-forget: sendPatientIDCard
-  // is async, so a synchronous try/catch here would never actually catch a
-  // rejected promise — .catch() is the correct guard, never blocks registration.
+  // kin. Carries the real photo already if one was captured on the
+  // registration form (see window._scPendingRegPhoto, read into
+  // admittedPatient.profilePhoto above, BEFORE this fires) — otherwise the
+  // usual placeholder silhouette, exactly as before. Best-effort,
+  // fire-and-forget: sendPatientIDCard is async, so a synchronous try/catch
+  // here would never actually catch a rejected promise — .catch() is the
+  // correct guard, never blocks registration.
   sendPatientIDCard(pid).catch(idErr => console.warn('Patient ID Card auto-send failed', idErr));
+  // Itemized billing notice — same message the "📤 Notify NOK" button in the
+  // Invoice Editor sends, now also fired automatically right after
+  // admission so next of kin get the charge breakdown without staff having
+  // to remember to open the invoice manually. Best-effort: the admission
+  // fee/card fee/ward accrual lines added above are already on the invoice
+  // by this point, so the breakdown is accurate; a missing NOK phone just
+  // no-ops quietly (notifyInvoiceNOKById toasts that case itself).
+  try {
+    // Skip silently (rather than calling notifyInvoiceNOKById and letting it
+    // toast) when there's no NOK phone — sendAutoAdmissionNOKMessage above
+    // already surfaced that exact warning once; a second "no phone" toast
+    // for the same missing contact would just be noise.
+    if (admittedPatient.nok?.phone) {
+      const admInvForNotice = getOrCreateOpenInvoiceForPatient(pid);
+      if (admInvForNotice) notifyInvoiceNOKById(admInvForNotice.id);
+    }
+  } catch (billErr) {
+    console.warn('Automatic billing notice failed', billErr);
+  }
   if(isReturning){
     setTimeout(()=>showToast(`Prior records from ${priorDischarged[0].date} automatically linked to ${pid}`,false,'📂 History Linked'),3500);
   }
 
+  // Registration consumed whatever was staged (attached above, or nothing)
+  // — clear it so the next patient's form starts clean rather than
+  // silently inheriting this one's photo.
+  window._scPendingRegPhoto = null;
+  _scRenderRegistrationPhotoPreview();
   clearRegForm();
   updateRegBeds(triggerEl);
   setTimeout(()=>{ showPatPane('registry'); },2000);
@@ -17203,6 +17728,119 @@ let patientCameraContext = null;
 let patientCapturedPhoto = null;
 let patientCameraInProgress = false;
 window._pendingPatientPhotoCapture = null;
+// Real face detection via the browser's native Shape Detection API where
+// it exists (mainly Chrome/Edge on Android — most desktop browsers don't
+// ship it). `null` = not yet checked, `false` = checked and unsupported,
+// an instance = ready to use. Never fabricate a "detecting" state when
+// this is false — the guide frame just stays a static framing aid instead.
+let _scCameraFaceDetector = null;
+let _scFaceDetectionTimer = null;
+
+function _scInitFaceDetector(){
+  if (_scCameraFaceDetector !== null) return _scCameraFaceDetector;
+  if (typeof FaceDetector === 'undefined') { _scCameraFaceDetector = false; return false; }
+  try { _scCameraFaceDetector = new FaceDetector({ fastMode: true, maxDetectedFaces: 1 }); }
+  catch (e) { _scCameraFaceDetector = false; }
+  return _scCameraFaceDetector;
+}
+
+function _scStartFaceDetection(){
+  _scStopFaceDetection();
+  const detector = _scInitFaceDetector();
+  const statusEl = document.getElementById('camera-face-status');
+  const frameEl = document.getElementById('camera-guide-frame');
+  if (!detector) {
+    // Not supported here — leave the static dashed guide as-is, no status pill.
+    if (statusEl) statusEl.style.display = 'none';
+    if (frameEl) frameEl.classList.remove('detected', 'searching');
+    return;
+  }
+  if (statusEl) statusEl.style.display = 'block';
+  if (frameEl) { frameEl.classList.remove('detected'); frameEl.classList.add('searching'); }
+  _scFaceDetectionTimer = setInterval(async () => {
+    const video = document.getElementById('patient-camera-video');
+    if (!video || !video.videoWidth) return;
+    try {
+      const faces = await detector.detect(video);
+      const found = !!(faces && faces.length);
+      if (frameEl) { frameEl.classList.toggle('detected', found); frameEl.classList.toggle('searching', !found); }
+      if (statusEl) statusEl.textContent = found ? '✓ Face detected — good to capture' : '🔍 Looking for a face…';
+    } catch (e) {
+      // Detection erroring mid-session (rare) — fall back to the static guide silently.
+      _scStopFaceDetection();
+      if (statusEl) statusEl.style.display = 'none';
+      if (frameEl) frameEl.classList.remove('detected', 'searching');
+    }
+  }, 600);
+}
+
+function _scStopFaceDetection(){
+  if (_scFaceDetectionTimer) { clearInterval(_scFaceDetectionTimer); _scFaceDetectionTimer = null; }
+}
+
+// Live preview filter — mirrors whatever's applied at capture time (see
+// capturePatientPhoto) so staff can actually SEE the effect of dragging
+// these sliders before taking the shot, instead of finding out only after
+// capturing. Previously these sliders existed but did nothing at all —
+// updateCameraFilter()/updateCameraPreviewBrightness() were never defined.
+function updateCameraFilter(){
+  const b = parseFloat(document.getElementById('camera-brightness-slider')?.value) || 1.15;
+  const c = parseFloat(document.getElementById('camera-contrast-slider')?.value) || 1.1;
+  const s = parseFloat(document.getElementById('camera-saturation-slider')?.value) || 1.05;
+  const video = document.getElementById('patient-camera-video');
+  if (video) video.style.filter = `brightness(${b}) contrast(${c}) saturate(${s})`;
+  const bv = document.getElementById('brightness-value'); if (bv) bv.textContent = b.toFixed(2);
+  const cv = document.getElementById('contrast-value'); if (cv) cv.textContent = c.toFixed(2);
+  const sv = document.getElementById('saturation-value'); if (sv) sv.textContent = s.toFixed(2);
+}
+
+function resetCameraFilter(){
+  const defaults = { 'camera-brightness-slider': 1.15, 'camera-contrast-slider': 1.1, 'camera-saturation-slider': 1.05 };
+  Object.entries(defaults).forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.value = val; });
+  updateCameraFilter();
+}
+// Holds a photo captured from the registration FORM itself, before a
+// patient record exists to attach it to — see openRegistrationPhotoCapture()
+// and savePatientPhoto()'s preReg branch. registerPatient() reads and
+// clears this when it actually creates the patient.
+window._scPendingRegPhoto = null;
+
+// Optional pre-registration photo capture — staff can capture a photo
+// before clicking "Register Patient" so the very first ID Card notice
+// (sent right after registration) already has the real photo instead of
+// the placeholder silhouette. Deliberately NOT required: for a critical/
+// unstable patient there may be no time for this, and registration must
+// never be blocked on it — see registerPatient()'s use of
+// window._scPendingRegPhoto (falls back to null/placeholder if skipped).
+function openRegistrationPhotoCapture(){
+  const fn = (document.getElementById('reg-fname')?.value || '').trim();
+  const ln = (document.getElementById('reg-lname')?.value || '').trim();
+  window._pendingPatientPhotoCapture = { pid: null, name: (fn + ' ' + ln).trim() || 'New Patient', photo: null, preReg: true };
+  openCameraModal();
+}
+
+function _scRenderRegistrationPhotoPreview(){
+  const img = document.getElementById('reg-photo-preview-img');
+  const icon = document.getElementById('reg-photo-placeholder-icon');
+  const status = document.getElementById('reg-photo-status');
+  const captureBtn = document.getElementById('reg-photo-capture-btn');
+  const clearBtn = document.getElementById('reg-photo-clear-btn');
+  if (!img) return; // form not mounted (e.g. dead duplicate #page-register) — nothing to update
+  const has = !!window._scPendingRegPhoto;
+  img.style.display = has ? 'block' : 'none';
+  img.src = has ? window._scPendingRegPhoto : '';
+  if (icon) icon.style.display = has ? 'none' : 'block';
+  if (status) status.textContent = has
+    ? '✓ Photo captured — will be attached when you register this patient.'
+    : 'No photo captured yet — optional, can be added now or after registration.';
+  if (captureBtn) captureBtn.textContent = has ? '🔄 Retake Photo' : '📸 Capture Photo';
+  if (clearBtn) clearBtn.style.display = has ? 'inline-block' : 'none';
+}
+
+function clearRegistrationPhoto(){
+  window._scPendingRegPhoto = null;
+  _scRenderRegistrationPhotoPreview();
+}
 
 function openCameraModal() {
   document.getElementById('camera-modal').classList.add('active');
@@ -17210,12 +17848,14 @@ function openCameraModal() {
   document.getElementById('save-photo-btn').style.display = 'none';
   document.querySelector('.camera-video-container').style.display = 'flex';
   document.getElementById('camera-canvas-preview').style.display = 'none';
+  resetCameraFilter();
   retakePatientPhoto();
 }
 
 function closeCameraModal() {
   document.getElementById('camera-modal').classList.remove('active');
   stopPatientCamera();
+  _scStopFaceDetection();
   patientCapturedPhoto = null;
   document.getElementById('camera-status').textContent = '';
 }
@@ -17229,19 +17869,24 @@ function startPatientCamera() {
     video.srcObject = patientCameraStream;
     document.getElementById('camera-no-access').style.display = 'none';
     document.getElementById('camera-status').textContent = '✓ Camera ready';
+    updateCameraFilter();
+    _scStartFaceDetection();
     return;
   }
   patientCameraInProgress = true;
 
+  // Higher ideal resolution than before for a genuinely sharper capture —
+  // these are hints, not requirements, so a lower-end camera just falls
+  // back to its own best without failing the request.
   const constraints = {
     video: {
-      width: { ideal: 1280 },
-      height: { ideal: 960 },
+      width: { ideal: 1920 },
+      height: { ideal: 1440 },
       facingMode: 'user'
     },
     audio: false
   };
-  
+
   navigator.mediaDevices.getUserMedia(constraints)
     .then(stream => {
       patientCameraStream = stream;
@@ -17250,6 +17895,8 @@ function startPatientCamera() {
       document.getElementById('camera-no-access').style.display = 'none';
       document.getElementById('camera-status').textContent = '✓ Camera ready';
       patientCameraInProgress = false;
+      updateCameraFilter();
+      _scStartFaceDetection();
     })
     .catch(err => {
       console.error('Camera access denied:', err);
@@ -17292,23 +17939,31 @@ function capturePatientPhoto() {
     cropY = (sourceHeight - finalCropHeight) / 2;
   }
 
-  const targetWidth = 1200; // Increased resolution
-  const targetHeight = 1600;
+  const targetWidth = 1500; // Higher resolution than before for a crisper stored photo
+  const targetHeight = 2000;
   canvas.width = targetWidth;
   canvas.height = targetHeight;
-  
-  const brightness = document.getElementById('camera-brightness-slider')?.value || 1.25;
+
+  // Read all three adjustment sliders — previously contrast/saturation
+  // were hardcoded here regardless of what the (also-hardcoded-looking,
+  // but visually present) contrast/saturation sliders showed, since
+  // nothing ever actually read them. Whatever the live preview looked
+  // like (see updateCameraFilter) is now exactly what gets captured.
+  const brightness = parseFloat(document.getElementById('camera-brightness-slider')?.value) || 1.15;
+  const contrast = parseFloat(document.getElementById('camera-contrast-slider')?.value) || 1.1;
+  const saturation = parseFloat(document.getElementById('camera-saturation-slider')?.value) || 1.05;
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = 'high';
-  // Enhanced brightness and contrast to solve "dark/blurry" issues
-  context.filter = `brightness(${brightness}) contrast(1.15) saturate(1.1)`;
+  context.filter = `brightness(${brightness}) contrast(${contrast}) saturate(${saturation})`;
   context.drawImage(video, cropX, cropY, finalCropWidth, finalCropHeight, 0, 0, targetWidth, targetHeight);
   context.filter = 'none';
 
-  patientCapturedPhoto = canvas.toDataURL('image/jpeg', 0.92);
+  patientCapturedPhoto = canvas.toDataURL('image/jpeg', 0.94);
 
   document.querySelector('.camera-video-container').style.display = 'none';
   document.getElementById('camera-canvas-preview').style.display = 'block';
+  // Nothing left to detect a face in once the live feed is hidden.
+  _scStopFaceDetection();
 
   // Keep the stream alive (just hidden) so Retake can resume instantly without re-asking for permission.
   document.getElementById('camera-status').textContent = '✓ Photo captured (centered chest-up portrait)';
@@ -17355,7 +18010,23 @@ function savePatientPhoto() {
     document.getElementById('camera-status').textContent = '❌ No photo to save';
     return;
   }
-  
+
+  // Captured from the registration FORM, before the patient record exists
+  // yet — nothing to attach it to yet, so just hold it in a module-level
+  // staging var. registerPatient() reads this when it actually builds the
+  // new patient object, so the very first WhatsApp notification (sent
+  // right after registration) already carries the real photo instead of
+  // the placeholder — see openRegistrationPhotoCapture().
+  if (window._pendingPatientPhotoCapture?.preReg) {
+    window._scPendingRegPhoto = patientCapturedPhoto;
+    _scRenderRegistrationPhotoPreview();
+    document.getElementById('camera-status').textContent = '✓ Photo ready — will be attached when you register the patient';
+    closeCameraModal();
+    window._pendingPatientPhotoCapture = null;
+    showToast('Photo captured — will be attached on registration', false, '📸 Photo Ready', 4000);
+    return;
+  }
+
   if (window._pendingPatientPhotoCapture) {
     const pid = window._pendingPatientPhotoCapture.pid;
     const p = patients.find(x => x.id === pid);
@@ -28672,9 +29343,9 @@ function switchAdminTab(tab) {
   if(tab === 'config')    renderAdminIndexStats();
   if(tab === 'database')  renderDatabaseView();
   if(tab === 'api')       renderAPIEndpointList();
-  if(tab === 'billingrates') renderBillingRatesPanel();
+  if(tab === 'billingrates') { renderBillingRatesPanel(); _scSyncStandardVATInputs(); }
   if(tab === 'facilities') renderFacilitiesPanel();
-  if(tab === 'pharmacy') renderDrugFormularyPanel('admin-drugform-body');
+  if(tab === 'pharmacy') { renderDrugFormularyPanel('admin-drugform-body'); _scSyncStandardVATInputs(); }
 }
 
 function setAPITestFields(btn) {
@@ -30861,25 +31532,40 @@ function getBedsForWard(ward) {
       <div class="camera-header-close" onclick="closeCameraModal()">✕</div>
     </div>
     <div class="camera-content">
-      <div class="camera-instruction">Position patient for chest-upwards photo capture. Frame should show shoulders to head.</div>
+      <div class="camera-instruction">Position patient for chest-upwards photo capture — align them inside the guide.</div>
       <div class="camera-constraints-info">
         <strong>📐 Capture Guidelines:</strong><br>
         • Camera will capture from chest upwards only<br>
         • Ensure good lighting for best results<br>
         • Frame patient shoulders to top of head<br>
-        • Keep subject centered in frame
+        • Keep subject centered inside the guide frame
       </div>
       <div class="camera-video-container" id="camera-video-container">
         <video id="patient-camera-video" playsinline autoplay muted></video>
+        <div class="camera-guide-frame" id="camera-guide-frame"></div>
+        <div class="camera-face-status" id="camera-face-status" style="display:none"></div>
         <div id="camera-no-access" style="color:#fff;text-align:center;font-size:13px;display:none">
           <div style="margin-bottom:10px">📹 Camera access required</div>
           <div style="font-size:11px;color:#ccc">Please allow camera access when prompted</div>
         </div>
       </div>
-      <div style="margin-top:5px; display:flex; align-items:center; gap:10px; background:var(--bg4); padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
-        <span style="font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.05em; min-width:80px;">Light Level:</span>
-        <input type="range" id="camera-brightness-slider" min="0.5" max="2.5" step="0.05" value="1.25" oninput="updateCameraPreviewBrightness()" style="flex:1;">
-        <span id="brightness-value" style="font-size:11px; font-family:var(--mono); color:var(--blue); font-weight:700; min-width:30px; text-align:right;">1.25</span>
+      <div class="camera-adjust-panel">
+        <div class="camera-adjust-row">
+          <span class="camera-adjust-label">☀ Brightness</span>
+          <input type="range" id="camera-brightness-slider" min="0.6" max="2.2" step="0.05" value="1.15" oninput="updateCameraFilter()" style="flex:1">
+          <span class="camera-adjust-value" id="brightness-value">1.15</span>
+        </div>
+        <div class="camera-adjust-row">
+          <span class="camera-adjust-label">◐ Contrast</span>
+          <input type="range" id="camera-contrast-slider" min="0.6" max="1.8" step="0.05" value="1.1" oninput="updateCameraFilter()" style="flex:1">
+          <span class="camera-adjust-value" id="contrast-value">1.10</span>
+        </div>
+        <div class="camera-adjust-row">
+          <span class="camera-adjust-label">🎨 Saturation</span>
+          <input type="range" id="camera-saturation-slider" min="0" max="1.8" step="0.05" value="1.05" oninput="updateCameraFilter()" style="flex:1">
+          <span class="camera-adjust-value" id="saturation-value">1.05</span>
+        </div>
+        <button type="button" class="camera-btn" style="align-self:flex-start;padding:6px 12px;font-size:11.5px" onclick="resetCameraFilter()">↺ Reset</button>
       </div>
       <div class="camera-canvas-preview" id="camera-canvas-preview">
         <canvas id="patient-camera-canvas"></canvas>
@@ -31058,71 +31744,6 @@ function getBedsForWard(ward) {
     <img id="full-size-patient-photo" style="max-width:90vw; max-height:85vh; border-radius:12px; border:3px solid #fff; box-shadow: 0 20px 60px rgba(0,0,0,0.5); object-fit: contain; background: #000;">
     <div style="margin-top:15px; color:#fff; font-weight:700; font-size:18px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);" id="photo-viewer-name">Patient Name</div>
     <div style="margin-top:10px; color:rgba(255,255,255,0.7); font-size:13px;">Click anywhere to close</div>
-  </div>
-</div>
-
-<!-- ═══ CAMERA CAPTURE MODAL ═══ -->
-<div id="camera-modal">
-  <div class="camera-container">
-    <div class="camera-header">
-      <div class="camera-header-title">📸 Capture Patient Photo</div>
-      <div class="camera-header-close" onclick="closeCameraModal()">✕</div>
-    </div>
-    <div class="camera-content">
-      <div class="camera-instruction">Position patient for chest-upwards photo capture. Frame should show shoulders to head.</div>
-      <div class="camera-constraints-info">
-        <strong>📐 Capture Guidelines:</strong><br>
-        • Camera will capture from chest upwards only<br>
-        • Ensure good lighting for best results<br>
-        • Frame patient shoulders to top of head<br>
-        • Keep subject centered in frame
-      </div>
-      <div class="camera-video-container" id="camera-video-container">
-        <video id="patient-camera-video" playsinline autoplay muted></video>
-        <div id="camera-no-access" style="color:#fff;text-align:center;font-size:13px;display:none">
-          <div style="margin-bottom:10px">📹 Camera access required</div>
-          <div style="font-size:11px;color:#ccc">Please allow camera access when prompted</div>
-        </div>
-      </div>
-      <div style="margin-top:5px; display:flex; flex-direction:column; gap:10px; background:var(--bg4); padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.05em; min-width:80px;">Brightness:</span>
-          <input type="range" id="camera-brightness-slider" min="0.5" max="2.5" step="0.05" value="1.25" oninput="updateCameraFilter()" style="flex:1;">
-          <span id="brightness-value" style="font-size:11px; font-family:var(--mono); color:var(--blue); font-weight:700; min-width:30px; text-align:right;">1.25</span>
-        </div>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.05em; min-width:80px;">Contrast:</span>
-          <input type="range" id="camera-contrast-slider" min="0.5" max="2.0" step="0.05" value="1.15" oninput="updateCameraFilter()" style="flex:1;">
-          <span id="contrast-value" style="font-size:11px; font-family:var(--mono); color:var(--blue); font-weight:700; min-width:30px; text-align:right;">1.15</span>
-        </div>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:0.05em; min-width:80px;">Saturation:</span>
-          <input type="range" id="camera-saturation-slider" min="0.0" max="2.0" step="0.05" value="1.1" oninput="updateCameraFilter()" style="flex:1;">
-          <span id="saturation-value" style="font-size:11px; font-family:var(--mono); color:var(--blue); font-weight:700; min-width:30px; text-align:right;">1.10</span>
-        </div>
-      </div>
-      <div class="camera-canvas-preview" id="camera-canvas-preview">
-        <canvas id="patient-camera-canvas"></canvas>
-        <div id="camera-adjustment-controls" style="display:none; margin-top:10px; justify-content:center; gap:10px; flex-wrap:wrap;">
-          <div style="width:100%; display:flex; justify-content:center; gap:10px; margin-bottom:5px;">
-            <button class="camera-btn" onclick="rotatePhoto(-1)" title="Rotate Left">⟲ Rotate</button>
-            <button class="camera-btn" onclick="rotatePhoto(1)" title="Rotate Right">⟳ Rotate</button>
-          </div>
-          <div style="width:100%; display:flex; justify-content:center; gap:10px; align-items:center;">
-            <button class="camera-btn" onclick="adjustPhotoVertical(-1)">⬆ Move Up</button>
-            <span style="font-size:11px; color:var(--text3); min-width:80px; text-align:center;">Offset: <span id="vertical-offset-value">0%</span></span>
-            <button class="camera-btn" onclick="adjustPhotoVertical(1)">⬇ Move Down</button>
-          </div>
-        </div>
-      </div>
-      <div class="camera-status" id="camera-status"></div>
-      <div class="camera-controls">
-        <button class="camera-btn" onclick="capturePatientPhoto()">📸 Capture Photo</button>
-        <button class="camera-btn" onclick="retakePatientPhoto()" style="display:none;" id="retake-photo-btn">🔄 Retake</button>
-        <button class="camera-btn danger" onclick="closeCameraModal()">✕ Cancel</button>
-        <button class="camera-btn primary" onclick="savePatientPhoto()" style="display:none" id="save-photo-btn">✓ Save Photo</button>
-      </div>
-    </div>
   </div>
 </div>
 

@@ -70,6 +70,10 @@
   const bed = params.get('bed') || '';
   const status = params.get('stat') || '';
   const diagnosis = params.get('dx') || '';
+  const weight = params.get('w') || '';
+  const height = params.get('h') || '';
+  const bmi = parseFloat(params.get('bmi') || '');
+  const bmiCat = isNaN(bmi) ? '' : bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese';
   const meds = (params.get('meds') || '').split(';').map(s => s.trim()).filter(Boolean);
   const allergies = (params.get('allergies') || '').split(';').map(s => s.trim()).filter(Boolean);
   const balance = parseFloat(params.get('bal') || '0') || 0;
@@ -103,6 +107,9 @@
         ${gender ? `<div><div class="field-label">Gender</div><div class="field-value">${escapeHtml(gender)}</div></div>` : ''}
         ${status === 'admitted' && ward ? `<div><div class="field-label">Ward</div><div class="field-value">${escapeHtml(ward)}</div></div>` : ''}
         ${status === 'admitted' && bed ? `<div><div class="field-label">Bed</div><div class="field-value">${escapeHtml(bed)}</div></div>` : ''}
+        ${weight ? `<div><div class="field-label">Weight</div><div class="field-value">${escapeHtml(weight)} kg</div></div>` : ''}
+        ${height ? `<div><div class="field-label">Height</div><div class="field-value">${escapeHtml(height)} cm</div></div>` : ''}
+        ${!isNaN(bmi) ? `<div><div class="field-label">BMI</div><div class="field-value">${bmi.toFixed(1)} <span style="font-weight:400;color:var(--text3);font-size:11px">(${bmiCat})</span></div></div>` : ''}
       </div>
 
       <div class="section-label">🩺 Diagnosis</div>
