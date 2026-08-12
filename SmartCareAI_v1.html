@@ -15975,16 +15975,25 @@ function _buildInvoicePDF(inv, mode){
   doc.setFont('helvetica','normal'); doc.setFontSize(7.8); doc.setTextColor(...INK);
   notes.forEach(n => { const lines = doc.splitTextToSize('- ' + n, pw-2*mg); doc.text(lines, mg, y); y += lines.length*4.2; });
 
-  // ── Footer bar ──
+  // ── Footer bar — drawn on every page, not just whichever page happened
+  // to be current when this ran. A long line-item list can push the
+  // content across 2+ pages via the addPage() calls above; without this
+  // loop, only the last page got a footer and earlier pages (or a mostly-
+  // empty trailing page, if Notes alone tipped over the page break) shipped
+  // with none at all. ──
   const footY = ph-16;
-  doc.setFillColor(...NAVY);
-  doc.rect(0, footY, pw, 16, 'F');
-  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
-  doc.text(pdfSanitise(displayHospName), mg, footY+6.5);
-  doc.setFont('helvetica','normal'); doc.setFontSize(7);
-  doc.text([hs.phone,hs.email,hs.website].filter(Boolean).map(pdfSanitise).join('   |   '), mg, footY+11);
-  doc.setFontSize(6.5); doc.setTextColor(200,208,220);
-  doc.text('This is a computer-generated invoice and does not require a signature.', pw-mg, footY+11, {align:'right'});
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let pg = 1; pg <= totalPages; pg++) {
+    doc.setPage(pg);
+    doc.setFillColor(...NAVY);
+    doc.rect(0, footY, pw, 16, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+    doc.text(pdfSanitise(displayHospName), mg, footY+6.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    doc.text([hs.phone,hs.email,hs.website].filter(Boolean).map(pdfSanitise).join('   |   '), mg, footY+11);
+    doc.setFontSize(6.5); doc.setTextColor(200,208,220);
+    doc.text('This is a computer-generated invoice and does not require a signature.', pw-mg, footY+11, {align:'right'});
+  }
 
   const fileName = `Invoice_${inv.id}_${(inv.patientName||'patient').replace(/\s+/g,'_')}.pdf`;
   if (mode === 'preview') {
@@ -16237,15 +16246,20 @@ function _buildPaymentReceiptPDF(inv, payment, mode){
     y += 54;
   }
 
-  // ── Footer ──
+  // ── Footer — drawn on every page (see the matching comment in
+  // _buildInvoicePDF for why a single one-shot draw isn't enough) ──
   const footY = ph - 16;
-  doc.setFillColor(...NAVY); doc.rect(0, footY, pw, 16, 'F');
-  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
-  doc.text(pdfSanitise(displayHospName), mg, footY + 6.5);
-  doc.setFont('helvetica','normal'); doc.setFontSize(7);
-  doc.text([hs.phone, hs.email, hs.website].filter(Boolean).map(pdfSanitise).join('   |   '), mg, footY + 11);
-  doc.setFontSize(6.5); doc.setTextColor(200,208,220);
-  doc.text('This is a computer-generated receipt and does not require a signature.', pw - mg, footY + 11, { align: 'right' });
+  const totalPagesReceipt = doc.internal.getNumberOfPages();
+  for (let pg = 1; pg <= totalPagesReceipt; pg++) {
+    doc.setPage(pg);
+    doc.setFillColor(...NAVY); doc.rect(0, footY, pw, 16, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+    doc.text(pdfSanitise(displayHospName), mg, footY + 6.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    doc.text([hs.phone, hs.email, hs.website].filter(Boolean).map(pdfSanitise).join('   |   '), mg, footY + 11);
+    doc.setFontSize(6.5); doc.setTextColor(200,208,220);
+    doc.text('This is a computer-generated receipt and does not require a signature.', pw - mg, footY + 11, { align: 'right' });
+  }
 
   const fileName = `Receipt_${inv.id}_${(inv.patientName || 'patient').replace(/\s+/g,'_')}.pdf`;
   if (mode === 'preview') {
@@ -16567,14 +16581,20 @@ function _buildDischargeSummaryPDF(patient, mode){
     y += 22;
   }
 
+  // Footer — drawn on every page (see the matching comment in
+  // _buildInvoicePDF for why a single one-shot draw isn't enough)
   const footY = ph - 16;
-  doc.setFillColor(...NAVY); doc.rect(0, footY, pw, 16, 'F');
-  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
-  doc.text(pdfSanitise(displayHospName), mg, footY + 6.5);
-  doc.setFont('helvetica','normal'); doc.setFontSize(7);
-  doc.text([hs.phone, hs.email, hs.website].filter(Boolean).map(pdfSanitise).join('   |   '), mg, footY + 11);
-  doc.setFontSize(6.5); doc.setTextColor(200,208,220);
-  doc.text('Please follow up as advised by your healthcare provider.', pw - mg, footY + 11, { align: 'right' });
+  const totalPagesDischarge = doc.internal.getNumberOfPages();
+  for (let pg = 1; pg <= totalPagesDischarge; pg++) {
+    doc.setPage(pg);
+    doc.setFillColor(...NAVY); doc.rect(0, footY, pw, 16, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+    doc.text(pdfSanitise(displayHospName), mg, footY + 6.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    doc.text([hs.phone, hs.email, hs.website].filter(Boolean).map(pdfSanitise).join('   |   '), mg, footY + 11);
+    doc.setFontSize(6.5); doc.setTextColor(200,208,220);
+    doc.text('Please follow up as advised by your healthcare provider.', pw - mg, footY + 11, { align: 'right' });
+  }
 
   const fileName = `Discharge_${(patient.id || 'patient')}_${(patient.name || 'patient').replace(/\s+/g,'_')}.pdf`;
   if (mode === 'preview') {
