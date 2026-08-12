@@ -15400,7 +15400,12 @@ function notifyInvoiceNOKById(invId){
   const items = getInvoiceLineItemsResolved(inv);
   const hospName = document.getElementById('hosp-name')?.value?.trim() || 'SmartCare Hospital';
   const itemLines = items.map(li => `- ${li.description}: $${(li.amount+li.vatAmount).toFixed(2)}`).join('\n');
-  const msg = `*${hospName}*\nBilling Notice — Dear ${nok.name || 'family'}, this is to inform you of the current charges for ${inv.patientName}'s care.\n\nInvoice #: ${inv.id}\n${itemLines}\n\nSubtotal: $${t.subtotal.toFixed(2)}\nVAT: $${t.vatTotal.toFixed(2)}\n*Total: $${t.total.toFixed(2)}*\nPaid: $${t.paid.toFixed(2)}\n*Balance Due: $${t.balance.toFixed(2)}*\n\nFor questions about this invoice, please contact hospital administration.`;
+  // Same pay-online link the Payment Receipt PDF offers — WhatsApp has no
+  // markdown link syntax, so (as with _scBuildPaymentReceiptCaption) the CTA
+  // text sits right before the raw URL rather than wrapping it. Only shown
+  // when there's actually a balance to pay.
+  const payLine = t.balance > 0 ? `Tap here to pay online now -> ${_scBuildPaymentLink(inv, t.balance)}\n\n` : '';
+  const msg = `*${hospName}*\nBilling Notice — Dear ${nok.name || 'family'}, this is to inform you of the current charges for ${inv.patientName}'s care.\n\nInvoice #: ${inv.id}\n${itemLines}\n\nSubtotal: $${t.subtotal.toFixed(2)}\nVAT: $${t.vatTotal.toFixed(2)}\n*Total: $${t.total.toFixed(2)}*\nPaid: $${t.paid.toFixed(2)}\n*Balance Due: $${t.balance.toFixed(2)}*\n\n${payLine}For questions about this invoice, please contact hospital administration.`;
 
   logNOKMessage(inv.patientId || `INV-${Date.now()}`, 'whatsapp', 'outbound', msg, {
     recipient: nok.name || 'Next of Kin',
