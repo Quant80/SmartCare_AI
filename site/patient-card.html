@@ -43,6 +43,11 @@
   .footer-note{font-size:10px;color:var(--text3);text-align:center;line-height:1.6;margin-top:18px}
   .error-card{text-align:center;padding:40px 24px}
   .error-icon{font-size:34px;margin-bottom:10px}
+  .nok-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+  .nok-row:last-child{border-bottom:none}
+  .nok-label{font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px}
+  .nok-value{font-size:13px;font-weight:600;color:var(--text)}
+  .nok-value a{color:var(--blue);text-decoration:none}
 </style>
 </head>
 <body>
@@ -77,6 +82,13 @@
   const meds = (params.get('meds') || '').split(';').map(s => s.trim()).filter(Boolean);
   const allergies = (params.get('allergies') || '').split(';').map(s => s.trim()).filter(Boolean);
   const balance = parseFloat(params.get('bal') || '0') || 0;
+  const admDate = params.get('ad') || '';
+  const firstAdmDate = params.get('fad') || ''; // only present at all when this is a returning patient
+  const nokName = params.get('nn') || '';
+  const nokPhone = params.get('np') || '';
+  const nokRel = params.get('nr') || '';
+  const doctor = params.get('doc') || '';
+  const nationality = params.get('nat') || '';
   const content = document.getElementById('content');
 
   function escapeHtml(s){
@@ -93,9 +105,18 @@
     return;
   }
 
+  // Dates travel as plain ISO strings ("2026-08-11") from the registration
+  // form's date picker — reformat for display the same way the rest of the
+  // app does (e.g. the ID card PDF's "11 Aug 2026" style).
+  function fmtDate(iso){
+    if (!iso) return '';
+    const d = new Date(iso);
+    return isNaN(d) ? iso : d.toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'});
+  }
+
   content.innerHTML = `
     <div class="warn">
-      ⚠ This page shows information from a QR code with no sign-in required. Anyone who scans this exact code can see it too — keep this card as safe as you would a passport.
+      ⚠ Caution: QR Code not encrypted.
     </div>
     <div class="card">
       <div class="hosp">${escapeHtml(hosp)}</div>
@@ -105,8 +126,12 @@
       <div class="grid">
         ${age ? `<div><div class="field-label">Age</div><div class="field-value">${escapeHtml(age)}y</div></div>` : ''}
         ${gender ? `<div><div class="field-label">Gender</div><div class="field-value">${escapeHtml(gender)}</div></div>` : ''}
+        ${nationality ? `<div><div class="field-label">Nationality</div><div class="field-value">${escapeHtml(nationality)}</div></div>` : ''}
         ${status === 'admitted' && ward ? `<div><div class="field-label">Ward</div><div class="field-value">${escapeHtml(ward)}</div></div>` : ''}
         ${status === 'admitted' && bed ? `<div><div class="field-label">Bed</div><div class="field-value">${escapeHtml(bed)}</div></div>` : ''}
+        ${doctor ? `<div><div class="field-label">Doctor</div><div class="field-value">${escapeHtml(doctor)}</div></div>` : ''}
+        ${firstAdmDate ? `<div><div class="field-label">FAdmission Date</div><div class="field-value">${escapeHtml(fmtDate(firstAdmDate))}</div></div>` : ''}
+        ${admDate ? `<div><div class="field-label">Admission Date</div><div class="field-value">${escapeHtml(fmtDate(admDate))}</div></div>` : ''}
         ${weight ? `<div><div class="field-label">Weight</div><div class="field-value">${escapeHtml(weight)} kg</div></div>` : ''}
         ${height ? `<div><div class="field-label">Height</div><div class="field-value">${escapeHtml(height)} cm</div></div>` : ''}
         ${!isNaN(bmi) ? `<div><div class="field-label">BMI</div><div class="field-value">${bmi.toFixed(1)} <span style="font-weight:400;color:var(--text3);font-size:11px">(${bmiCat})</span></div></div>` : ''}
@@ -120,6 +145,12 @@
 
       <div class="section-label">⚠ Allergies</div>
       ${allergies.length ? `<div class="tag-row">${allergies.map(a => `<span class="tag allergy">${escapeHtml(a)}</span>`).join('')}</div>` : '<div class="empty-note">None on file</div>'}
+
+      <div class="section-label">📞 Next of Kin</div>
+      ${nokName || nokPhone ? `
+        <div class="nok-row"><span class="nok-label">Name</span><span class="nok-value">${escapeHtml(nokName) || '—'}${nokRel ? ` <span style="font-weight:400;color:var(--text3);font-size:11px">(${escapeHtml(nokRel)})</span>` : ''}</span></div>
+        <div class="nok-row"><span class="nok-label">Contact</span><span class="nok-value">${nokPhone ? `<a href="tel:${escapeHtml(nokPhone)}">${escapeHtml(nokPhone)}</a>` : '—'}</span></div>
+      ` : '<div class="empty-note">None on file</div>'}
 
       <div class="section-label">💳 Billing</div>
       <div class="balance-row">

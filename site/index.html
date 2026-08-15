@@ -2712,13 +2712,13 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:12px">
           <div>
             <label style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Service UUID</label>
-            <input id="ble-service-uuid" value="12345678-1234-1234-1234-123456789abc"
+            <input id="ble-service-uuid" value="6e400001-b5a3-f393-e0a9-e50e24dcca9e"
               style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:monospace;background:var(--bg2)">
             <div style="font-size:10px;color:var(--text3);margin-top:3px">Nordic UART: 6e400001-b5a3-f393-e0a9-e50e24dcca9e</div>
           </div>
           <div>
             <label style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px">Characteristic UUID</label>
-            <input id="ble-char-uuid" value="12345678-1234-1234-1234-123456789abd"
+            <input id="ble-char-uuid" value="6e400003-b5a3-f393-e0a9-e50e24dcca9e"
               style="width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:monospace;background:var(--bg2)">
             <div style="font-size:10px;color:var(--text3);margin-top:3px">Nordic UART TX: 6e400003-b5a3-f393-e0a9-e50e24dcca9e</div>
           </div>
@@ -2727,7 +2727,7 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
             <select id="ble-data-format" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;background:var(--bg2);font-family:inherit">
               <option value="json">JSON  {"hr":72,"o2":98,"bp":"120/80","temp":36.6,"rr":16}</option>
               <option value="csv">CSV  72,98,120/80,36.6,16</option>
-              <option value="nordic">Nordic UART (text line)</option>
+              <option value="nordic" selected>Nordic UART (text line)</option>
               <option value="raw">Raw bytes [HR][O2][SBP][DBP][TEMP×10][RR]</option>
             </select>
           </div>
@@ -16303,14 +16303,18 @@ function _scRenderBarcodePNG(value, opts = {}){
 function _scRenderQRPNG(text, opts = {}){
   try {
     const div = document.createElement('div');
-    // width/height:140 (was 240) — same rationale as the barcode above:
-    // embedded at ~22mm in the PDF regardless of source resolution, and a
-    // dense QR (this one's payload has grown with every field added —
-    // allergies, then weight/height/BMI — each growth step increases the
-    // QR's own module count/complexity, which multiplies PNG file size at
-    // a fixed canvas size far more than a barcode's simple parallel lines
-    // do) was the single biggest contributor to the oversized PDF.
-    new QRCode(div, Object.assign({ text: String(text), width: 140, height: 140, correctLevel: QRCode.CorrectLevel.M }, opts));
+    // width/height:180 (was 140, was 240 before that) — same file-size
+    // rationale as the barcode above, but 140 stopped being reliably
+    // decodable once the patient-card link grew past its original field
+    // set (measured directly: this library's QR rendering has size-
+    // dependent pixel-alignment artifacts that make some sizes decode
+    // cleanly and others consistently fail, independent of a smooth
+    // "bigger is better" curve — 140 landed in a bad zone for the current
+    // payload length; 160-200 all decoded reliably in repeated testing, so
+    // 180 was picked as the middle of that confirmed-good range, not the
+    // smallest technically-passing value, to leave margin against future
+    // small growth in what the link encodes.
+    new QRCode(div, Object.assign({ text: String(text), width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M }, opts));
     const canvas = div.querySelector('canvas');
     return canvas ? canvas.toDataURL('image/png') : null;
   } catch (e) { return null; }
@@ -16330,6 +16334,13 @@ function _scRenderQRPNG(text, opts = {}){
 // on a real, physical, government ID card — flagged clearly on
 // patient-card.html itself, and worth reconsidering before a genuine
 // production deployment in favour of the "identity only" alternative.
+//
+// Deliberately carries NO embedded images (hospital logo or patient photo)
+// even compressed — measured directly: adding a ~1.5KB compressed logo
+// alone pushed this QR from 69 modules to 161 (version ~36 of a possible
+// 40, an extreme outlier next to the ~25-57 modules a typical QR code
+// uses), and a printed-card-size decode test came back too unreliable to
+// trust. Text-only fields keep this at a safe, ordinary density.
 function _scBuildPatientCardQRLink(p){
   const base = String(window.location.href).replace(/[^/]*$/, '') + 'patient-card.html';
   const fac = getFacilityByName(p.facility);
@@ -16344,12 +16355,34 @@ function _scBuildPatientCardQRLink(p){
   // it out here lets the page's ordinary empty state ("None on file") apply.
   const rawAllergies = Array.isArray(p.allergies) ? p.allergies : String(p.allergies || '').split(/[,;]/);
   const allergies = rawAllergies.map(a => a.trim()).filter(a => a && !/^(none|none known|nil|n\/?a)$/i.test(a)).join(';');
+
+  // First-ever admission date, only surfaced when there actually IS an
+  // earlier stay — same "returning patient" match rule registerPatient()
+  // uses (national ID if present, else exact name match) so this stays
+  // consistent with how the app itself decides someone is a returning
+  // patient, rather than inventing a second definition here.
+  const priorAdmissions = (typeof dischargedPatients !== 'undefined' ? dischargedPatients : []).filter(d =>
+    (p.nationalId && d.nationalId === p.nationalId) ||
+    (!p.nationalId && d.name && p.name && d.name.toLowerCase() === p.name.toLowerCase())
+  );
+  let firstAdmDate = '';
+  if (priorAdmissions.length) {
+    const candidates = [p.admDate, ...priorAdmissions.map(d => d.admDate)].filter(Boolean);
+    firstAdmDate = candidates.reduce((earliest, d) => {
+      const cur = new Date(d), best = new Date(earliest);
+      return (!isNaN(cur) && (isNaN(best) || cur < best)) ? d : earliest;
+    }, candidates[0] || '');
+  }
+
   const params = new URLSearchParams({
     n: p.name || '', pid: p.id || '', a: p.age ?? '', g: p.gender || '',
     hosp: fac?.name || p.facility || '', ward: p.ward || '', bed: p.bed || '',
     stat: isDischarged ? 'discharged' : 'admitted',
     dx: p.diagnosis || '', meds, allergies, bal: balance.toFixed(2),
-    w: p.weight ?? '', h: p.height ?? '', bmi: p.bmi ?? ''
+    w: p.weight ?? '', h: p.height ?? '', bmi: p.bmi ?? '',
+    ad: p.admDate || '', fad: firstAdmDate,
+    nn: p.nok?.name || '', np: p.nok?.phone || '', nr: p.nok?.rel || '',
+    doc: p.doctor || '', nat: p.nationality || ''
   });
   return `${base}?${params.toString()}`;
 }
