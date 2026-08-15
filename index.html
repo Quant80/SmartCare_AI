@@ -27134,8 +27134,10 @@ function populateAuthFacilitySelect(){
   const sel = document.getElementById('auth-facility');
   if (!sel) return;
   const current = sel.value;
+  // Same guard as _scRenderHospitalPicker — one malformed record shouldn't
+  // be able to abort .map() for every facility.
   sel.innerHTML = '<option value="">No specific facility</option>' +
-    facilities.map(f => `<option value="${_scEsc(f.name)}">${_scEsc(f.name)}</option>`).join('');
+    (facilities || []).filter(f => f && f.name).map(f => `<option value="${_scEsc(f.name)}">${_scEsc(f.name)}</option>`).join('');
   if ([...sel.options].some(o => o.value === current)) sel.value = current;
 }
 
@@ -27150,8 +27152,13 @@ function _scRenderHospitalPicker(containerId, selectedName, onSelectFnName, quer
   const el = document.getElementById(containerId);
   if (!el) return;
   const q = String(query || '').toLowerCase().trim();
-  const list = (facilities || []).filter(f => !q ||
-    f.name.toLowerCase().includes(q) || (f.town||'').toLowerCase().includes(q) || (f.province||'').toLowerCase().includes(q));
+  // Guard against a malformed record (e.g. stale localStorage data missing
+  // a field a newer version of the app expects) crashing the filter for
+  // EVERY facility, not just the bad one — Array.filter's callback
+  // throwing aborts the whole operation, so one bad entry used to blank
+  // the entire picker instead of just being skipped.
+  const list = (facilities || []).filter(f => f && f.name && (!q ||
+    f.name.toLowerCase().includes(q) || (f.town||'').toLowerCase().includes(q) || (f.province||'').toLowerCase().includes(q)));
   if (!list.length) {
     el.innerHTML = '<div style="padding:14px;text-align:center;color:#7ab0bf;font-size:12.5px">No hospitals match your search.</div>';
     return;
