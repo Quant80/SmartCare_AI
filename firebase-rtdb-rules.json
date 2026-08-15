@@ -30,6 +30,10 @@
             "fromName": { ".validate": "newData.isString() && newData.val().length <= 100" },
             "text": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000" },
             "ts": { ".validate": true },
+            "fileName": { ".validate": "newData.isString() && newData.val().length <= 260" },
+            "fileData": { ".validate": "newData.isString() && newData.val().length <= 700000" },
+            "fileType": { ".validate": "newData.isString() && newData.val().length <= 120" },
+            "fileSize": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 512000" },
             "$other": { ".validate": false }
           }
         }
@@ -86,6 +90,39 @@
         ".read": "auth != null",
         ".write": "auth != null",
         ".validate": "!newData.exists() || newData.hasChildren(['convId','fromEmail','text','ts'])"
+      }
+    },
+
+    "callLogs": {
+      "$uid": {
+        ".read": "auth != null",
+        "$logId": {
+          ".write": "auth != null && !data.exists()",
+          ".validate": "newData.hasChildren(['direction','status','startedAt'])",
+          "peerEmail": { ".validate": "newData.isString() && newData.val().length <= 254" },
+          "peerName": { ".validate": "newData.isString() && newData.val().length <= 100" },
+          "direction": { ".validate": "newData.isString() && (newData.val() === 'incoming' || newData.val() === 'outgoing')" },
+          "status": { ".validate": "newData.isString() && (newData.val() === 'completed' || newData.val() === 'missed' || newData.val() === 'declined' || newData.val() === 'no-answer')" },
+          "startedAt": { ".validate": true },
+          "durationSec": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 86400" },
+          "$other": { ".validate": false }
+        }
+      }
+    },
+
+    "userConversations": {
+      "$uid": {
+        ".read": "auth != null",
+        "$convId": {
+          ".write": "auth != null",
+          ".validate": "newData.hasChildren(['peerEmail','lastMessage','lastFrom','ts'])",
+          "peerEmail": { ".validate": "newData.isString() && newData.val().length <= 254" },
+          "peerName": { ".validate": "newData.isString() && newData.val().length <= 100" },
+          "lastMessage": { ".validate": "newData.isString() && newData.val().length <= 2000" },
+          "lastFrom": { ".validate": "newData.isString() && newData.val().length <= 254" },
+          "ts": { ".validate": true },
+          "$other": { ".validate": false }
+        }
       }
     }
   }

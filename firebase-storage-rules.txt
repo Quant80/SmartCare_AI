@@ -1,0 +1,32 @@
+// NOT CURRENTLY IN USE. Firebase Storage requires the Blaze (pay-as-you-go)
+// billing plan to enable at all, which was deliberately not adopted here —
+// file attachments instead use a size-capped base64-in-Realtime-Database
+// fallback (see the SC_MAX_ATTACHMENT_BYTES / fileData rules in
+// firebase-rtdb-rules.json). Kept as reference only, in case this project
+// is later upgraded to Blaze and a Storage-backed version (no size cap,
+// real uploads) becomes worth building.
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Chat attachments only — everything else stays denied by the
+    // catch-all below. Same "auth != null" gate as the Realtime Database
+    // rules (see firebase-rtdb-rules.json's own comment on what that
+    // does and doesn't buy you): raises the bar from zero-effort access
+    // to needing a real, if anonymous, Firebase session.
+    match /chatFiles/{convId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size <= 10 * 1024 * 1024
+                   && (request.resource.contentType.matches('image/.*')
+                       || request.resource.contentType == 'application/pdf'
+                       || request.resource.contentType == 'application/msword'
+                       || request.resource.contentType.matches('application/vnd\\.openxmlformats-officedocument\\..*')
+                       || request.resource.contentType == 'application/vnd.ms-excel'
+                       || request.resource.contentType == 'application/vnd.ms-powerpoint');
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

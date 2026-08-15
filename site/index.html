@@ -2493,7 +2493,7 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
       <div class="sb-box-label">Team</div>
       <div class="ni" onclick="showPage('staff')">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Staff Directory
+        SmartCom
       </div>
     </div>
 
@@ -4278,20 +4278,72 @@ Waiting for data…</pre>
     </div>
   </div>
 
-  <!-- ═══ STAFF DIRECTORY ═══ -->
+  <!-- ═══ SMARTCOM — staff directory, in-app messaging, calls, profile ═══ -->
   <div class="page" id="page-staff">
-    <div class="sec-t">Staff Directory</div>
-    <div class="sec-s">Call or message any colleague across the network directly — opens your device's own phone or messaging app, no in-app account needed on their end.</div>
-    <div class="card mb">
-      <div class="ch">
-        <div class="ct">All Staff</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input id="staff-dir-search" placeholder="Search by name, role or facility…" oninput="renderStaffDirectory()"
-            style="padding:9px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;outline:none;font-family:inherit;min-width:220px">
-          <select id="staff-dir-facility" onchange="renderStaffDirectory()" class="fsel" style="width:200px"><option value="">All Facilities</option></select>
+    <div class="sec-t">📡 SmartCom</div>
+    <div class="sec-s">Staff directory, in-app messaging, and voice calls — all in one place. Call/SMS hand off to your device (works even if a colleague isn't signed in); Message/In-App Call stay entirely inside SmartCare AI.</div>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="btn btn-p" id="btn-smartcom-directory" onclick="showSmartComPane('directory')">👥 Directory</button>
+      <button class="btn btn-g" id="btn-smartcom-messages" onclick="showSmartComPane('messages')">💬 Messages</button>
+      <button class="btn btn-g" id="btn-smartcom-calls" onclick="showSmartComPane('calls')">📞 Call Log</button>
+      <button class="btn btn-g" id="btn-smartcom-profile" onclick="showSmartComPane('profile')">👤 My Profile</button>
+    </div>
+
+    <!-- Directory pane -->
+    <div id="smartcom-pane-directory">
+      <div class="card mb">
+        <div class="ch">
+          <div class="ct">All Staff</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input id="staff-dir-search" placeholder="Search by name, role or facility…" oninput="renderStaffDirectory()"
+              style="padding:9px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;outline:none;font-family:inherit;min-width:220px">
+            <select id="staff-dir-facility" onchange="renderStaffDirectory()" class="fsel" style="width:200px"><option value="">All Facilities</option></select>
+          </div>
         </div>
+        <div id="staff-directory-list"></div>
       </div>
-      <div id="staff-directory-list"></div>
+    </div>
+
+    <!-- Messages pane -->
+    <div id="smartcom-pane-messages" style="display:none">
+      <div class="card mb">
+        <div class="ch"><div class="ct">Conversations</div></div>
+        <div id="smartcom-conversations-list"></div>
+      </div>
+    </div>
+
+    <!-- Call Log pane -->
+    <div id="smartcom-pane-calls" style="display:none">
+      <div class="card mb">
+        <div class="ch"><div class="ct">Call Log</div></div>
+        <div id="smartcom-calllog-list"></div>
+      </div>
+    </div>
+
+    <!-- My Profile pane -->
+    <div id="smartcom-pane-profile" style="display:none">
+      <div class="card mb" style="max-width:520px">
+        <div class="ch"><div class="ct">My Profile</div></div>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+          <div id="smartcom-profile-avatar" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--blue2),var(--blue));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:24px;flex-shrink:0;overflow:hidden">?</div>
+          <div>
+            <label class="btn btn-g btn-sm" style="cursor:pointer;display:inline-block">
+              📷 Change Photo
+              <input type="file" accept="image/*" id="smartcom-profile-photo-input" style="display:none" onchange="_scSmartComPhotoSelected(this)">
+            </label>
+            <div style="font-size:10.5px;color:var(--text3);margin-top:6px">Visible to colleagues in the Directory and on your messages/calls.</div>
+          </div>
+        </div>
+        <div class="fgrid">
+          <div class="fg"><label class="fl">Full Name</label><input class="fi" id="smartcom-profile-name" disabled></div>
+          <div class="fg"><label class="fl">Role</label><input class="fi" id="smartcom-profile-role" disabled></div>
+          <div class="fg"><label class="fl">Facility</label><input class="fi" id="smartcom-profile-facility" disabled></div>
+          <div class="fg"><label class="fl">Phone Number</label><input class="fi" id="smartcom-profile-phone" placeholder="e.g. +263 77 123 4567"></div>
+        </div>
+        <div style="font-size:10.5px;color:var(--text3);margin:6px 0 10px">Name/Role/Facility are managed by your account — contact an administrator to change those. Phone and photo are yours to update any time.</div>
+        <button class="btn btn-p btn-sm" onclick="saveSmartComProfile()">💾 Save Profile</button>
+      </div>
     </div>
   </div>
 
@@ -6315,6 +6367,10 @@ Waiting for data…</pre>
     </div>
     <div class="wa-chat" id="team-chat-box"></div>
     <div class="wa-input-row">
+      <label style="display:flex;align-items:center;cursor:pointer;padding:0 4px" title="Attach a file (Word, PDF, Excel, PowerPoint, image)">
+        📎
+        <input type="file" id="team-chat-file-input" style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,image/png,image/jpeg,image/gif" onchange="_scAttachFileSelected(this)">
+      </label>
       <input class="wa-input" id="team-chat-input" placeholder="Type a message…" onkeydown="if(event.key==='Enter'){event.preventDefault();sendTeamMessage();}">
       <button class="wa-send" onclick="sendTeamMessage()" title="Send message">➤</button>
     </div>
@@ -6915,7 +6971,7 @@ let pendingWardTransferId = null;
 // ═══════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════
-const pageTitles = {dashboard:'Dashboard Overview',monitoring:'Live Monitoring',patients:'Patient Registry',discharge:'Discharge Management',records:'Patient Records Database',beds:'Ward Monitor & Bed Management',analytics:'Analytics Overview',ai:'AI Predictions',alerts:'Alert Management',register:'Register Patient',wards:'Ward Monitor & Bed Management',outpatient:'Outpatient Management','ai-hub':'AI Clinical Hub','ai-clinical':'AI Clinical Intelligence',xray:'X-ray AI Scanner — Radiology Intelligence',settings:'Settings & API Configuration',admin:'Admin Panel — System Control',exec:'Ministerial Executive Portal — National Overview',billing:'Billing & Payments',pharmacy:'Pharmacy — Prescriptions & Dispensing',prescriptions:'Prescriptions',staff:'Staff Directory'};
+const pageTitles = {dashboard:'Dashboard Overview',monitoring:'Live Monitoring',patients:'Patient Registry',discharge:'Discharge Management',records:'Patient Records Database',beds:'Ward Monitor & Bed Management',analytics:'Analytics Overview',ai:'AI Predictions',alerts:'Alert Management',register:'Register Patient',wards:'Ward Monitor & Bed Management',outpatient:'Outpatient Management','ai-hub':'AI Clinical Hub','ai-clinical':'AI Clinical Intelligence',xray:'X-ray AI Scanner — Radiology Intelligence',settings:'Settings & API Configuration',admin:'Admin Panel — System Control',exec:'Ministerial Executive Portal — National Overview',billing:'Billing & Payments',pharmacy:'Pharmacy — Prescriptions & Dispensing',prescriptions:'Prescriptions',staff:'SmartCom'};
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -8514,7 +8570,7 @@ function _initEnterpriseSystems() {
 // of these is safe to call repeatedly: each guards its own one-time Chart.js
 // setup behind an init flag and only re-renders/re-fetches data on repeat
 // calls, so re-invoking here never creates duplicate chart instances.
-const PAGE_INITS = {monitoring:initMonitoring,analytics:initAnalytics,ai:initAIPage,discharge:initDischarge,wards:initWards,outpatient:initOutpatient,'ai-hub':initAIHub,'ai-clinical':initAIClinical,xray:initXray,settings:initSettings,admin:initAdminPage,exec:initExecPortal,billing:initBilling,pharmacy:initPharmacy,prescriptions:initPrescriptions,staff:initStaffDirectory};
+const PAGE_INITS = {monitoring:initMonitoring,analytics:initAnalytics,ai:initAIPage,discharge:initDischarge,wards:initWards,outpatient:initOutpatient,'ai-hub':initAIHub,'ai-clinical':initAIClinical,xray:initXray,settings:initSettings,admin:initAdminPage,exec:initExecPortal,billing:initBilling,pharmacy:initPharmacy,prescriptions:initPrescriptions,staff:initSmartCom};
 
 function showPage(id){
   if(sessionStorage.getItem('sc_exec_mode')==='1' && id!=='exec'){
@@ -27021,9 +27077,24 @@ function doCreateAccount(){
 // off to the device's own phone/messaging app instead, which places a real
 // call over the normal cellular network — works today, no new
 // infrastructure, no per-message cost.
-function initStaffDirectory(){
-  _scPopulateStaffDirectoryFacilities();
-  renderStaffDirectory();
+function initSmartCom(){
+  showSmartComPane('directory');
+}
+
+// Tab switch within the SmartCom page — same pattern as showDischPane().
+// Leaves room for Meetings/Calendar tabs later without needing a redesign;
+// just add another name to the arrays here and a pane/button in the HTML.
+function showSmartComPane(pane){
+  ['directory','messages','calls','profile'].forEach(p => {
+    const el = document.getElementById('smartcom-pane-' + p);
+    if (el) el.style.display = (p === pane) ? 'block' : 'none';
+    const btn = document.getElementById('btn-smartcom-' + p);
+    if (btn) btn.className = (p === pane) ? 'btn btn-p' : 'btn btn-g';
+  });
+  if (pane === 'directory') { _scPopulateStaffDirectoryFacilities(); renderStaffDirectory(); }
+  else if (pane === 'messages') renderSmartComConversations();
+  else if (pane === 'calls') renderSmartComCallLog();
+  else if (pane === 'profile') _scPopulateSmartComProfile();
 }
 
 // Persists just the Mobile/WhatsApp field from Settings > User Profile back
@@ -27268,12 +27339,33 @@ async function openTeamChat(peerEmail, peerName){
     box.innerHTML = msgs.map(m => {
       const mine = (m.from || '').toLowerCase() === session.email.toLowerCase();
       const time = m.ts ? new Date(m.ts).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : '';
-      return `<div class="wa-msg ${mine ? 'out' : 'in'}"><div>${_scEsc(m.text || '')}</div><div class="wa-msg-time">${_scEsc(time)}</div></div>`;
+      return `<div class="wa-msg ${mine ? 'out' : 'in'}"><div>${_scRenderChatMessageBody(m)}</div><div class="wa-msg-time">${_scEsc(time)}</div></div>`;
     }).join('');
     box.scrollTop = box.scrollHeight;
   };
   ref.on('value', handler);
   _scTeamChatState = { peerEmail, peerName, convId, ref, handler };
+}
+
+// Shared by sendTeamMessage() and _scSendTeamAttachment() — the "someone
+// got a message" side-effects (notify ping + both parties' conversation
+// index entries) are identical regardless of whether the message body was
+// typed text or a file attachment; only the actual chats/ message payload
+// differs between the two.
+function _scNotifyAndIndexMessage(previewText){
+  const db = _scFirebaseInit();
+  const session = getCurrentSessionUser();
+  if (!db || !session?.email || !_scTeamChatState) return;
+  db.ref('messageNotify/' + _scFirebaseSafeKey(_scTeamChatState.peerEmail)).set({
+    convId: _scTeamChatState.convId, fromEmail: session.email, fromName: session.name || '', text: previewText, ts: firebase.database.ServerValue.TIMESTAMP
+  }).catch(()=>{});
+  const myKey = _scFirebaseSafeKey(session.email), peerKey = _scFirebaseSafeKey(_scTeamChatState.peerEmail);
+  db.ref('userConversations/' + myKey + '/' + _scTeamChatState.convId).set({
+    peerEmail: _scTeamChatState.peerEmail, peerName: _scTeamChatState.peerName, lastMessage: previewText, lastFrom: session.email, ts: firebase.database.ServerValue.TIMESTAMP
+  }).catch(()=>{});
+  db.ref('userConversations/' + peerKey + '/' + _scTeamChatState.convId).set({
+    peerEmail: session.email, peerName: session.name || '', lastMessage: previewText, lastFrom: session.email, ts: firebase.database.ServerValue.TIMESTAMP
+  }).catch(()=>{});
 }
 
 function sendTeamMessage(){
@@ -27290,10 +27382,112 @@ function sendTeamMessage(){
   // ping (mirrors how incomingCalls/<key> works for calls) lets a global
   // listener started at sign-in time (_scListenForMessageNotifications)
   // notify them regardless of what page they're on.
-  db.ref('messageNotify/' + _scFirebaseSafeKey(_scTeamChatState.peerEmail)).set({
-    convId: _scTeamChatState.convId, fromEmail: session.email, fromName: session.name || '', text, ts: firebase.database.ServerValue.TIMESTAMP
-  }).catch(()=>{});
+  _scNotifyAndIndexMessage(text);
   input.value = '';
+}
+
+// ── File attachments (Word/PDF/Excel/PowerPoint/images) ───────
+// Stored as base64 directly inside the message document in Realtime
+// Database, NOT Firebase Storage — Storage now requires the Blaze
+// (pay-as-you-go) billing plan even to enable it at all, which is a real
+// external commitment (a card on file) this deliberately avoids. The
+// trade-off, accepted knowingly: RTDB is a JSON tree meant for small
+// values, so this only works for genuinely small files — a real
+// multi-page Word doc or scanned PDF will often exceed the cap below and
+// get rejected outright, on purpose, rather than silently bloating every
+// read of this conversation's history. SC_MAX_ATTACHMENT_BYTES sizes the
+// ORIGINAL file; base64 inflates it by ~33% on top of that before it's
+// written, which is what the RTDB rules' fileData length ceiling accounts
+// for.
+const SC_MAX_ATTACHMENT_BYTES = 500 * 1024; // 500KB
+const SC_ATTACHMENT_ICONS = [
+  { test: (t, n) => t.includes('pdf') || /\.pdf$/i.test(n), icon: '📄' },
+  { test: (t, n) => t.includes('word') || /\.docx?$/i.test(n), icon: '📝' },
+  { test: (t, n) => t.includes('sheet') || t.includes('excel') || /\.xlsx?$/i.test(n), icon: '📊' },
+  { test: (t, n) => t.includes('presentation') || t.includes('powerpoint') || /\.pptx?$/i.test(n), icon: '📽️' }
+];
+
+function _scFileTypeIcon(fileType, fileName){
+  const t = (fileType || '').toLowerCase(), n = (fileName || '').toLowerCase();
+  const match = SC_ATTACHMENT_ICONS.find(e => e.test(t, n));
+  return match ? match.icon : '📎';
+}
+
+function _scFormatFileSize(bytes){
+  bytes = Number(bytes) || 0;
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+// Renders one message bubble's inner content — plain escaped text for a
+// normal message, an inline preview for an image attachment, or a file
+// card (icon + name + size, opens the real file — the base64 data URI
+// itself — in a new tab) for anything else.
+function _scRenderChatMessageBody(m){
+  if (!m.fileData) return _scEsc(m.text || '');
+  const isImage = (m.fileType || '').startsWith('image/');
+  const dataUri = _scAttrSafe(m.fileData);
+  if (isImage) {
+    return `<a href="${dataUri}" target="_blank" rel="noopener"><img src="${dataUri}" style="max-width:200px;max-height:200px;border-radius:8px;display:block" alt="${_scEsc(m.fileName || 'attachment')}"></a>`;
+  }
+  const icon = _scFileTypeIcon(m.fileType, m.fileName);
+  return `<a href="${dataUri}" download="${_scAttrSafe(m.fileName || 'attachment')}" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit;background:rgba(255,255,255,.1);border-radius:8px;padding:8px 10px;min-width:160px">
+    <span style="font-size:22px;flex-shrink:0">${icon}</span>
+    <span style="min-width:0">
+      <div style="font-weight:600;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px">${_scEsc(m.fileName || 'Attachment')}</div>
+      <div style="font-size:10.5px;opacity:.75">${_scEsc(_scFormatFileSize(m.fileSize))}</div>
+    </span>
+  </a>`;
+}
+
+function _scAttachFileSelected(input){
+  const file = input.files?.[0];
+  if (!file) return;
+  const ALLOWED = /\.(pdf|docx?|xlsx?|pptx?)$/i;
+  const isImage = file.type.startsWith('image/');
+  if (!isImage && !ALLOWED.test(file.name)) {
+    showToast('That file type isn\'t supported — try a Word, PDF, Excel, PowerPoint, or image file.', true, '⚠ Unsupported File');
+    input.value = '';
+    return;
+  }
+  if (file.size > SC_MAX_ATTACHMENT_BYTES) {
+    showToast(`File is too large — max ${_scFormatFileSize(SC_MAX_ATTACHMENT_BYTES)} (in-app attachments are size-limited since they're stored directly in the database, not a separate file host).`, true, '⚠ File Too Large', 7000);
+    input.value = '';
+    return;
+  }
+  _scSendTeamAttachment(file);
+  input.value = '';
+}
+
+async function _scSendTeamAttachment(file){
+  const db = _scFirebaseInit();
+  const session = getCurrentSessionUser();
+  if (!db || !session?.email || !_scTeamChatState) {
+    showToast('Configure Firebase in Settings to send attachments.', true, '⚠ Not Configured');
+    return;
+  }
+  await _scFirebaseAuthReady();
+
+  showToast('Sending attachment…', false, '📎 Sending', 15000);
+  try {
+    const fileData = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error || new Error('Could not read the file'));
+      reader.readAsDataURL(file);
+    });
+    const previewText = '📎 ' + file.name;
+    await db.ref('chats/' + _scTeamChatState.convId + '/messages').push({
+      from: session.email, fromName: session.name || '', text: previewText,
+      fileName: file.name, fileData, fileType: file.type || '', fileSize: file.size,
+      ts: firebase.database.ServerValue.TIMESTAMP
+    });
+    _scNotifyAndIndexMessage(previewText);
+    showToast('Attachment sent.', false, '✅ Sent', 4000);
+  } catch(e) {
+    showToast('Could not send the attachment: ' + (e.message || 'unknown error'), true, '⚠ Send Failed', 8000);
+  }
 }
 
 function closeTeamChat(){
@@ -27396,8 +27590,13 @@ async function _scListenForIncomingCalls(){
     const val = snap.val();
     if (!val) {
       // Caller hung up / cleared it before we answered — dismiss if we're
-      // still showing the incoming-call UI for that same call.
-      if (_scPendingIncomingCall && !_scTeamCallState) { _scPendingIncomingCall = null; _scSetCallUI('hidden'); }
+      // still showing the incoming-call UI for that same call, and log it
+      // as a genuinely missed call (we never got to accept or decline it).
+      if (_scPendingIncomingCall && !_scTeamCallState) {
+        _scWriteCallLog({ peerEmail: _scPendingIncomingCall.callerEmail, peerName: _scPendingIncomingCall.callerName, direction: 'incoming', status: 'missed', startedAt: Date.now(), durationSec: 0 });
+        _scPendingIncomingCall = null;
+        _scSetCallUI('hidden');
+      }
       return;
     }
     if (_scTeamCallState || _scPendingIncomingCall) return; // already on/offered a call — no call-waiting in this first pass
@@ -27434,6 +27633,31 @@ async function _scListenForMessageNotifications(){
     showToast(`${val.fromName || 'A colleague'}: ${preview}`, false, '💬 New Message', 8000);
   });
 }
+
+// Persistent call history — separate from the transient calls/<callId>
+// signaling doc (which exists only for the duration of setting a call up
+// and can be reused/overwritten in spirit each call). Written once per
+// call, from whichever side's hangUpTeamCall()/declineTeamCall()/missed-
+// call detection actually observes how it ended, never live-updated.
+function _scWriteCallLog(entry){
+  const db = _scFirebaseInit();
+  const session = getCurrentSessionUser();
+  if (!db || !session?.email) return;
+  const key = _scFirebaseSafeKey(session.email);
+  db.ref('callLogs/' + key).push({
+    peerEmail: entry.peerEmail || '',
+    peerName: entry.peerName || '',
+    direction: entry.direction,
+    status: entry.status,
+    startedAt: entry.startedAt || Date.now(),
+    durationSec: entry.durationSec || 0
+  }).catch(()=>{});
+}
+
+// A call nobody ever answers shouldn't ring forever — 45s (long enough to
+// be a genuine ring, not so long it reads as broken) before the caller's
+// side gives up and logs it as no-answer, same as a real phone.
+const SC_CALL_NO_ANSWER_MS = 45000;
 
 async function startTeamCall(peerEmail, peerName){
   const db = _scFirebaseInit();
@@ -27475,15 +27699,20 @@ async function startTeamCall(peerEmail, peerName){
   // state and both try to apply the answer. A synchronous flag, set the
   // instant the first firing decides to act (not after any await), is what
   // actually closes the race.
+  const startedAt = Date.now();
   let answerApplied = false;
   const statusHandler = snap => {
     const call = snap.val();
     if (!call) return;
     if (call.status === 'accepted' && call.answer && !answerApplied) {
       answerApplied = true;
+      if (_scTeamCallState) _scTeamCallState.connectedAt = Date.now();
+      clearTimeout(noAnswerTimer);
       pc.setRemoteDescription(new RTCSessionDescription(call.answer));
       _scSetCallUI('active', peerName);
     } else if (call.status === 'declined') {
+      if (_scTeamCallState) _scTeamCallState.endStatus = 'declined';
+      clearTimeout(noAnswerTimer);
       _scSetCallUI('declined', peerName);
       setTimeout(() => hangUpTeamCall(), 1500);
     } else if (call.status === 'ended') {
@@ -27495,7 +27724,17 @@ async function startTeamCall(peerEmail, peerName){
     pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(()=>{});
   });
 
-  _scTeamCallState = { callId, peerEmail, peerName, role: 'caller', pc, localStream, callRef, statusHandler, candRef: callRef.child('calleeCandidates'), candHandler, calleeKey };
+  // Caller gives up if nobody answers within SC_CALL_NO_ANSWER_MS — logged
+  // as 'no-answer' rather than lumped in with a real decline or a
+  // genuinely completed call.
+  const noAnswerTimer = setTimeout(() => {
+    if (_scTeamCallState?.callId === callId && !_scTeamCallState.connectedAt) {
+      _scTeamCallState.endStatus = 'no-answer';
+      hangUpTeamCall();
+    }
+  }, SC_CALL_NO_ANSWER_MS);
+
+  _scTeamCallState = { callId, peerEmail, peerName, role: 'caller', pc, localStream, callRef, statusHandler, candRef: callRef.child('calleeCandidates'), candHandler, calleeKey, startedAt, connectedAt: null, endStatus: null, noAnswerTimer };
   _scSetCallUI('calling', peerName);
 }
 
@@ -27508,6 +27747,18 @@ async function acceptTeamCall(){
   let localStream;
   try { localStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
   catch(e) { showToast('Microphone access is needed to answer.', true, '⚠ Mic Blocked'); declineTeamCall(); return; }
+
+  // Clear the pending-incoming-call flag now, synchronously, before any of
+  // the awaited calls below — otherwise _scListenForIncomingCalls's own
+  // "caller gave up before I answered" detection can race the
+  // incomingCalls/<key> removal a few lines down (confirmed live: it fired
+  // mid-accept, while _scPendingIncomingCall was still set and
+  // _scTeamCallState wasn't set yet, and logged a bogus missed call for a
+  // call that was actually being accepted successfully). Safe to clear
+  // here — `pending` is already captured locally, and the only other
+  // caller that needs the global version (the mic-denied fallback just
+  // above) has already returned by this point.
+  _scPendingIncomingCall = null;
 
   const pc = new RTCPeerConnection({ iceServers: SC_STUN_SERVERS });
   localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
@@ -27528,8 +27779,9 @@ async function acceptTeamCall(){
     pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(()=>{});
   });
 
-  _scTeamCallState = { callId: pending.callId, peerEmail: pending.callerEmail, peerName: pending.callerName, role: 'callee', pc, localStream, callRef, statusHandler, candRef: callRef.child('callerCandidates'), candHandler };
-  _scPendingIncomingCall = null;
+  const now = Date.now();
+  _scTeamCallState = { callId: pending.callId, peerEmail: pending.callerEmail, peerName: pending.callerName, role: 'callee', pc, localStream, callRef, statusHandler, candRef: callRef.child('callerCandidates'), candHandler, startedAt: now, connectedAt: now, endStatus: 'completed' };
+  // (_scPendingIncomingCall already cleared earlier in this function, before the awaited Firebase calls above — see that comment for why.)
   _scSetCallUI('active', pending.callerName);
 }
 
@@ -27537,15 +27789,27 @@ function declineTeamCall(){
   const db = _scFirebaseInit();
   const pending = _scPendingIncomingCall;
   const session = getCurrentSessionUser();
+  // Clear this BEFORE the incomingCalls removal below, not after — Firebase
+  // applies a write to its local listener cache synchronously (before any
+  // network round trip), so the .remove() call two lines down can
+  // re-enter _scListenForIncomingCalls's own "caller gave up" branch
+  // reentrantly, mid-function, while _scPendingIncomingCall was still set —
+  // confirmed live: it fired and logged a bogus missed call alongside the
+  // real declined one, even though this function has no awaits at all.
+  // Same underlying issue as the one fixed in acceptTeamCall(), just
+  // triggered via synchronous local-cache reentrancy instead of an actual
+  // await gap.
+  _scPendingIncomingCall = null;
   if (db && pending) db.ref('calls/' + pending.callId).update({ status: 'declined' }).catch(()=>{});
   if (db && session?.email) db.ref('incomingCalls/' + _scFirebaseSafeKey(session.email)).remove().catch(()=>{});
-  _scPendingIncomingCall = null;
+  if (pending) _scWriteCallLog({ peerEmail: pending.callerEmail, peerName: pending.callerName, direction: 'incoming', status: 'declined', startedAt: Date.now(), durationSec: 0 });
   _scSetCallUI('hidden');
 }
 
 function hangUpTeamCall(){
   const state = _scTeamCallState;
   if (state) {
+    clearTimeout(state.noAnswerTimer);
     try { state.callRef?.update({ status: 'ended' }); } catch(e) {}
     try { state.callRef?.off('value', state.statusHandler); } catch(e) {}
     try { state.candRef?.off('child_added', state.candHandler); } catch(e) {}
@@ -27554,11 +27818,99 @@ function hangUpTeamCall(){
     if (state.role === 'caller' && state.calleeKey) {
       try { _scFirebaseInit()?.ref('incomingCalls/' + state.calleeKey).remove(); } catch(e) {}
     }
+    // Log exactly once per call, from whichever side hangUpTeamCall() runs
+    // on. state.endStatus is set along the way by the various triggers
+    // (accepted -> connectedAt set, so this defaults to 'completed';
+    // declined branch sets 'declined'; the no-answer timeout sets
+    // 'no-answer') — a plain manual hang-up before anyone answered, with
+    // no other status set, falls back to 'no-answer' too since that's
+    // exactly what it was from the recipient's perspective.
+    const durationSec = state.connectedAt ? Math.max(0, Math.round((Date.now() - state.connectedAt) / 1000)) : 0;
+    const status = state.endStatus || (state.connectedAt ? 'completed' : 'no-answer');
+    _scWriteCallLog({ peerEmail: state.peerEmail, peerName: state.peerName, direction: state.role === 'caller' ? 'outgoing' : 'incoming', status, startedAt: state.startedAt, durationSec });
   }
   const audioEl = document.getElementById('team-call-remote-audio');
   if (audioEl) audioEl.srcObject = null;
   _scTeamCallState = null;
   _scSetCallUI('hidden');
+}
+
+function _scFormatCallDuration(sec){
+  sec = Math.max(0, Math.round(sec || 0));
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+function renderSmartComCallLog(){
+  const listEl = document.getElementById('smartcom-calllog-list');
+  if (!listEl) return;
+  const db = _scFirebaseInit();
+  if (!db) { listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px">Configure Team Communication in Settings to see your call log.</div>'; return; }
+  const session = getCurrentSessionUser();
+  if (!session?.email) return;
+  listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px">Loading…</div>';
+  db.ref('callLogs/' + _scFirebaseSafeKey(session.email)).limitToLast(100).once('value').then(snap => {
+    const entries = [];
+    snap.forEach(child => entries.push(child.val()));
+    entries.reverse(); // most-recent-first — RTDB push keys sort chronologically ascending
+    if (!entries.length) {
+      listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px">No calls yet — use 📱 In-App Call from the Directory tab.</div>';
+      return;
+    }
+    const STATUS_META = {
+      completed: { label: 'Completed', color: 'var(--green)' },
+      missed: { label: 'Missed', color: 'var(--crit)' },
+      declined: { label: 'Declined', color: 'var(--text3)' },
+      'no-answer': { label: 'No Answer', color: 'var(--amber)' }
+    };
+    listEl.innerHTML = entries.map(e => {
+      const meta = STATUS_META[e.status] || { label: e.status, color: 'var(--text3)' };
+      const icon = e.direction === 'outgoing' ? '📤' : (e.status === 'missed' ? '📵' : '📥');
+      const durationStr = e.durationSec > 0 ? ' · ' + _scFormatCallDuration(e.durationSec) : '';
+      const dateStr = e.startedAt ? new Date(e.startedAt).toLocaleString('en-ZA', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+      return `<div style="display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px;background:var(--bg4)">
+        <div style="font-size:18px;flex-shrink:0">${icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;color:var(--text);font-size:13.5px">${_scEsc(e.peerName || 'Unknown')}</div>
+          <div style="font-size:11.5px;color:${meta.color}">${e.direction === 'outgoing' ? 'Outgoing' : 'Incoming'} · ${meta.label}${durationStr}</div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);white-space:nowrap;flex-shrink:0">${_scEsc(dateStr)}</div>
+      </div>`;
+    }).join('');
+  }).catch(() => { listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px">Could not load call log.</div>'; });
+}
+
+function renderSmartComConversations(){
+  const listEl = document.getElementById('smartcom-conversations-list');
+  if (!listEl) return;
+  const db = _scFirebaseInit();
+  if (!db) { listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px">Configure Team Communication in Settings to see your messages.</div>'; return; }
+  const session = getCurrentSessionUser();
+  if (!session?.email) return;
+  listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px">Loading…</div>';
+  db.ref('userConversations/' + _scFirebaseSafeKey(session.email)).once('value').then(snap => {
+    const convos = [];
+    snap.forEach(child => convos.push(child.val()));
+    convos.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    if (!convos.length) {
+      listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px">No conversations yet — message a colleague from the Directory tab.</div>';
+      return;
+    }
+    listEl.innerHTML = convos.map(c => {
+      const initials = (c.peerName || '?').split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      const mine = (c.lastFrom || '').toLowerCase() === session.email.toLowerCase();
+      const preview = (mine ? 'You: ' : '') + (c.lastMessage || '');
+      const timeStr = c.ts ? new Date(c.ts).toLocaleString('en-ZA', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+      return `<div onclick="openTeamChat('${_scEscJS(c.peerEmail)}','${_scEscJS(c.peerName)}')" style="cursor:pointer;display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:8px;background:var(--bg4)">
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--blue2),var(--blue));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0">${_scEsc(initials)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;color:var(--text);font-size:13.5px">${_scEsc(c.peerName || 'Unknown')}</div>
+          <div style="font-size:11.5px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_scEsc(preview)}</div>
+        </div>
+        <div style="font-size:10.5px;color:var(--text3);white-space:nowrap;flex-shrink:0">${_scEsc(timeStr)}</div>
+      </div>`;
+    }).join('');
+  }).catch(() => { listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px">Could not load conversations.</div>'; });
 }
 
 function _scPopulateStaffDirectoryFacilities(){
@@ -27610,10 +27962,13 @@ function renderStaffDirectory(){
     const dot = fbReady
       ? `<span title="${presence?.online ? 'Online' : 'Offline'}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${presence?.online ? 'var(--green)' : '#9ca3af'};position:absolute;bottom:-1px;right:-1px;border:2px solid var(--bg4)"></span>`
       : '';
+    const avatarInner = u.photo
+      ? `<img src="${_scAttrSafe(u.photo)}" style="width:100%;height:100%;object-fit:cover">`
+      : _scEsc(initials);
     return `
     <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:10px;background:var(--bg4);flex-wrap:wrap">
       <div style="position:relative;flex-shrink:0">
-        <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue2),var(--blue));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px">${_scEsc(initials)}</div>
+        <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue2),var(--blue));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;overflow:hidden">${avatarInner}</div>
         ${dot}
       </div>
       <div style="flex:1;min-width:140px">
@@ -27623,6 +27978,64 @@ function renderStaffDirectory(){
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${contact}${inApp}</div>
     </div>`;
   }).join('');
+}
+
+// ── SmartCom > My Profile ───────────────────────────────────
+function _scPopulateSmartComProfile(){
+  const session = getCurrentSessionUser();
+  const acct = session ? getAccounts().find(a => (a.email || '').toLowerCase() === (session.email || '').toLowerCase()) : null;
+  const nameEl = document.getElementById('smartcom-profile-name');
+  const roleEl = document.getElementById('smartcom-profile-role');
+  const facEl = document.getElementById('smartcom-profile-facility');
+  const phoneEl = document.getElementById('smartcom-profile-phone');
+  if (!acct) { if (nameEl) nameEl.value = ''; return; }
+  if (nameEl) nameEl.value = acct.name || '';
+  if (roleEl) roleEl.value = acct.role || '';
+  if (facEl) facEl.value = acct.facility || '';
+  if (phoneEl) phoneEl.value = acct.phone || '';
+  window._scPendingProfilePhoto = null; // discard any staged-but-unsaved upload from a previous visit to this tab
+  const avatar = document.getElementById('smartcom-profile-avatar');
+  if (avatar) {
+    avatar.innerHTML = acct.photo
+      ? `<img src="${_scAttrSafe(acct.photo)}" style="width:100%;height:100%;object-fit:cover">`
+      : _scEsc((acct.name || '?').split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase());
+  }
+}
+
+// Staged in memory (not written to the account) until Save Profile is
+// clicked — lets someone change their mind / pick a different photo
+// without every intermediate pick round-tripping through storage.
+function _scSmartComPhotoSelected(input){
+  const file = input.files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { showToast('Please choose an image file.', true, '⚠ Invalid File'); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    window._scPendingProfilePhoto = reader.result;
+    const avatar = document.getElementById('smartcom-profile-avatar');
+    if (avatar) avatar.innerHTML = `<img src="${_scAttrSafe(reader.result)}" style="width:100%;height:100%;object-fit:cover">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Same account-record pattern as saveUserProfile() (Settings > User
+// Profile) — the two intentionally write the same acct.phone field, so
+// whichever one someone uses last is what sticks; kept as two separate
+// entry points since SmartCom's profile also handles the photo, and
+// Settings' original card has no reason to grow a whole avatar uploader.
+function saveSmartComProfile(){
+  const session = getCurrentSessionUser();
+  if (!session?.email) { showToast('Sign in to save your profile.', true, '⚠ Not Signed In'); return; }
+  const accounts = getAccounts();
+  const acct = accounts.find(a => (a.email || '').toLowerCase() === session.email.toLowerCase());
+  if (!acct) { showToast('Could not find your account record.', true, '⚠ Error'); return; }
+  acct.phone = document.getElementById('smartcom-profile-phone')?.value.trim() || '';
+  if (window._scPendingProfilePhoto) { acct.photo = window._scPendingProfilePhoto; window._scPendingProfilePhoto = null; }
+  saveAccounts(accounts);
+  const settingsPhoneEl = document.getElementById('prof-mobile');
+  if (settingsPhoneEl) settingsPhoneEl.value = acct.phone; // keep the Settings > User Profile field in sync, same underlying data
+  showToast('Profile updated', false, '✅ Profile Saved');
+  if (document.getElementById('page-staff')?.classList.contains('active')) renderStaffDirectory();
 }
 
 function doSignIn(){
