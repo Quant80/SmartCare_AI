@@ -1543,6 +1543,12 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
           <div id="auth-email-hint" style="display:none;margin-top:5px;font-size:11px;color:#ff8fa3">Enter a valid email address.</div>
         </div>
         <div>
+          <label class="auth-lbl">Phone Number</label>
+          <input id="auth-phone" type="tel" placeholder="e.g. +263 77 123 4567"
+            onkeydown="if(event.key==='Enter')doCreateAccount()" class="auth-inp">
+          <div class="auth-hint">Used for the Staff Directory's Call/SMS buttons — colleagues can reach you directly.</div>
+        </div>
+        <div>
           <label class="auth-lbl">Role</label>
           <select id="auth-role" onchange="_scOnAuthRoleChange()" class="auth-inp" style="cursor:pointer;appearance:auto">
             <optgroup label="Clinical">
@@ -2470,6 +2476,14 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
       <div class="ni" onclick="showPage('alerts')">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke-width="1.5"/><path d="M13.73 21a2 2 0 0 1-3.46 0" stroke-width="1.5"/></svg>
         Alerts<span class="nb pulse" id="nb-alerts">3</span>
+      </div>
+    </div>
+
+    <div class="sb-box">
+      <div class="sb-box-label">Team</div>
+      <div class="ni" onclick="showPage('staff')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Staff Directory
       </div>
     </div>
 
@@ -4254,6 +4268,23 @@ Waiting for data…</pre>
     </div>
   </div>
 
+  <!-- ═══ STAFF DIRECTORY ═══ -->
+  <div class="page" id="page-staff">
+    <div class="sec-t">Staff Directory</div>
+    <div class="sec-s">Call or message any colleague across the network directly — opens your device's own phone or messaging app, no in-app account needed on their end.</div>
+    <div class="card mb">
+      <div class="ch">
+        <div class="ct">All Staff</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="staff-dir-search" placeholder="Search by name, role or facility…" oninput="renderStaffDirectory()"
+            style="padding:9px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;outline:none;font-family:inherit;min-width:220px">
+          <select id="staff-dir-facility" onchange="renderStaffDirectory()" class="fsel" style="width:200px"><option value="">All Facilities</option></select>
+        </div>
+      </div>
+      <div id="staff-directory-list"></div>
+    </div>
+  </div>
+
   <!-- ═══ REGISTER PATIENT ═══ -->
   <div class="page" id="page-register">
     <div class="sec-t">Register New Patient</div>
@@ -5716,9 +5747,9 @@ Waiting for data…</pre>
             <div class="fg"><label class="fl">Full Name</label><input class="fi" value="Dr. Sipho Radebe" id="prof-name"></div>
             <div class="fg"><label class="fl">Role</label><select class="fsel" id="prof-role"><option>Chief Medical Officer</option><option>Senior Physician</option><option>Registrar</option><option>Nurse Manager</option><option>Radiologist</option><option>Pharmacist</option><option>Admin</option></select></div>
             <div class="fg"><label class="fl">Email</label><input class="fi" value="s.radebe@smartcarehosp.co.za" id="prof-email"></div>
-            <div class="fg"><label class="fl">Mobile / WhatsApp</label><input class="fi" value="+27 82 100 2000" id="prof-mobile"></div>
+            <div class="fg"><label class="fl">Mobile / WhatsApp</label><input class="fi" id="prof-mobile" placeholder="e.g. +263 77 123 4567"></div>
           </div>
-          <button class="btn btn-p btn-sm" style="margin-top:8px" onclick="showToast('Profile updated',false,'✅ Profile Saved')">Save Profile</button>
+          <button class="btn btn-p btn-sm" style="margin-top:8px" onclick="saveUserProfile()">Save Profile</button>
         </div>
 
         <div class="card">
@@ -6812,7 +6843,7 @@ let pendingWardTransferId = null;
 // ═══════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════
-const pageTitles = {dashboard:'Dashboard Overview',monitoring:'Live Monitoring',patients:'Patient Registry',discharge:'Discharge Management',records:'Patient Records Database',beds:'Ward Monitor & Bed Management',analytics:'Analytics Overview',ai:'AI Predictions',alerts:'Alert Management',register:'Register Patient',wards:'Ward Monitor & Bed Management',outpatient:'Outpatient Management','ai-hub':'AI Clinical Hub','ai-clinical':'AI Clinical Intelligence',xray:'X-ray AI Scanner — Radiology Intelligence',settings:'Settings & API Configuration',admin:'Admin Panel — System Control',exec:'Ministerial Executive Portal — National Overview',billing:'Billing & Payments',pharmacy:'Pharmacy — Prescriptions & Dispensing',prescriptions:'Prescriptions'};
+const pageTitles = {dashboard:'Dashboard Overview',monitoring:'Live Monitoring',patients:'Patient Registry',discharge:'Discharge Management',records:'Patient Records Database',beds:'Ward Monitor & Bed Management',analytics:'Analytics Overview',ai:'AI Predictions',alerts:'Alert Management',register:'Register Patient',wards:'Ward Monitor & Bed Management',outpatient:'Outpatient Management','ai-hub':'AI Clinical Hub','ai-clinical':'AI Clinical Intelligence',xray:'X-ray AI Scanner — Radiology Intelligence',settings:'Settings & API Configuration',admin:'Admin Panel — System Control',exec:'Ministerial Executive Portal — National Overview',billing:'Billing & Payments',pharmacy:'Pharmacy — Prescriptions & Dispensing',prescriptions:'Prescriptions',staff:'Staff Directory'};
 
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -8411,7 +8442,7 @@ function _initEnterpriseSystems() {
 // of these is safe to call repeatedly: each guards its own one-time Chart.js
 // setup behind an init flag and only re-renders/re-fetches data on repeat
 // calls, so re-invoking here never creates duplicate chart instances.
-const PAGE_INITS = {monitoring:initMonitoring,analytics:initAnalytics,ai:initAIPage,discharge:initDischarge,wards:initWards,outpatient:initOutpatient,'ai-hub':initAIHub,'ai-clinical':initAIClinical,xray:initXray,settings:initSettings,admin:initAdminPage,exec:initExecPortal,billing:initBilling,pharmacy:initPharmacy,prescriptions:initPrescriptions};
+const PAGE_INITS = {monitoring:initMonitoring,analytics:initAnalytics,ai:initAIPage,discharge:initDischarge,wards:initWards,outpatient:initOutpatient,'ai-hub':initAIHub,'ai-clinical':initAIClinical,xray:initXray,settings:initSettings,admin:initAdminPage,exec:initExecPortal,billing:initBilling,pharmacy:initPharmacy,prescriptions:initPrescriptions,staff:initStaffDirectory};
 
 function showPage(id){
   if(sessionStorage.getItem('sc_exec_mode')==='1' && id!=='exec'){
@@ -23494,6 +23525,19 @@ function initSettings(){
   document.getElementById('sys-patients').textContent=patients.length;
   syncThemeControls(document.documentElement.getAttribute('data-theme') || getSavedTheme());
   loadHospitalInvoiceSettings();
+
+  // Only the phone field is wired to the real account record (see
+  // saveUserProfile()) — Name/Email/Role above stay as they already were,
+  // static demo values with no live account binding. Fixing those too
+  // would mean adding real validation (email-collision checks, and a
+  // privilege-escalation guard on self-editing role) that's out of scope
+  // here; the phone number is what the Staff Directory actually needs.
+  try {
+    const session = getCurrentSessionUser();
+    const acct = session ? getAccounts().find(a => (a.email||'').toLowerCase() === (session.email||'').toLowerCase()) : null;
+    const mobileEl = document.getElementById('prof-mobile');
+    if (mobileEl) mobileEl.value = acct?.phone || '';
+  } catch(e) {}
   try{ const k=JSON.parse((sessionStorage.getItem('sc_api_keys_v1') || localStorage.getItem('sc_api_keys_v1'))||'{}'); Object.keys(k).forEach(m=>{ if(k[m]) apiKeys[m]=k[m]; }); }catch(e){}
 
   try{
@@ -26800,7 +26844,7 @@ function _refreshCreateAccountRoleAccess(){
   }
 }
 
-function createAccount(name, email, role, password, facility, province){
+function createAccount(name, email, role, password, facility, province, phone){
   const targetRole = role || 'Clinician';
   if(!_canAssignRole(targetRole)){
     return {ok:false, msg:'Only signed-in administrators can create Admin accounts.'};
@@ -26814,6 +26858,7 @@ function createAccount(name, email, role, password, facility, province){
   }
   const cleanPw = password.trim();
   const user = {id:'u'+Date.now(), name, email:email.trim().toLowerCase(), role: targetRole, facility: facility||'', province: province||'',
+    phone: (phone||'').trim(),
     hash: hashPassword(cleanPw), created: new Date().toISOString()};
   accounts.push(user);
   saveAccounts(accounts);
@@ -26855,6 +26900,7 @@ function migrateAccountHash(email, password){
 function doCreateAccount(){
   const name  = document.getElementById('auth-name')?.value.trim();
   const email = document.getElementById('auth-email')?.value.trim();
+  const phone = document.getElementById('auth-phone')?.value.trim() || '';
   const role  = document.getElementById('auth-role')?.value;
   const facility = document.getElementById('auth-facility')?.value || '';
   const province = document.getElementById('auth-province')?.value || '';
@@ -26862,7 +26908,7 @@ function doCreateAccount(){
   const errEl = document.getElementById('auth-error');
 
   if(!name||!email||!pass){ if(errEl) errEl.textContent='Please fill in all fields.'; return; }
-  const result = createAccount(name, email, role, pass, facility, province);
+  const result = createAccount(name, email, role, pass, facility, province, phone);
   if(!result.ok){ if(errEl) errEl.textContent=result.msg; return; }
   // Update profile in settings
   const profName  = document.getElementById('prof-name');
@@ -26880,6 +26926,93 @@ function doCreateAccount(){
   closeAuthModal();
   enterSystem();
   showToast('Welcome, ' + name + '! Account created successfully.', false, '✅ Account Created');
+}
+
+// ═══════════════════════════════════════════════════
+// STAFF DIRECTORY — Call/SMS colleagues across the network
+// ═══════════════════════════════════════════════════
+// Deliberately NOT an in-app call/chat system — there is no shared backend
+// here (every browser's localStorage is its own island, see the BLE/nRF
+// device discussion on the same limitation), so two staff on two different
+// machines have no live channel between them at all. tel:/sms: links hand
+// off to the device's own phone/messaging app instead, which places a real
+// call over the normal cellular network — works today, no new
+// infrastructure, no per-message cost.
+function initStaffDirectory(){
+  _scPopulateStaffDirectoryFacilities();
+  renderStaffDirectory();
+}
+
+// Persists just the Mobile/WhatsApp field from Settings > User Profile back
+// onto the signed-in user's real account record — see initSettings()'s
+// comment for why this is the one profile field actually wired up. Matches
+// by session email (stable, doesn't change here) rather than by id, since
+// getCurrentSessionUser() doesn't always carry the account id depending on
+// which session store served it.
+function saveUserProfile(){
+  const session = getCurrentSessionUser();
+  if (!session || !session.email) {
+    showToast('Sign in to save your profile.', true, '⚠ Not Signed In');
+    return;
+  }
+  const accounts = getAccounts();
+  const acct = accounts.find(a => (a.email||'').toLowerCase() === session.email.toLowerCase());
+  if (!acct) {
+    showToast('Could not find your account record.', true, '⚠ Error');
+    return;
+  }
+  acct.phone = document.getElementById('prof-mobile')?.value.trim() || '';
+  saveAccounts(accounts);
+  showToast('Profile updated', false, '✅ Profile Saved');
+}
+
+function _scPopulateStaffDirectoryFacilities(){
+  const sel = document.getElementById('staff-dir-facility');
+  if(!sel) return;
+  const current = sel.value;
+  const names = (typeof facilities !== 'undefined' ? facilities : []).map(f => f.name).filter(Boolean).sort();
+  sel.innerHTML = '<option value="">All Facilities</option>' + names.map(n => `<option value="${_scEsc(n)}">${_scEsc(n)}</option>`).join('');
+  if (names.includes(current)) sel.value = current;
+}
+
+function renderStaffDirectory(){
+  const listEl = document.getElementById('staff-directory-list');
+  if(!listEl) return;
+  const search = (document.getElementById('staff-dir-search')?.value || '').toLowerCase();
+  const facFilter = document.getElementById('staff-dir-facility')?.value || '';
+  const me = getCurrentSessionUser() || {};
+  const all = getAccounts().filter(a => !a.suspended && (a.email || '').toLowerCase() !== (me.email || '').toLowerCase());
+  const filtered = all.filter(u =>
+    (!facFilter || u.facility === facFilter) &&
+    ((u.name || '').toLowerCase().includes(search) || (u.role || '').toLowerCase().includes(search) || (u.facility || '').toLowerCase().includes(search))
+  );
+
+  if (!all.length) {
+    listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px">No other staff accounts yet — invite colleagues to create an account to see them here.</div>';
+    return;
+  }
+  if (!filtered.length) {
+    listEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px">No staff match your search.</div>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(u => {
+    const phone = _scNormalizePhone(u.phone || '');
+    const initials = u.initials || (u.name || '?').split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const contact = phone
+      ? `<a href="tel:${phone}" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--green);background:rgba(16,163,110,.1);color:var(--green);font-size:12.5px;font-weight:700;text-decoration:none;white-space:nowrap">📞 Call</a>
+         <a href="sms:${phone}" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--blue);background:rgba(26,111,196,.1);color:var(--blue);font-size:12.5px;font-weight:700;text-decoration:none;white-space:nowrap">💬 SMS</a>`
+      : `<span style="font-size:11px;color:var(--text3);font-style:italic">No phone on file</span>`;
+    return `
+    <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:10px;background:var(--bg4);flex-wrap:wrap">
+      <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue2),var(--blue));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0">${_scEsc(initials)}</div>
+      <div style="flex:1;min-width:140px">
+        <div style="font-size:14px;font-weight:700;color:var(--text)">${_scEsc(u.name || 'Unknown')}</div>
+        <div style="font-size:12px;color:var(--text3)">${_scEsc(u.role || '')}${u.facility ? ' · ' + _scEsc(u.facility) : ''}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">${contact}</div>
+    </div>`;
+  }).join('');
 }
 
 function doSignIn(){
