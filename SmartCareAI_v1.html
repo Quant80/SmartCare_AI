@@ -13,6 +13,15 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<!-- Team Communication (in-app messaging + calls) — Realtime Database only,
+     used as the shared signaling/storage channel this app otherwise has no
+     backend for at all. compat build (not the modular v9+ SDK) to match
+     this file's plain script-tag style everywhere else — no bundler,
+     no ES modules used anywhere in this app. Inert with zero errors until
+     a real Firebase project's config is entered in Settings — see
+     _scFirebaseInit(). -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 :root{
@@ -5693,6 +5702,25 @@ Waiting for data…</pre>
         </div>
 
         <div class="card mb">
+          <div class="ch"><div class="ct">💬 Team Communication (Firebase)</div>
+            <span id="fb-status-badge" style="font-size:9.5px;color:var(--text3);font-weight:400">Not configured</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Powers in-app presence, messaging and voice calls in the Staff Directory — communication that stays inside SmartCare AI rather than handing off to the device's own phone/SMS apps. Get these values from your Firebase project's Web App config (Project Settings → General → Your apps → the "SDK setup and configuration" snippet). Realtime Database must be enabled on the project.</div>
+          <div class="fgrid">
+            <div class="fg"><label class="fl">API Key</label><input class="fi" type="text" id="fb-apikey" placeholder="AIzaSy…" autocomplete="off"></div>
+            <div class="fg"><label class="fl">Auth Domain</label><input class="fi" type="text" id="fb-authdomain" placeholder="your-project.firebaseapp.com" autocomplete="off"></div>
+            <div class="fg"><label class="fl">Database URL</label><input class="fi" type="text" id="fb-dburl" placeholder="https://your-project-default-rtdb.firebaseio.com" autocomplete="off"></div>
+            <div class="fg"><label class="fl">Project ID</label><input class="fi" type="text" id="fb-projectid" placeholder="your-project-id" autocomplete="off"></div>
+            <div class="fg"><label class="fl">App ID</label><input class="fi" type="text" id="fb-appid" placeholder="1:1234567890:web:abcdef" autocomplete="off"></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn-p btn-sm" onclick="saveFirebaseConfig()">💾 Save &amp; Connect</button>
+            <button type="button" class="btn btn-g btn-sm" onclick="testFirebaseConnection()">🔌 Test Connection</button>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:6px">Started in Realtime Database "test mode"? That's fine to get this working — lock down security rules before relying on this for anything sensitive.</div>
+        </div>
+
+        <div class="card mb">
           <div class="ch"><div class="ct">🏥 Hospital &amp; Invoice Details</div><div style="font-size:10px;color:var(--text3)">Used on the letterhead of every generated invoice</div></div>
           <div class="fgrid">
             <div class="fg"><label class="fl">Hospital Address</label><input class="fi" id="hosp-address" placeholder="e.g. 123 Wellness Avenue, Harare"></div>
@@ -6269,6 +6297,49 @@ Waiting for data…</pre>
       <button class="wa-send" onclick="sendWAMessage()" title="Send message">➤</button>
     </div>
   </div>
+</div>
+
+<!-- ═══ TEAM CHAT MODAL — in-app staff-to-staff messaging (Firebase RTDB) ═══
+     Reuses the wa-* classes for a consistent look, distinct ids/behaviour. -->
+<div class="wa-modal" id="team-chat-modal">
+  <div class="wa-box">
+    <div class="wa-header">
+      <button onclick="closeTeamChat()" style="background:rgba(255,255,255,.15);border:none;border-radius:6px;color:#fff;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px" title="Close">←</button>
+      <div class="wa-avatar" style="flex-shrink:0" id="team-chat-avatar">👤</div>
+      <div style="flex:1">
+        <div class="wa-contact" id="team-chat-name">Colleague</div>
+        <div class="wa-status" id="team-chat-sub">SmartCare AI — In-App Message</div>
+      </div>
+      <button onclick="closeTeamChat()" style="background:rgba(255,255,255,.15);border:none;border-radius:6px;color:#fff;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px" title="Close">✕</button>
+    </div>
+    <div class="wa-chat" id="team-chat-box"></div>
+    <div class="wa-input-row">
+      <input class="wa-input" id="team-chat-input" placeholder="Type a message…" onkeydown="if(event.key==='Enter'){event.preventDefault();sendTeamMessage();}">
+      <button class="wa-send" onclick="sendTeamMessage()" title="Send message">➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TEAM CALL MODAL — in-app voice call via WebRTC, signaled through
+     Firebase RTDB (see the "Team Communication" comment block in the
+     script for the full design/limitations). ═══ -->
+<div id="team-call-modal" style="display:none;position:fixed;inset:0;background:rgba(10,15,25,.85);z-index:600;align-items:center;justify-content:center;backdrop-filter:blur(6px)">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:36px 32px;width:340px;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.5)">
+    <div id="team-call-avatar" style="width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,var(--blue2),var(--blue));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:30px;margin:0 auto 16px">?</div>
+    <div id="team-call-name" style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px">Colleague</div>
+    <div id="team-call-status" style="font-size:13px;color:var(--text3);margin-bottom:24px">Calling…</div>
+    <div id="team-call-actions-outgoing" style="display:flex;justify-content:center;gap:14px">
+      <button onclick="hangUpTeamCall()" style="width:56px;height:56px;border-radius:50%;border:none;background:var(--crit);color:#fff;font-size:22px;cursor:pointer">✕</button>
+    </div>
+    <div id="team-call-actions-incoming" style="display:none;justify-content:center;gap:20px">
+      <button onclick="declineTeamCall()" style="width:56px;height:56px;border-radius:50%;border:none;background:var(--crit);color:#fff;font-size:22px;cursor:pointer">✕</button>
+      <button onclick="acceptTeamCall()" style="width:56px;height:56px;border-radius:50%;border:none;background:var(--green);color:#fff;font-size:22px;cursor:pointer">📞</button>
+    </div>
+    <div id="team-call-actions-active" style="display:none;justify-content:center;gap:14px">
+      <button onclick="hangUpTeamCall()" style="width:56px;height:56px;border-radius:50%;border:none;background:var(--crit);color:#fff;font-size:22px;cursor:pointer">✕</button>
+    </div>
+  </div>
+  <audio id="team-call-remote-audio" autoplay></audio>
 </div>
 
 <!-- ═══ MEDICAL HISTORY MODAL ═══ -->
@@ -23568,6 +23639,16 @@ function initSettings(){
     const badge = document.getElementById('sentwa-status-badge');
     if(badge && sw.instance && sw.token){ badge.textContent='✓ Configured'; badge.style.color='var(--green)'; }
   }catch(e){}
+
+  // Restore Firebase (Team Communication) config
+  try {
+    const fbCfg = _scFirebaseGetConfig();
+    if (fbCfg) {
+      const map = { 'fb-apikey':'apiKey', 'fb-authdomain':'authDomain', 'fb-dburl':'databaseURL', 'fb-projectid':'projectId', 'fb-appid':'appId' };
+      Object.entries(map).forEach(([id, key]) => { const el = document.getElementById(id); if (el) el.value = fbCfg[key] || ''; });
+    }
+    _scFirebaseUpdateStatusBadge();
+  } catch(e) {}
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════
@@ -26966,6 +27047,377 @@ function saveUserProfile(){
   showToast('Profile updated', false, '✅ Profile Saved');
 }
 
+// ═══════════════════════════════════════════════════
+// TEAM COMMUNICATION — presence, in-app messaging, in-app voice calls
+// ═══════════════════════════════════════════════════
+// This app has no backend of its own — every browser's localStorage is its
+// own island (same limitation covered for the nRF/BLE feature and the
+// original tel:/sms: Staff Directory buttons). Firebase Realtime Database
+// is the shared channel that makes genuine in-app presence, messaging and
+// call SIGNALING possible; actual call AUDIO travels peer-to-peer via
+// WebRTC once two browsers have found each other through it. Every
+// function below no-ops safely (with a clear toast) until a real Firebase
+// project's config is saved in Settings — see _scFirebaseInit().
+//
+// Known limitation, stated plainly rather than hidden: WebRTC here uses a
+// public STUN server only, no TURN relay. That covers many real-world
+// network pairs, but two networks that both do strict/symmetric NAT
+// (common on locked-down hospital firewalls) can fail to connect a call —
+// there's no fallback for that today. A TURN service would close that gap
+// as a follow-up if it turns out to matter in practice.
+
+let _scFbApp = null, _scFbDb = null;
+let _scPresenceCache = {};       // { safeKey: {online, name, role, facility, email, lastSeen} }
+let _scTeamCallState = null;     // active call: {callId, peerEmail, peerName, role, pc, localStream, refs/handlers to detach on hangup}
+let _scPendingIncomingCall = null; // {callId, callerEmail, callerName, offer} while the incoming-call UI is showing, before Accept/Decline
+let _scTeamChatState = null;     // open chat: {peerEmail, peerName, convId, ref, handler}
+let _scIncomingCallsRef = null;  // the currently-listened-to incomingCalls/<key> ref, so a same-tab account switch can detach the old one
+const SC_STUN_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
+
+function _scFirebaseGetConfig(){
+  try { return JSON.parse(localStorage.getItem('sc_fb_config_v1') || 'null'); } catch(e) { return null; }
+}
+
+// RTDB keys can't contain . # $ [ ] / — email addresses need sanitising
+// before use as a key (they're fine as plain VALUES, just not as keys).
+function _scFirebaseSafeKey(email){
+  return String(email || '').trim().toLowerCase().replace(/[.#$\[\]/]/g, '_');
+}
+
+function _scFirebaseInit(){
+  if (_scFbDb) return _scFbDb;
+  const cfg = _scFirebaseGetConfig();
+  if (!cfg || !cfg.apiKey || !cfg.databaseURL || !cfg.projectId) return null;
+  if (typeof firebase === 'undefined') return null; // CDN blocked/offline
+  try {
+    _scFbApp = (firebase.apps && firebase.apps.length) ? firebase.apps[0] : firebase.initializeApp(cfg);
+    _scFbDb = firebase.database();
+    return _scFbDb;
+  } catch(e) {
+    console.warn('Firebase init failed:', e);
+    return null;
+  }
+}
+
+function _scFirebaseUpdateStatusBadge(){
+  const badge = document.getElementById('fb-status-badge');
+  if (!badge) return;
+  if (!_scFirebaseGetConfig()) { badge.textContent = 'Not configured'; badge.style.color = 'var(--text3)'; return; }
+  badge.textContent = _scFirebaseInit() ? '✓ Configured' : '⚠ Configured, SDK unavailable';
+  badge.style.color = _scFbDb ? 'var(--green)' : 'var(--amber)';
+}
+
+function saveFirebaseConfig(){
+  const apiKey = document.getElementById('fb-apikey')?.value.trim();
+  const authDomain = document.getElementById('fb-authdomain')?.value.trim();
+  const databaseURL = document.getElementById('fb-dburl')?.value.trim();
+  const projectId = document.getElementById('fb-projectid')?.value.trim();
+  const appId = document.getElementById('fb-appid')?.value.trim();
+  if (!apiKey || !databaseURL || !projectId) {
+    showToast('API Key, Database URL and Project ID are required.', true, '⚠ Missing Fields');
+    return;
+  }
+  try { localStorage.setItem('sc_fb_config_v1', JSON.stringify({ apiKey, authDomain, databaseURL, projectId, appId })); } catch(e) {}
+  _scFbApp = null; _scFbDb = null; // force a fresh init against the new config
+  const db = _scFirebaseInit();
+  _scFirebaseUpdateStatusBadge();
+  if (db) {
+    showToast('Firebase connected — starting presence.', false, '✅ Team Communication');
+    _scStartPresence();
+    _scListenForIncomingCalls();
+  } else {
+    showToast('Saved, but could not connect — check the values and that Realtime Database is enabled on the project.', true, '⚠ Connection Failed');
+  }
+}
+
+function testFirebaseConnection(){
+  const db = _scFirebaseInit();
+  if (!db) { showToast('Not configured, or the Firebase SDK failed to load.', true, '⚠ Firebase'); return; }
+  showToast('Testing connection…', false, '🔌 Firebase');
+  // .info/connected is a special RTDB path reflecting live socket state —
+  // it fires an initial (often false) value immediately on attach and a
+  // true one once actually connected, so this waits for a genuine true
+  // rather than trusting whatever the very first emission happens to be.
+  const ref = db.ref('.info/connected');
+  let done = false;
+  const handler = snap => {
+    if (done || snap.val() !== true) return;
+    done = true; clearTimeout(timer); ref.off('value', handler);
+    showToast('Connected to Firebase Realtime Database.', false, '✅ Connection OK');
+  };
+  const timer = setTimeout(() => {
+    if (done) return;
+    done = true; ref.off('value', handler);
+    showToast('Timed out waiting for a connection — check the Database URL and your network.', true, '⚠ Not Connected');
+  }, 8000);
+  ref.on('value', handler);
+}
+
+// ── Presence ─────────────────────────────────────────────────
+let _scPresenceActiveKey = null; // which account's presence is currently live — lets a same-tab account switch mark the outgoing one offline
+let _scPresenceListListenerActive = false; // enterSystem() can run more than once per session (sign-out/in, quick-launch, etc.) — this stops a second db.ref('presence').on(...) from stacking on top of the first
+
+function _scStartPresence(){
+  const db = _scFirebaseInit();
+  const session = getCurrentSessionUser();
+  if (!db || !session || !session.email) return;
+  const key = _scFirebaseSafeKey(session.email);
+
+  // Same-tab account switch (sign out, then sign in as someone else) —
+  // onDisconnect only fires on an actual tab close/network loss, not this,
+  // so the outgoing account would otherwise be stuck showing "online"
+  // until the browser tab itself closes.
+  if (_scPresenceActiveKey && _scPresenceActiveKey !== key) {
+    db.ref('presence/' + _scPresenceActiveKey).update({ online: false, lastSeen: firebase.database.ServerValue.TIMESTAMP }).catch(()=>{});
+  }
+  _scPresenceActiveKey = key;
+
+  const ref = db.ref('presence/' + key);
+  ref.set({ online: true, name: session.name || '', role: session.role || '', facility: session.facility || '', email: session.email, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+  // Realtime Database's own disconnect detection — fires automatically if
+  // the tab closes, loses network, or crashes, without needing a
+  // heartbeat or the browser to run any cleanup code itself.
+  ref.onDisconnect().update({ online: false, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+
+  if (_scPresenceListListenerActive) return;
+  _scPresenceListListenerActive = true;
+  db.ref('presence').on('value', snap => {
+    _scPresenceCache = snap.val() || {};
+    if (document.getElementById('page-staff')?.classList.contains('active')) renderStaffDirectory();
+  });
+}
+
+// ── In-app messaging ─────────────────────────────────────────
+function _scChatConvId(emailA, emailB){
+  return [_scFirebaseSafeKey(emailA), _scFirebaseSafeKey(emailB)].sort().join('__');
+}
+
+function openTeamChat(peerEmail, peerName){
+  const db = _scFirebaseInit();
+  if (!db) { showToast('Configure Firebase in Settings to use in-app messaging.', true, '⚠ Not Configured'); return; }
+  const session = getCurrentSessionUser();
+  if (!session?.email) { showToast('Sign in to message colleagues.', true, '⚠ Not Signed In'); return; }
+
+  closeTeamChat(); // detach any previous conversation's listener first
+
+  const convId = _scChatConvId(session.email, peerEmail);
+  document.getElementById('team-chat-name').textContent = peerName || 'Colleague';
+  const avatar = document.getElementById('team-chat-avatar');
+  if (avatar) avatar.textContent = (peerName || '?').split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const box = document.getElementById('team-chat-box');
+  box.innerHTML = '';
+  document.getElementById('team-chat-modal').classList.add('active');
+
+  const ref = db.ref('chats/' + convId + '/messages').limitToLast(200);
+  const handler = snap => {
+    const msgs = [];
+    snap.forEach(child => { msgs.push(child.val()); });
+    box.innerHTML = msgs.map(m => {
+      const mine = (m.from || '').toLowerCase() === session.email.toLowerCase();
+      const time = m.ts ? new Date(m.ts).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : '';
+      return `<div class="wa-msg ${mine ? 'out' : 'in'}"><div>${_scEsc(m.text || '')}</div><div class="wa-msg-time">${_scEsc(time)}</div></div>`;
+    }).join('');
+    box.scrollTop = box.scrollHeight;
+  };
+  ref.on('value', handler);
+  _scTeamChatState = { peerEmail, peerName, convId, ref, handler };
+}
+
+function sendTeamMessage(){
+  const db = _scFirebaseInit();
+  const session = getCurrentSessionUser();
+  const input = document.getElementById('team-chat-input');
+  const text = input?.value.trim();
+  if (!db || !session?.email || !_scTeamChatState || !text) return;
+  db.ref('chats/' + _scTeamChatState.convId + '/messages').push({
+    from: session.email, fromName: session.name || '', text, ts: firebase.database.ServerValue.TIMESTAMP
+  });
+  input.value = '';
+}
+
+function closeTeamChat(){
+  document.getElementById('team-chat-modal')?.classList.remove('active');
+  if (_scTeamChatState?.ref && _scTeamChatState.handler) _scTeamChatState.ref.off('value', _scTeamChatState.handler);
+  _scTeamChatState = null;
+}
+
+// ── In-app voice calls (WebRTC, signaled through RTDB) ────────
+function _scCallAvatarInitials(name){
+  return (name || '?').split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function _scSetCallUI(state, name){
+  const modal = document.getElementById('team-call-modal');
+  const nameEl = document.getElementById('team-call-name');
+  const statusEl = document.getElementById('team-call-status');
+  const avatarEl = document.getElementById('team-call-avatar');
+  const outgoing = document.getElementById('team-call-actions-outgoing');
+  const incoming = document.getElementById('team-call-actions-incoming');
+  const active = document.getElementById('team-call-actions-active');
+  if (!modal) return;
+  if (state === 'hidden') { modal.style.display = 'none'; return; }
+  modal.style.display = 'flex';
+  if (nameEl) nameEl.textContent = name || 'Colleague';
+  if (avatarEl) avatarEl.textContent = _scCallAvatarInitials(name);
+  [outgoing, incoming, active].forEach(el => { if (el) el.style.display = 'none'; });
+  if (state === 'calling') { statusEl.textContent = 'Calling…'; if (outgoing) outgoing.style.display = 'flex'; }
+  else if (state === 'incoming') { statusEl.textContent = 'Incoming call…'; if (incoming) incoming.style.display = 'flex'; }
+  else if (state === 'active') { statusEl.textContent = 'In call'; if (active) active.style.display = 'flex'; }
+  else if (state === 'declined') { statusEl.textContent = 'Call declined'; if (outgoing) outgoing.style.display = 'flex'; }
+}
+
+function _scListenForIncomingCalls(){
+  const db = _scFirebaseInit();
+  const session = getCurrentSessionUser();
+  if (!db || !session?.email) return;
+  const key = _scFirebaseSafeKey(session.email);
+  // Same idempotency concern as _scStartPresence() — enterSystem() can run
+  // more than once per session. Detach any previous listener (possibly on
+  // a different account's key, after a same-tab account switch) first.
+  if (_scIncomingCallsRef) { try { _scIncomingCallsRef.off('value'); } catch(e) {} }
+  _scIncomingCallsRef = db.ref('incomingCalls/' + key);
+  _scIncomingCallsRef.on('value', async snap => {
+    const val = snap.val();
+    if (!val) {
+      // Caller hung up / cleared it before we answered — dismiss if we're
+      // still showing the incoming-call UI for that same call.
+      if (_scPendingIncomingCall && !_scTeamCallState) { _scPendingIncomingCall = null; _scSetCallUI('hidden'); }
+      return;
+    }
+    if (_scTeamCallState || _scPendingIncomingCall) return; // already on/offered a call — no call-waiting in this first pass
+    const callSnap = await db.ref('calls/' + val.callId).once('value');
+    const call = callSnap.val();
+    if (!call || call.status !== 'ringing') return;
+    _scPendingIncomingCall = { callId: val.callId, callerEmail: val.callerEmail, callerName: val.callerName, offer: call.offer };
+    _scSetCallUI('incoming', val.callerName);
+  });
+}
+
+async function startTeamCall(peerEmail, peerName){
+  const db = _scFirebaseInit();
+  if (!db) { showToast('Configure Firebase in Settings to use in-app calling.', true, '⚠ Not Configured'); return; }
+  const session = getCurrentSessionUser();
+  if (!session?.email) { showToast('Sign in to call colleagues.', true, '⚠ Not Signed In'); return; }
+  if (_scTeamCallState || _scPendingIncomingCall) { showToast('Already on a call.', true, '⚠ Busy'); return; }
+
+  let localStream;
+  try { localStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch(e) { showToast('Microphone access is needed to make a call.', true, '⚠ Mic Blocked'); return; }
+
+  const pc = new RTCPeerConnection({ iceServers: SC_STUN_SERVERS });
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
+  const callRef = db.ref('calls').push();
+  const callId = callRef.key;
+  const calleeKey = _scFirebaseSafeKey(peerEmail);
+
+  pc.onicecandidate = e => { if (e.candidate) callRef.child('callerCandidates').push(e.candidate.toJSON()); };
+  pc.ontrack = e => { const audioEl = document.getElementById('team-call-remote-audio'); if (audioEl) audioEl.srcObject = e.streams[0]; };
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  await callRef.set({
+    callerEmail: session.email, callerName: session.name || '', calleeEmail: peerEmail, calleeName: peerName || '',
+    status: 'ringing', offer: { type: offer.type, sdp: offer.sdp }, createdAt: firebase.database.ServerValue.TIMESTAMP
+  });
+  await db.ref('incomingCalls/' + calleeKey).set({ callId, callerEmail: session.email, callerName: session.name || '' });
+
+  // RTDB's .on('value', ...) can genuinely fire the same logical update more
+  // than once in quick succession (confirmed live: caught a real
+  // "Called in wrong state: stable" exception from a second firing racing
+  // the first). pc.signalingState is the wrong thing to guard on here — it
+  // only flips to 'stable' AFTER setRemoteDescription's promise resolves,
+  // so two firings arriving before that resolves both see the pre-update
+  // state and both try to apply the answer. A synchronous flag, set the
+  // instant the first firing decides to act (not after any await), is what
+  // actually closes the race.
+  let answerApplied = false;
+  const statusHandler = snap => {
+    const call = snap.val();
+    if (!call) return;
+    if (call.status === 'accepted' && call.answer && !answerApplied) {
+      answerApplied = true;
+      pc.setRemoteDescription(new RTCSessionDescription(call.answer));
+      _scSetCallUI('active', peerName);
+    } else if (call.status === 'declined') {
+      _scSetCallUI('declined', peerName);
+      setTimeout(() => hangUpTeamCall(), 1500);
+    } else if (call.status === 'ended') {
+      hangUpTeamCall();
+    }
+  };
+  callRef.on('value', statusHandler);
+  const candHandler = callRef.child('calleeCandidates').on('child_added', snap => {
+    pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(()=>{});
+  });
+
+  _scTeamCallState = { callId, peerEmail, peerName, role: 'caller', pc, localStream, callRef, statusHandler, candRef: callRef.child('calleeCandidates'), candHandler, calleeKey };
+  _scSetCallUI('calling', peerName);
+}
+
+async function acceptTeamCall(){
+  const db = _scFirebaseInit();
+  const pending = _scPendingIncomingCall;
+  const session = getCurrentSessionUser();
+  if (!db || !pending || !session?.email) return;
+
+  let localStream;
+  try { localStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch(e) { showToast('Microphone access is needed to answer.', true, '⚠ Mic Blocked'); declineTeamCall(); return; }
+
+  const pc = new RTCPeerConnection({ iceServers: SC_STUN_SERVERS });
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  const callRef = db.ref('calls/' + pending.callId);
+
+  pc.onicecandidate = e => { if (e.candidate) callRef.child('calleeCandidates').push(e.candidate.toJSON()); };
+  pc.ontrack = e => { const audioEl = document.getElementById('team-call-remote-audio'); if (audioEl) audioEl.srcObject = e.streams[0]; };
+
+  await pc.setRemoteDescription(new RTCSessionDescription(pending.offer));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  await callRef.update({ status: 'accepted', answer: { type: answer.type, sdp: answer.sdp } });
+  await db.ref('incomingCalls/' + _scFirebaseSafeKey(session.email)).remove();
+
+  const statusHandler = snap => { if (snap.val()?.status === 'ended') hangUpTeamCall(); };
+  callRef.on('value', statusHandler);
+  const candHandler = callRef.child('callerCandidates').on('child_added', snap => {
+    pc.addIceCandidate(new RTCIceCandidate(snap.val())).catch(()=>{});
+  });
+
+  _scTeamCallState = { callId: pending.callId, peerEmail: pending.callerEmail, peerName: pending.callerName, role: 'callee', pc, localStream, callRef, statusHandler, candRef: callRef.child('callerCandidates'), candHandler };
+  _scPendingIncomingCall = null;
+  _scSetCallUI('active', pending.callerName);
+}
+
+function declineTeamCall(){
+  const db = _scFirebaseInit();
+  const pending = _scPendingIncomingCall;
+  const session = getCurrentSessionUser();
+  if (db && pending) db.ref('calls/' + pending.callId).update({ status: 'declined' }).catch(()=>{});
+  if (db && session?.email) db.ref('incomingCalls/' + _scFirebaseSafeKey(session.email)).remove().catch(()=>{});
+  _scPendingIncomingCall = null;
+  _scSetCallUI('hidden');
+}
+
+function hangUpTeamCall(){
+  const state = _scTeamCallState;
+  if (state) {
+    try { state.callRef?.update({ status: 'ended' }); } catch(e) {}
+    try { state.callRef?.off('value', state.statusHandler); } catch(e) {}
+    try { state.candRef?.off('child_added', state.candHandler); } catch(e) {}
+    try { state.pc?.close(); } catch(e) {}
+    try { state.localStream?.getTracks().forEach(t => t.stop()); } catch(e) {}
+    if (state.role === 'caller' && state.calleeKey) {
+      try { _scFirebaseInit()?.ref('incomingCalls/' + state.calleeKey).remove(); } catch(e) {}
+    }
+  }
+  const audioEl = document.getElementById('team-call-remote-audio');
+  if (audioEl) audioEl.srcObject = null;
+  _scTeamCallState = null;
+  _scSetCallUI('hidden');
+}
+
 function _scPopulateStaffDirectoryFacilities(){
   const sel = document.getElementById('staff-dir-facility');
   if(!sel) return;
@@ -26996,21 +27448,36 @@ function renderStaffDirectory(){
     return;
   }
 
+  const fbReady = !!_scFirebaseGetConfig();
   listEl.innerHTML = filtered.map(u => {
     const phone = _scNormalizePhone(u.phone || '');
     const initials = u.initials || (u.name || '?').split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const nameJS = _scEscJS(u.name || ''), emailJS = _scEscJS(u.email || '');
     const contact = phone
       ? `<a href="tel:${phone}" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--green);background:rgba(16,163,110,.1);color:var(--green);font-size:12.5px;font-weight:700;text-decoration:none;white-space:nowrap">📞 Call</a>
          <a href="sms:${phone}" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--blue);background:rgba(26,111,196,.1);color:var(--blue);font-size:12.5px;font-weight:700;text-decoration:none;white-space:nowrap">💬 SMS</a>`
       : `<span style="font-size:11px;color:var(--text3);font-style:italic">No phone on file</span>`;
+    // In-app buttons only appear once Team Communication is actually
+    // configured — no point offering a control that can only fail.
+    const presence = _scPresenceCache[_scFirebaseSafeKey(u.email || '')];
+    const inApp = fbReady ? `
+         <button onclick="openTeamChat('${emailJS}','${nameJS}')" title="Message in SmartCare AI" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--cyan);background:rgba(34,211,238,.1);color:var(--cyan);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">💬 Message</button>
+         <button onclick="startTeamCall('${emailJS}','${nameJS}')" title="${presence?.online ? 'Call in SmartCare AI' : 'Offline — will still try to ring them'}" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--purple,#7c3aed);background:rgba(124,58,237,.1);color:var(--purple,#7c3aed);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">📱 In-App Call</button>`
+      : '';
+    const dot = fbReady
+      ? `<span title="${presence?.online ? 'Online' : 'Offline'}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${presence?.online ? 'var(--green)' : '#9ca3af'};position:absolute;bottom:-1px;right:-1px;border:2px solid var(--bg4)"></span>`
+      : '';
     return `
     <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:10px;background:var(--bg4);flex-wrap:wrap">
-      <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue2),var(--blue));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0">${_scEsc(initials)}</div>
+      <div style="position:relative;flex-shrink:0">
+        <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue2),var(--blue));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px">${_scEsc(initials)}</div>
+        ${dot}
+      </div>
       <div style="flex:1;min-width:140px">
         <div style="font-size:14px;font-weight:700;color:var(--text)">${_scEsc(u.name || 'Unknown')}</div>
         <div style="font-size:12px;color:var(--text3)">${_scEsc(u.role || '')}${u.facility ? ' · ' + _scEsc(u.facility) : ''}</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">${contact}</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${contact}${inApp}</div>
     </div>`;
   }).join('');
 }
@@ -27509,6 +27976,13 @@ function enterSystem(){
   try { if (typeof updateScopeBanner === 'function') updateScopeBanner(); } catch (e) {}
   try { if (typeof updateAuthUI === 'function') updateAuthUI(); } catch (e) {}
   try { if (typeof startInactivityTracking === 'function') startInactivityTracking(); } catch (e) {}
+  // Team Communication (Firebase) — presence + incoming-call listening only
+  // start when a real project's config is already saved; silently no-ops
+  // otherwise via _scFirebaseInit()'s own guard, so this is safe to call
+  // unconditionally on every entry path.
+  try {
+    if (_scFirebaseGetConfig()) { _scStartPresence(); _scListenForIncomingCalls(); }
+  } catch (e) {}
   const lp = document.getElementById('landing-page');
   const app = document.getElementById('main-app');
   stopLandingLiveUpdates();
