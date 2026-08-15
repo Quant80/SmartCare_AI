@@ -27074,6 +27074,7 @@ let _scTeamCallState = null;     // active call: {callId, peerEmail, peerName, r
 let _scPendingIncomingCall = null; // {callId, callerEmail, callerName, offer} while the incoming-call UI is showing, before Accept/Decline
 let _scTeamChatState = null;     // open chat: {peerEmail, peerName, convId, ref, handler}
 let _scIncomingCallsRef = null;  // the currently-listened-to incomingCalls/<key> ref, so a same-tab account switch can detach the old one
+let _scMessageNotifyRef = null;  // same idea, for messageNotify/<key>
 const SC_STUN_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
 
 // The smartcareAI Firebase project's config — a real project's Realtime
@@ -27174,6 +27175,7 @@ function saveFirebaseConfig(){
     showToast('Firebase connected — starting presence.', false, '✅ Team Communication');
     _scStartPresence();
     _scListenForIncomingCalls();
+    _scListenForMessageNotifications();
   } else {
     showToast('Saved, but could not connect — check the values and that Realtime Database is enabled on the project.', true, '⚠ Connection Failed');
   }
@@ -27283,6 +27285,14 @@ function sendTeamMessage(){
   db.ref('chats/' + _scTeamChatState.convId + '/messages').push({
     from: session.email, fromName: session.name || '', text, ts: firebase.database.ServerValue.TIMESTAMP
   });
+  // Messages only ever live-updated a conversation the RECIPIENT already
+  // had open — nothing told them a message arrived if they didn't. This
+  // ping (mirrors how incomingCalls/<key> works for calls) lets a global
+  // listener started at sign-in time (_scListenForMessageNotifications)
+  // notify them regardless of what page they're on.
+  db.ref('messageNotify/' + _scFirebaseSafeKey(_scTeamChatState.peerEmail)).set({
+    convId: _scTeamChatState.convId, fromEmail: session.email, fromName: session.name || '', text, ts: firebase.database.ServerValue.TIMESTAMP
+  }).catch(()=>{});
   input.value = '';
 }
 
@@ -27297,6 +27307,60 @@ function _scCallAvatarInitials(name){
   return (name || '?').split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
+// Ringtone — generated with the Web Audio API (no audio file/asset needed,
+// consistent with the app never bundling binary assets). A shared
+// AudioContext is created once and "unlocked" on the page's very first
+// tap/click, because browsers block audio playback until a real user
+// gesture has happened — and an incoming call's ring needs to play from a
+// Firebase listener callback, which is NOT itself a user gesture. Without
+// this pre-unlock, the ring would silently fail to play on a genuinely
+// unattended incoming call (exactly the case that matters most).
+let _scAudioCtx = null;
+function _scGetAudioCtx(){
+  if (_scAudioCtx) return _scAudioCtx;
+  if (!window.AudioContext && !window.webkitAudioContext) return null;
+  try { _scAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return null; }
+  return _scAudioCtx;
+}
+['click', 'touchend'].forEach(evt => document.addEventListener(evt, function _scUnlockAudioOnce(){
+  const ctx = _scGetAudioCtx();
+  if (ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
+}, { passive: true }));
+
+function _scPlayRingBeep(freq, duration){
+  const ctx = _scGetAudioCtx();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') ctx.resume().catch(()=>{});
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  // Fade in/out rather than a hard on/off click, so it reads as a tone,
+  // not a pop.
+  gain.gain.setValueAtTime(0, ctx.currentTime);
+  gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.04);
+  gain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + duration + 0.05);
+}
+
+let _scRingtoneTimer = null;
+function _scStartRingtone(kind){
+  _scStopRingtone();
+  // Two short pips for an incoming call (higher, more attention-grabbing —
+  // this is the case someone actually needs to notice and react to) vs a
+  // single softer tone for the caller's own outgoing ring-back.
+  const pattern = kind === 'incoming'
+    ? () => { _scPlayRingBeep(880, 0.28); setTimeout(() => _scPlayRingBeep(880, 0.28), 380); }
+    : () => { _scPlayRingBeep(480, 0.4); };
+  pattern();
+  _scRingtoneTimer = setInterval(pattern, 2000);
+}
+function _scStopRingtone(){
+  if (_scRingtoneTimer) { clearInterval(_scRingtoneTimer); _scRingtoneTimer = null; }
+}
+
 function _scSetCallUI(state, name){
   const modal = document.getElementById('team-call-modal');
   const nameEl = document.getElementById('team-call-name');
@@ -27306,15 +27370,15 @@ function _scSetCallUI(state, name){
   const incoming = document.getElementById('team-call-actions-incoming');
   const active = document.getElementById('team-call-actions-active');
   if (!modal) return;
-  if (state === 'hidden') { modal.style.display = 'none'; return; }
+  if (state === 'hidden') { modal.style.display = 'none'; _scStopRingtone(); return; }
   modal.style.display = 'flex';
   if (nameEl) nameEl.textContent = name || 'Colleague';
   if (avatarEl) avatarEl.textContent = _scCallAvatarInitials(name);
   [outgoing, incoming, active].forEach(el => { if (el) el.style.display = 'none'; });
-  if (state === 'calling') { statusEl.textContent = 'Calling…'; if (outgoing) outgoing.style.display = 'flex'; }
-  else if (state === 'incoming') { statusEl.textContent = 'Incoming call…'; if (incoming) incoming.style.display = 'flex'; }
-  else if (state === 'active') { statusEl.textContent = 'In call'; if (active) active.style.display = 'flex'; }
-  else if (state === 'declined') { statusEl.textContent = 'Call declined'; if (outgoing) outgoing.style.display = 'flex'; }
+  if (state === 'calling') { statusEl.textContent = 'Calling…'; if (outgoing) outgoing.style.display = 'flex'; _scStartRingtone('outgoing'); }
+  else if (state === 'incoming') { statusEl.textContent = 'Incoming call…'; if (incoming) incoming.style.display = 'flex'; _scStartRingtone('incoming'); }
+  else if (state === 'active') { statusEl.textContent = 'In call'; if (active) active.style.display = 'flex'; _scStopRingtone(); }
+  else if (state === 'declined') { statusEl.textContent = 'Call declined'; if (outgoing) outgoing.style.display = 'flex'; _scStopRingtone(); }
 }
 
 async function _scListenForIncomingCalls(){
@@ -27342,6 +27406,32 @@ async function _scListenForIncomingCalls(){
     if (!call || call.status !== 'ringing') return;
     _scPendingIncomingCall = { callId: val.callId, callerEmail: val.callerEmail, callerName: val.callerName, offer: call.offer };
     _scSetCallUI('incoming', val.callerName);
+  });
+}
+
+// Global "you have a new message" notifier — mirrors
+// _scListenForIncomingCalls()'s design exactly (a per-recipient ping path,
+// listened to from sign-in time regardless of what page is open), because
+// without it a message only ever showed up live if the recipient already
+// had that exact chat open. skippedFirst guards against toasting on the
+// listener's own initial snapshot (RTDB fires .on('value') once
+// immediately with whatever's already there, which could be a stale ping
+// from a previous session, not a genuinely new message).
+async function _scListenForMessageNotifications(){
+  const db = _scFirebaseInit();
+  const session = getCurrentSessionUser();
+  if (!db || !session?.email) return;
+  await _scFirebaseAuthReady();
+  const key = _scFirebaseSafeKey(session.email);
+  if (_scMessageNotifyRef) { try { _scMessageNotifyRef.off('value'); } catch(e) {} }
+  _scMessageNotifyRef = db.ref('messageNotify/' + key);
+  let skippedFirst = false;
+  _scMessageNotifyRef.on('value', snap => {
+    if (!skippedFirst) { skippedFirst = true; return; }
+    const val = snap.val();
+    if (!val || (val.fromEmail || '').toLowerCase() === session.email.toLowerCase()) return;
+    const preview = String(val.text || '').slice(0, 80);
+    showToast(`${val.fromName || 'A colleague'}: ${preview}`, false, '💬 New Message', 8000);
   });
 }
 
@@ -28034,7 +28124,7 @@ function enterSystem(){
   // otherwise via _scFirebaseInit()'s own guard, so this is safe to call
   // unconditionally on every entry path.
   try {
-    if (_scFirebaseGetConfig()) { _scStartPresence(); _scListenForIncomingCalls(); }
+    if (_scFirebaseGetConfig()) { _scStartPresence(); _scListenForIncomingCalls(); _scListenForMessageNotifications(); }
   } catch (e) {}
   const lp = document.getElementById('landing-page');
   const app = document.getElementById('main-app');

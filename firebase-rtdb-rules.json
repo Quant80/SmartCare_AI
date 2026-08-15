@@ -79,6 +79,14 @@
         ".write": "auth != null",
         ".validate": "!newData.exists() || newData.hasChildren(['callId','callerEmail'])"
       }
+    },
+
+    "messageNotify": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        ".validate": "!newData.exists() || newData.hasChildren(['convId','fromEmail','text','ts'])"
+      }
     }
   }
 }
