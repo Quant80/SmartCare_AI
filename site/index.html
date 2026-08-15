@@ -22,6 +22,7 @@
      _scFirebaseInit(). -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 :root{
@@ -27099,6 +27100,34 @@ function _scFirebaseInit(){
   }
 }
 
+// Anonymous Firebase Auth — the one gate this app has against the database
+// config being publicly visible in the shipped page source (Firebase web
+// configs always are; that's normal, not a leak). Without this, "test
+// mode" RTDB rules mean anyone who opens dev tools on the live site can
+// read/write everything. With this + matching ".read"/".write":
+// "auth != null" rules published in the console, a request needs a real
+// (if anonymous) Firebase Auth session to touch the database at all —
+// raises the bar from "zero effort" to "have to deliberately call
+// signInAnonymously() yourself", which is the standard baseline Firebase
+// itself recommends for an app with no full user-identity system of its
+// own. It is NOT the same as knowing who's on the other end — this app's
+// own account system stays the only place real identity is checked.
+// Cached as a promise so every caller awaiting it shares one sign-in
+// attempt rather than racing to start several.
+let _scFirebaseAuthReadyPromise = null;
+function _scFirebaseAuthReady(){
+  if (_scFirebaseAuthReadyPromise) return _scFirebaseAuthReadyPromise;
+  const db = _scFirebaseInit();
+  if (!db || typeof firebase === 'undefined' || !firebase.auth) {
+    _scFirebaseAuthReadyPromise = Promise.resolve(false);
+    return _scFirebaseAuthReadyPromise;
+  }
+  _scFirebaseAuthReadyPromise = firebase.auth().signInAnonymously()
+    .then(() => true)
+    .catch(e => { console.warn('Firebase anonymous sign-in failed — Anonymous sign-in may need enabling in Firebase Console > Authentication > Sign-in method.', e); return false; });
+  return _scFirebaseAuthReadyPromise;
+}
+
 function _scFirebaseUpdateStatusBadge(){
   const badge = document.getElementById('fb-status-badge');
   if (!badge) return;
@@ -27157,10 +27186,11 @@ function testFirebaseConnection(){
 let _scPresenceActiveKey = null; // which account's presence is currently live — lets a same-tab account switch mark the outgoing one offline
 let _scPresenceListListenerActive = false; // enterSystem() can run more than once per session (sign-out/in, quick-launch, etc.) — this stops a second db.ref('presence').on(...) from stacking on top of the first
 
-function _scStartPresence(){
+async function _scStartPresence(){
   const db = _scFirebaseInit();
   const session = getCurrentSessionUser();
   if (!db || !session || !session.email) return;
+  await _scFirebaseAuthReady();
   const key = _scFirebaseSafeKey(session.email);
 
   // Same-tab account switch (sign out, then sign in as someone else) —
@@ -27192,7 +27222,7 @@ function _scChatConvId(emailA, emailB){
   return [_scFirebaseSafeKey(emailA), _scFirebaseSafeKey(emailB)].sort().join('__');
 }
 
-function openTeamChat(peerEmail, peerName){
+async function openTeamChat(peerEmail, peerName){
   const db = _scFirebaseInit();
   if (!db) { showToast('Configure Firebase in Settings to use in-app messaging.', true, '⚠ Not Configured'); return; }
   const session = getCurrentSessionUser();
@@ -27208,6 +27238,7 @@ function openTeamChat(peerEmail, peerName){
   box.innerHTML = '';
   document.getElementById('team-chat-modal').classList.add('active');
 
+  await _scFirebaseAuthReady();
   const ref = db.ref('chats/' + convId + '/messages').limitToLast(200);
   const handler = snap => {
     const msgs = [];
@@ -27266,10 +27297,11 @@ function _scSetCallUI(state, name){
   else if (state === 'declined') { statusEl.textContent = 'Call declined'; if (outgoing) outgoing.style.display = 'flex'; }
 }
 
-function _scListenForIncomingCalls(){
+async function _scListenForIncomingCalls(){
   const db = _scFirebaseInit();
   const session = getCurrentSessionUser();
   if (!db || !session?.email) return;
+  await _scFirebaseAuthReady();
   const key = _scFirebaseSafeKey(session.email);
   // Same idempotency concern as _scStartPresence() — enterSystem() can run
   // more than once per session. Detach any previous listener (possibly on
@@ -27299,6 +27331,7 @@ async function startTeamCall(peerEmail, peerName){
   const session = getCurrentSessionUser();
   if (!session?.email) { showToast('Sign in to call colleagues.', true, '⚠ Not Signed In'); return; }
   if (_scTeamCallState || _scPendingIncomingCall) { showToast('Already on a call.', true, '⚠ Busy'); return; }
+  await _scFirebaseAuthReady();
 
   let localStream;
   try { localStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }

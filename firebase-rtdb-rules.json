@@ -1,0 +1,84 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "presence": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['online','name','role','facility','email','lastSeen'])",
+        "online": { ".validate": "newData.isBoolean()" },
+        "name": { ".validate": "newData.isString() && newData.val().length <= 100" },
+        "role": { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "facility": { ".validate": "newData.isString() && newData.val().length <= 120" },
+        "email": { ".validate": "newData.isString() && newData.val().length <= 254" },
+        "lastSeen": { ".validate": true },
+        "$other": { ".validate": false }
+      }
+    },
+
+    "chats": {
+      "$convId": {
+        ".read": "auth != null",
+        "messages": {
+          ".read": "auth != null",
+          "$msgId": {
+            ".write": "auth != null && !data.exists()",
+            ".validate": "newData.hasChildren(['from','text','ts'])",
+            "from": { ".validate": "newData.isString() && newData.val().length <= 254" },
+            "fromName": { ".validate": "newData.isString() && newData.val().length <= 100" },
+            "text": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000" },
+            "ts": { ".validate": true },
+            "$other": { ".validate": false }
+          }
+        }
+      }
+    },
+
+    "calls": {
+      "$callId": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "status": { ".validate": "newData.isString() && (newData.val() === 'ringing' || newData.val() === 'accepted' || newData.val() === 'declined' || newData.val() === 'ended')" },
+        "callerEmail": { ".validate": "newData.isString() && newData.val().length <= 254" },
+        "calleeEmail": { ".validate": "newData.isString() && newData.val().length <= 254" },
+        "callerName": { ".validate": "newData.isString() && newData.val().length <= 100" },
+        "calleeName": { ".validate": "newData.isString() && newData.val().length <= 100" },
+        "createdAt": { ".validate": true },
+        "offer": {
+          ".validate": "newData.hasChildren(['type','sdp'])",
+          "type": { ".validate": "newData.isString()" },
+          "sdp": { ".validate": "newData.isString() && newData.val().length <= 20000" }
+        },
+        "answer": {
+          ".validate": "newData.hasChildren(['type','sdp'])",
+          "type": { ".validate": "newData.isString()" },
+          "sdp": { ".validate": "newData.isString() && newData.val().length <= 20000" }
+        },
+        "callerCandidates": {
+          ".read": "auth != null",
+          "$candId": {
+            ".write": "auth != null && !data.exists()",
+            ".validate": "newData.hasChild('candidate')"
+          }
+        },
+        "calleeCandidates": {
+          ".read": "auth != null",
+          "$candId": {
+            ".write": "auth != null && !data.exists()",
+            ".validate": "newData.hasChild('candidate')"
+          }
+        }
+      }
+    },
+
+    "incomingCalls": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        ".validate": "!newData.exists() || newData.hasChildren(['callId','callerEmail'])"
+      }
+    }
+  }
+}
