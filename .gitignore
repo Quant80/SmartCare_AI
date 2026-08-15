@@ -1,4 +1,5 @@
 sentwa-proxy/.env
+.env
 sentwa-proxy/smartcare_users.db
 SmartCare_Logs_*.json
 node_modules/

@@ -23641,13 +23641,14 @@ function initSettings(){
     if(badge && sw.instance && sw.token){ badge.textContent='✓ Configured'; badge.style.color='var(--green)'; }
   }catch(e){}
 
-  // Restore Firebase (Team Communication) config
+  // Restore Firebase (Team Communication) config — falls back to
+  // SC_DEFAULT_FIREBASE_CONFIG to pre-fill the form when nothing's been
+  // explicitly saved yet, but never overrides a config someone actually
+  // saved (including a deliberately different one).
   try {
-    const fbCfg = _scFirebaseGetConfig();
-    if (fbCfg) {
-      const map = { 'fb-apikey':'apiKey', 'fb-authdomain':'authDomain', 'fb-dburl':'databaseURL', 'fb-projectid':'projectId', 'fb-appid':'appId' };
-      Object.entries(map).forEach(([id, key]) => { const el = document.getElementById(id); if (el) el.value = fbCfg[key] || ''; });
-    }
+    const fbCfg = _scFirebaseGetConfig() || SC_DEFAULT_FIREBASE_CONFIG;
+    const map = { 'fb-apikey':'apiKey', 'fb-authdomain':'authDomain', 'fb-dburl':'databaseURL', 'fb-projectid':'projectId', 'fb-appid':'appId' };
+    Object.entries(map).forEach(([id, key]) => { const el = document.getElementById(id); if (el) el.value = fbCfg[key] || ''; });
     _scFirebaseUpdateStatusBadge();
   } catch(e) {}
 }
@@ -27074,6 +27075,25 @@ let _scPendingIncomingCall = null; // {callId, callerEmail, callerName, offer} w
 let _scTeamChatState = null;     // open chat: {peerEmail, peerName, convId, ref, handler}
 let _scIncomingCallsRef = null;  // the currently-listened-to incomingCalls/<key> ref, so a same-tab account switch can detach the old one
 const SC_STUN_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
+
+// The smartcareAI Firebase project's config — a real project's Realtime
+// Database URL/keys, dedicated to this app and kept deliberately separate
+// from the unrelated DAQS Learn Firebase project. Firebase web configs are
+// always public (visible in any page's source/dev tools; that's normal
+// for Firebase, not a leak) — what actually protects the data is the
+// published security rules + Anonymous Auth requirement, not hiding this
+// object. Used only to PRE-FILL the Settings form (see initSettings()) so
+// staff don't have to type/paste it — it deliberately does NOT make
+// _scFirebaseGetConfig() return truthy on its own; Team Communication
+// only actually activates once someone clicks "Save & Connect", same as
+// before.
+const SC_DEFAULT_FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyD_67tQEUX5_BJ3JX10AVFvs3Jsu7RDwzY',
+  authDomain: 'smartcareai-f5fc0.firebaseapp.com',
+  databaseURL: 'https://smartcareai-f5fc0-default-rtdb.firebaseio.com',
+  projectId: 'smartcareai-f5fc0',
+  appId: '1:46194280139:web:8e552ffe7f7b74f9e6bd4e'
+};
 
 function _scFirebaseGetConfig(){
   try { return JSON.parse(localStorage.getItem('sc_fb_config_v1') || 'null'); } catch(e) { return null; }
