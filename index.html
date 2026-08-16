@@ -1564,6 +1564,30 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
   .g2{grid-template-columns:1fr}
   #ward-cards-grid{grid-template-columns:1fr}
 
+  /* ═══ STAGE 2 ═══ .fgrid (31 usages app-wide — Discharge, Register,
+     Wards, Admin, Ward Transfer, Edit Patient, etc.) and .g32/.g23/.g13
+     (asymmetric 2fr:1fr layout grids, 21 usages, 13 of them inside Exec
+     Portal alone) were the two biggest shared-class gaps Stage 1 didn't
+     reach — this one addition fixes most of Exec Portal and most modal
+     forms app-wide at once. */
+  .fgrid{grid-template-columns:1fr}
+  .g32,.g23,.g13{grid-template-columns:1fr}
+
+  /* Modal-specific inline grids with no shared class to hook into.
+     Inline styles always beat external CSS regardless of selector
+     specificity, so this needs !important — same justification already
+     used for .tc-fullscreen's overrides. Scoped narrowly: .modal-flex
+     has exactly two modals (Readmit, Refer) in the whole file; the
+     other two selectors are scoped to their own modal's id. Fragile in
+     one specific way — if the underlying inline style text is ever
+     hand-edited, these selectors silently stop matching, since they
+     match on the exact current inline style string. */
+  .modal-flex [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
+  #edit-patient-overlay [style*="grid-template-columns:1fr 1fr"],
+  #edit-patient-overlay [style*="grid-template-columns:repeat(2,1fr)"]{grid-template-columns:1fr !important}
+  #patient-modal [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
+  #patient-modal [style*="grid-template-columns:repeat(5,1fr)"]{grid-template-columns:repeat(2,1fr) !important}
+
   /* Touch targets — mobile only; desktop's tighter, denser sizing is untouched. */
   .btn{padding:11px 18px;min-height:44px}
   .btn-sm{padding:8px 14px;min-height:38px;font-size:12px}
@@ -1584,6 +1608,9 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
 }
 @media (max-width:480px){
   .mGrid,.mGrid4{grid-template-columns:1fr}
+  /* Patient Detail modal's 5-column vitals row — 2 columns at 768px is
+     still a lot for the smallest phones, drop to 1 here. */
+  #patient-modal [style*="grid-template-columns:repeat(5,1fr)"]{grid-template-columns:1fr !important}
   /* Toast: fixed max-width:310px can poke past the smallest real phone
      screens (320px) — go edge-to-edge instead below this width. Also
      dropped below the topbar (54px tall) instead of the default top:14px
@@ -2929,10 +2956,12 @@ Waiting for data…</pre>
             <span style="font-size:10px;color:var(--text3)">Click row to track individual · NOK alert per patient</span>
           </div>
         </div>
+        <div style="overflow-x:auto">
         <table class="tbl">
           <thead><tr><th>Patient</th><th>HR</th><th>BP</th><th>O₂%</th><th>Temp</th><th>RR</th><th>Status</th><th>NOK Alert</th></tr></thead>
           <tbody id="icu-vitals-body"></tbody>
         </table>
+        </div>
       </div>
       <div class="card">
         <div class="ch">
@@ -4294,10 +4323,12 @@ Waiting for data…</pre>
       <div>
         <div class="card mb">
           <div class="ch"><div class="ct">Patient Risk Predictions</div><div class="pill blue">XGBoost Model</div></div>
+          <div style="overflow-x:auto">
           <table class="tbl">
             <thead><tr><th>Patient</th><th>Ward</th><th>Score</th><th>Level</th><th>Primary Flag</th><th>Pred. LOS</th></tr></thead>
             <tbody id="ai-pred-table"></tbody>
           </table>
+          </div>
         </div>
         <div class="card">
           <div class="ch"><div class="ct">Model Performance Radar</div></div>
@@ -4684,10 +4715,12 @@ Waiting for data…</pre>
         <div class="ct">Outpatient Follow-Up Tracker</div>
         <div class="pill cyan">Post-Discharge Monitoring</div>
       </div>
+      <div style="overflow-x:auto">
       <table class="tbl">
         <thead><tr><th>Name</th><th>Original Diagnosis</th><th>Discharge Date</th><th>Follow-Up Type</th><th>Status</th><th>NOK Alert</th></tr></thead>
         <tbody id="followup-table-body"></tbody>
       </table>
+      </div>
     </div>
   </div>
 
