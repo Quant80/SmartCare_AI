@@ -48,6 +48,7 @@
   --card-glow:rgba(26,111,196,.04);
   --sidebar-border:rgba(30,80,160,.15);
   --page-gutter:20px;
+  --call-widget-bg:rgba(255,255,255,.62);
 }
 
 /* ── Soft dark mode inspired by landing page (not too dark) ── */
@@ -76,6 +77,7 @@
   --disch-bg:rgba(79,205,233,.15);
   --card-glow:rgba(42,78,132,.35);
   --sidebar-border:rgba(124,160,219,.28);
+  --call-widget-bg:rgba(36,56,93,.6);
 }
 
 html{color-scheme:light}
@@ -1509,6 +1511,87 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
 .inv-lineitem-auto{background:linear-gradient(90deg,rgba(79,168,232,.08),transparent);border-left:3px solid var(--blue)}
 .inv-live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:6px;flex-shrink:0;box-shadow:0 0 0 0 rgba(16,163,110,.5);animation:invLivePulse 1.8s infinite}
 @keyframes invLivePulse{0%{box-shadow:0 0 0 0 rgba(16,163,110,.45)}70%{box-shadow:0 0 0 6px rgba(16,163,110,0)}100%{box-shadow:0 0 0 0 rgba(16,163,110,0)}}
+
+/* SmartCom call widget — optional full-screen "focus mode", toggled via
+   _scToggleTeamCallFullscreen(). The default floating/draggable widget
+   stays the norm (that's the whole point of it — keep working during a
+   call); this is an opt-in upgrade for when someone wants to give the
+   call their full attention instead, same idea as Meet/Zoom's expand
+   button. !important is deliberate here: it's the one clean way to
+   override this widget's own extensive inline sizing without having to
+   duplicate every single inline style in JS. */
+#team-call-widget.tc-fullscreen{top:0 !important;left:0 !important;right:0 !important;bottom:0 !important;width:100% !important;height:100% !important}
+#team-call-widget.tc-fullscreen #team-call-expanded{border-radius:0 !important;height:100%;display:flex;flex-direction:column;justify-content:center;box-shadow:none}
+#team-call-widget.tc-fullscreen #team-call-drag-handle{cursor:default;flex-shrink:0}
+#team-call-widget.tc-fullscreen > #team-call-expanded > div:last-child{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+#team-call-widget.tc-fullscreen #team-call-remote-video{max-width:min(920px,90vw) !important;width:100%;max-height:70vh !important;margin-bottom:24px !important}
+#team-call-widget.tc-fullscreen #team-call-local-video{width:180px !important;height:135px !important;top:28px !important;right:28px !important}
+#team-call-widget.tc-fullscreen #team-call-avatar{width:150px !important;height:150px !important;font-size:52px !important;margin-bottom:20px !important}
+#team-call-widget.tc-fullscreen #team-call-name{font-size:26px !important;margin-bottom:6px !important}
+#team-call-widget.tc-fullscreen #team-call-status{font-size:15px !important;margin-bottom:28px !important}
+#team-call-widget.tc-fullscreen #team-call-actions-outgoing button,
+#team-call-widget.tc-fullscreen #team-call-actions-incoming button{width:64px !important;height:64px !important;font-size:24px !important}
+#team-call-widget.tc-fullscreen #team-call-actions-active > div:first-child button{width:52px !important;height:52px !important;font-size:19px !important}
+#team-call-widget.tc-fullscreen #team-call-volume-panel{max-width:280px;margin:16px auto 0}
+
+/* ═══ MOBILE RESPONSIVENESS — STAGE 1 (app shell, tables, grids, touch
+   targets) ═══ Everything here is additive and gated behind a mobile
+   breakpoint (max-width:768px, matching this codebase's one existing
+   breakpoint convention used for the landing page) — nothing here
+   changes desktop-width behavior. Before this, the app had ZERO mobile
+   handling for the sidebar/topbar/page shell: the 224px-wide sidebar
+   (.sidebar) was permanently visible as a flex sibling of the main
+   content, eating over half of any phone screen. #mobile-menu-btn stays
+   hidden outside the media query so it never appears on desktop. */
+#mobile-menu-btn{display:none;width:36px;height:36px;align-items:center;justify-content:center;border:none;background:none;color:var(--text);cursor:pointer;font-size:20px;border-radius:8px;flex-shrink:0}
+#sb-mobile-backdrop{display:none}
+@media (max-width:768px){
+  .sidebar{
+    position:fixed;top:0;left:0;height:100vh;z-index:200;
+    transform:translateX(-100%);transition:transform .25s ease;
+    box-shadow:4px 0 24px rgba(0,0,0,.35);
+  }
+  .sidebar.mobile-open{transform:translateX(0)}
+  #sb-mobile-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199}
+  #sb-mobile-backdrop.show{display:block}
+  #mobile-menu-btn{display:flex}
+
+  /* Fixed KPI/stat-card grid utility classes used across many pages —
+     collapse to fewer columns rather than crushing 3-5 columns into a
+     360-400px screen. */
+  .mGrid,.mGrid4{grid-template-columns:repeat(2,1fr)}
+  .mGrid3,.g3{grid-template-columns:1fr}
+  .g2{grid-template-columns:1fr}
+  #ward-cards-grid{grid-template-columns:1fr}
+
+  /* Touch targets — mobile only; desktop's tighter, denser sizing is untouched. */
+  .btn{padding:11px 18px;min-height:44px}
+  .btn-sm{padding:8px 14px;min-height:38px;font-size:12px}
+  .fi,.fsel{padding:12px 11px;min-height:44px}
+
+  /* Pre-existing bug this surfaced: .tb-right (Home/Health/AI Hub
+     shortcut chips + theme toggle + clock + bell) is ~583px wide and
+     was already overflowing a 390px topbar — silently crushing .tb-left
+     to zero width. Invisible before since .tb-left only held static
+     text; now it holds #mobile-menu-btn, so it's a real blocker
+     (confirmed live: the Home chip was rendering directly on top of the
+     hamburger, eating its clicks). Home/Health/AI Hub are all already
+     reachable via the sidebar drawer, so hiding these specific
+     shortcuts on mobile loses no capability — just the redundant
+     topbar copy of them — keeping the more compact/non-duplicated
+     theme toggle and alert bell visible.  */
+  .tb-right .topnav-chip,.tb-right .tb-clock{display:none}
+}
+@media (max-width:480px){
+  .mGrid,.mGrid4{grid-template-columns:1fr}
+  /* Toast: fixed max-width:310px can poke past the smallest real phone
+     screens (320px) — go edge-to-edge instead below this width. Also
+     dropped below the topbar (54px tall) instead of the default top:14px
+     — an edge-to-edge toast at top:14px would otherwise sit directly
+     over #mobile-menu-btn (the hamburger, inside the topbar) and block
+     taps on it, confirmed live via a blocked-click test before shipping. */
+  .toast{top:64px;left:14px;right:14px;max-width:none}
+}
 </style>
 </head>
 <body>
@@ -2385,6 +2468,11 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
 
 <div class="app" style="display:none" id="main-app">
 
+<!-- Mobile-only sidebar backdrop — tap to close the drawer. Stays
+     display:none outside the mobile breakpoint (see the .tc-fullscreen-
+     adjacent mobile CSS block), so it's inert on desktop. -->
+<div id="sb-mobile-backdrop" onclick="closeMobileSidebar()"></div>
+
 <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
 <div class="sidebar">
   <div class="sb-logo">
@@ -2552,6 +2640,7 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
 <div class="main">
   <div class="topbar">
     <div class="tb-left">
+      <button id="mobile-menu-btn" onclick="toggleMobileSidebar()" title="Menu">☰</button>
       <div class="tb-title" id="page-title">Dashboard Overview</div>
       <div class="pill green">System Online</div>
     </div>
@@ -2925,10 +3014,12 @@ Waiting for data…</pre>
         </select>
       </div>
       <div class="card">
+        <div style="overflow-x:auto">
         <table class="tbl" id="ptable">
           <thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Sex</th><th>Ward</th><th>Bed</th><th>Diagnosis</th><th>Doctor</th><th>Days</th><th>LOS</th><th>AI Risk</th><th>Level</th><th>Discharge</th><th>Actions</th></tr></thead>
           <tbody id="ptable-body"></tbody>
         </table>
+        </div>
       </div>
     </div>
 
@@ -3996,10 +4087,12 @@ Waiting for data…</pre>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;margin-left:auto"><input type="checkbox" id="rx-mypatients-toggle" onchange="filterPrescriptionsPatients()"> My Patients only</label>
     </div>
     <div class="card">
+      <div style="overflow-x:auto">
       <table class="tbl" id="rxtable">
         <thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Sex</th><th>Ward</th><th>Bed</th><th>Diagnosis</th><th>Doctor</th><th>Days</th><th>LOS</th><th>AI Risk</th><th>Level</th><th>Discharge</th><th>Actions</th></tr></thead>
         <tbody id="rxtable-body"></tbody>
       </table>
+      </div>
     </div>
   </div>
 
@@ -5774,6 +5867,39 @@ Waiting for data…</pre>
         </div>
 
         <div class="card mb">
+          <div class="ch"><div class="ct">📡 Call Reliability (TURN)</div>
+            <span id="turn-status-badge" style="font-size:9.5px;color:var(--text3);font-weight:400">Not configured</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Helps SmartCom calls connect even when both people are on strict/locked-down networks (common on hospital WiFi) where the plain STUN server alone can fail. Get these from your Metered.ca dashboard → TURN Server page → TURN Credentials → generate a credential, then use the Server host shown in its "Show ICE Servers Array" popup (e.g. "standard.relay.metered.ca") along with the Username and Password shown in the table.</div>
+          <div class="fgrid">
+            <div class="fg"><label class="fl">Server</label><input class="fi" type="text" id="turn-host" placeholder="standard.relay.metered.ca" autocomplete="off"></div>
+            <div class="fg"><label class="fl">Username</label><input class="fi" type="text" id="turn-username" placeholder="TURN username…" autocomplete="off"></div>
+            <div class="fg"><label class="fl">Credential</label><input class="fi" type="password" id="turn-credential" placeholder="TURN password…" autocomplete="off"></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn-p btn-sm" onclick="saveTurnConfig()">💾 Save</button>
+            <button type="button" class="btn btn-g btn-sm" onclick="testTurnConnection()">🔌 Test Connection</button>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:6px">Calls still work without this — it's a fallback for the specific case where a direct connection can't be made, not a requirement for calling to function at all.</div>
+        </div>
+
+        <div class="card mb">
+          <div class="ch"><div class="ct">🎥 Camera Device</div>
+            <span id="camera-status-badge" style="font-size:9.5px;color:var(--text3);font-weight:400">Using system default</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:10px">If video calls connect with no picture, your PC may have more than one camera registered — including phone-as-webcam features (e.g. Windows Phone Link) — and the wrong one may be selected by default. Pick from the list below, preview it, and lock in the one that actually shows your camera.</div>
+          <div class="fgrid">
+            <div class="fg"><label class="fl">Camera</label><select class="fi" id="camera-device-select" onchange="_scPreviewCameraDevice(this.value)"><option value="">Click Refresh List →</option></select></div>
+          </div>
+          <video id="camera-preview-video" autoplay playsinline muted style="display:none;width:220px;max-width:100%;height:165px;border-radius:8px;background:#000;margin-top:10px;object-fit:cover"></video>
+          <div id="camera-preview-hint" style="font-size:10px;color:var(--text3);margin-top:6px"></div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn-g btn-sm" onclick="_scRefreshCameraList(true)">🔄 Refresh List</button>
+            <button type="button" class="btn btn-p btn-sm" onclick="_scSaveCameraChoice()">💾 Use This Camera</button>
+          </div>
+        </div>
+
+        <div class="card mb">
           <div class="ch"><div class="ct">🏥 Hospital &amp; Invoice Details</div><div style="font-size:10px;color:var(--text3)">Used on the letterhead of every generated invoice</div></div>
           <div class="fgrid">
             <div class="fg"><label class="fl">Hospital Address</label><input class="fi" id="hosp-address" placeholder="e.g. 123 Wellness Avenue, Harare"></div>
@@ -6377,26 +6503,64 @@ Waiting for data…</pre>
   </div>
 </div>
 
-<!-- ═══ TEAM CALL MODAL — in-app voice call via WebRTC, signaled through
-     Firebase RTDB (see the "Team Communication" comment block in the
-     script for the full design/limitations). ═══ -->
-<div id="team-call-modal" style="display:none;position:fixed;inset:0;background:rgba(10,15,25,.85);z-index:600;align-items:center;justify-content:center;backdrop-filter:blur(6px)">
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:36px 32px;width:340px;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.5)">
-    <div id="team-call-avatar" style="width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,var(--blue2),var(--blue));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:30px;margin:0 auto 16px">?</div>
-    <div id="team-call-name" style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px">Colleague</div>
-    <div id="team-call-status" style="font-size:13px;color:var(--text3);margin-bottom:24px">Calling…</div>
-    <div id="team-call-actions-outgoing" style="display:flex;justify-content:center;gap:14px">
-      <button onclick="hangUpTeamCall()" style="width:56px;height:56px;border-radius:50%;border:none;background:var(--crit);color:#fff;font-size:22px;cursor:pointer">✕</button>
+<!-- ═══ TEAM CALL WIDGET — floating, draggable, minimizable, non-blocking
+     in-app call via WebRTC, signaled through Firebase RTDB (see the "Team
+     Communication" comment block in the script for the full design/
+     limitations). Deliberately NOT a full-screen overlay — the whole
+     point is that the rest of the app stays usable during a call. Video
+     calls request a video track from the very start; the camera on/off
+     toggle mid-call just enables/disables that existing track (no WebRTC
+     renegotiation) — starting an AUDIO call and upgrading it to video
+     partway through isn't supported in this pass, that needs a real
+     renegotiation exchange, a materially bigger piece of work. ═══ -->
+<div id="team-call-widget" style="display:none;position:fixed;z-index:600;top:80px;right:24px;width:min(300px,92vw);user-select:none">
+  <div id="team-call-expanded" style="background:var(--call-widget-bg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border2);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden">
+    <div id="team-call-drag-handle" style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;cursor:move;background:transparent;border-bottom:1px solid var(--border)">
+      <span style="font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">📞 SmartCom Call</span>
+      <div style="display:flex;gap:2px">
+        <button id="team-call-expand-btn" onclick="_scToggleTeamCallFullscreen()" title="Full screen" style="width:22px;height:22px;border:none;background:none;color:var(--text3);cursor:pointer;font-size:13px;border-radius:5px;line-height:1">⛶</button>
+        <button onclick="_scMinimizeTeamCall()" title="Minimize — keep working while the call continues" style="width:22px;height:22px;border:none;background:none;color:var(--text3);cursor:pointer;font-size:15px;border-radius:5px;line-height:1">─</button>
+      </div>
     </div>
-    <div id="team-call-actions-incoming" style="display:none;justify-content:center;gap:20px">
-      <button onclick="declineTeamCall()" style="width:56px;height:56px;border-radius:50%;border:none;background:var(--crit);color:#fff;font-size:22px;cursor:pointer">✕</button>
-      <button onclick="acceptTeamCall()" style="width:56px;height:56px;border-radius:50%;border:none;background:var(--green);color:#fff;font-size:22px;cursor:pointer">📞</button>
-    </div>
-    <div id="team-call-actions-active" style="display:none;justify-content:center;gap:14px">
-      <button onclick="hangUpTeamCall()" style="width:56px;height:56px;border-radius:50%;border:none;background:var(--crit);color:#fff;font-size:22px;cursor:pointer">✕</button>
+    <div style="padding:20px 18px;text-align:center;position:relative">
+      <video id="team-call-remote-video" autoplay playsinline style="display:none;width:100%;border-radius:10px;margin-bottom:12px;background:#000;max-height:200px;object-fit:cover"></video>
+      <video id="team-call-local-video" autoplay playsinline muted style="display:none;width:64px;height:48px;border-radius:8px;position:absolute;top:16px;right:16px;border:2px solid var(--bg2);background:#000;object-fit:cover"></video>
+      <div id="team-call-avatar" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--blue2),var(--blue));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:26px;margin:0 auto 12px;overflow:hidden">?</div>
+      <div id="team-call-name" style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px">Colleague</div>
+      <div id="team-call-status" style="font-size:12px;color:var(--text3);margin-bottom:16px">Calling…</div>
+
+      <div id="team-call-actions-outgoing" style="display:flex;justify-content:center;gap:12px">
+        <button onclick="hangUpTeamCall()" title="Cancel" style="width:48px;height:48px;border-radius:50%;border:none;background:var(--crit);color:#fff;font-size:19px;cursor:pointer">✕</button>
+      </div>
+      <div id="team-call-actions-incoming" style="display:none;justify-content:center;gap:18px">
+        <button onclick="declineTeamCall()" title="Decline" style="width:48px;height:48px;border-radius:50%;border:none;background:var(--crit);color:#fff;font-size:19px;cursor:pointer">✕</button>
+        <button onclick="acceptTeamCall()" title="Accept" style="width:48px;height:48px;border-radius:50%;border:none;background:var(--green);color:#fff;font-size:19px;cursor:pointer">📞</button>
+      </div>
+      <div id="team-call-actions-active" style="display:none;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:center;gap:9px">
+          <button id="team-call-mute-btn" onclick="_scToggleTeamCallMute()" title="Mute" style="width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border2);background:var(--bg4);color:var(--text2);font-size:15px;cursor:pointer">🎤</button>
+          <button id="team-call-video-btn" onclick="_scToggleTeamCallVideo()" title="Camera" style="width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border2);background:var(--bg4);color:var(--text2);font-size:15px;cursor:pointer;display:none">📹</button>
+          <button id="team-call-speaker-btn" onclick="_scToggleVolumePanel()" title="Volume / Speaker" style="width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border2);background:var(--bg4);color:var(--text2);font-size:15px;cursor:pointer">🔊</button>
+          <button onclick="hangUpTeamCall()" title="Hang Up" style="width:40px;height:40px;border-radius:50%;border:none;background:var(--crit);color:#fff;font-size:17px;cursor:pointer">✕</button>
+        </div>
+        <div id="team-call-volume-panel" style="display:none;padding:8px 4px 0;text-align:left">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Volume</div>
+          <input type="range" id="team-call-volume-slider" min="0" max="100" value="100" oninput="_scSetTeamCallVolume(this.value)" style="width:100%">
+          <div id="team-call-speaker-picker-wrap" style="display:none;margin-top:8px">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Output Device</div>
+            <select id="team-call-speaker-picker" onchange="_scSetTeamCallOutputDevice(this.value)" style="width:100%;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:11.5px"></select>
+          </div>
+          <div id="team-call-speaker-unsupported-note" style="display:none;margin-top:6px;font-size:10px;color:var(--text3)">Output device switching isn't supported in this browser — this adjusts playback volume only.</div>
+        </div>
+      </div>
     </div>
   </div>
-  <audio id="team-call-remote-audio" autoplay></audio>
+
+  <div id="team-call-minimized" onclick="_scRestoreTeamCall()" title="Click to expand" style="display:none;align-items:center;gap:10px;background:var(--call-widget-bg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border2);border-radius:30px;padding:8px 16px 8px 8px;box-shadow:0 12px 32px rgba(0,0,0,.4);cursor:pointer">
+    <div id="team-call-mini-avatar" style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--blue2),var(--blue));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;flex-shrink:0;overflow:hidden">?</div>
+    <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap" id="team-call-mini-status">In call</div>
+    <span style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0"></span>
+  </div>
 </div>
 
 <!-- ═══ MEDICAL HISTORY MODAL ═══ -->
@@ -8572,7 +8736,33 @@ function _initEnterpriseSystems() {
 // calls, so re-invoking here never creates duplicate chart instances.
 const PAGE_INITS = {monitoring:initMonitoring,analytics:initAnalytics,ai:initAIPage,discharge:initDischarge,wards:initWards,outpatient:initOutpatient,'ai-hub':initAIHub,'ai-clinical':initAIClinical,xray:initXray,settings:initSettings,admin:initAdminPage,exec:initExecPortal,billing:initBilling,pharmacy:initPharmacy,prescriptions:initPrescriptions,staff:initSmartCom};
 
+// ── Mobile sidebar drawer (off-canvas, see the mobile CSS block near the
+// end of <style>) — desktop is completely unaffected since .mobile-open
+// only does anything under the max-width:768px media query, and these
+// functions are only ever reachable via #mobile-menu-btn, which itself
+// stays display:none outside that breakpoint.
+function toggleMobileSidebar(){
+  const open = document.querySelector('.sidebar').classList.toggle('mobile-open');
+  document.getElementById('sb-mobile-backdrop').classList.toggle('show', open);
+}
+function closeMobileSidebar(){
+  document.querySelector('.sidebar').classList.remove('mobile-open');
+  document.getElementById('sb-mobile-backdrop').classList.remove('show');
+}
+
 function showPage(id){
+  // Auto-close the mobile drawer on navigation — matchMedia guards this
+  // so it's a genuine no-op at desktop widths (closeMobileSidebar() just
+  // removes classes that were never added there).
+  if (window.matchMedia('(max-width:768px)').matches) closeMobileSidebar();
+  // Release the Settings > Camera Device live preview stream (if any) —
+  // navigating away shouldn't leave a webcam light on in the background.
+  // initSettings() starts a fresh preview on its own if this page is
+  // opened again.
+  if (typeof _scCameraPreviewStream !== 'undefined' && _scCameraPreviewStream) {
+    try { _scCameraPreviewStream.getTracks().forEach(t => t.stop()); } catch(e) {}
+    _scCameraPreviewStream = null;
+  }
   if(sessionStorage.getItem('sc_exec_mode')==='1' && id!=='exec'){
     showToast('Executive Portal access is limited to national statistics.', true, '🔒 Restricted');
     id='exec';
@@ -18434,6 +18624,7 @@ function showWardDetail(wName){
   document.getElementById('ward-detail-title').textContent=`${meta.icon} ${wName} Ward — Detailed View`;
   document.getElementById('ward-detail-badge').textContent=`${wPts.length}/${meta.beds} beds occupied`;
   document.getElementById('ward-detail-content').innerHTML=`
+    <div style="overflow-x:auto">
     <table class="tbl" style="margin-top:8px">
       <thead><tr><th>Patient</th><th>Bed</th><th>Diagnosis</th><th>HR</th><th>O₂</th><th>Temp</th><th>Intensity</th><th>Doctor</th><th>Days</th><th>Transfer</th><th>Discharge</th><th>NOK</th></tr></thead>
       <tbody>
@@ -18461,7 +18652,8 @@ function showWardDetail(wName){
             <td><button class="wa-btn" style="font-size:9.5px;padding:3px 7px" onclick="event.stopPropagation();openWhatsApp('${jsPid}','status')">📱</button></td>
           </tr>`;}).join(''):`<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:16px">No patients in this ward${activeIntensityFilter!=='all'?' matching filter':''}</td></tr>`}
       </tbody>
-    </table>`;
+    </table>
+    </div>`;
 }
 
 // ═══════════════════════════════════════════════════
@@ -23697,15 +23889,41 @@ function initSettings(){
     if(badge && sw.instance && sw.token){ badge.textContent='✓ Configured'; badge.style.color='var(--green)'; }
   }catch(e){}
 
-  // Restore Firebase (Team Communication) config — falls back to
-  // SC_DEFAULT_FIREBASE_CONFIG to pre-fill the form when nothing's been
-  // explicitly saved yet, but never overrides a config someone actually
-  // saved (including a deliberately different one).
+  // Restore Firebase (Team Communication) config into the form.
+  // _scFirebaseGetConfig() itself already falls back to
+  // SC_DEFAULT_FIREBASE_CONFIG when nothing's been explicitly saved (so
+  // Team Comm is live with zero setup) — this just mirrors whatever it's
+  // actually using into the fields; a config someone explicitly saved via
+  // Save & Connect (e.g. pointing this deployment at a different Firebase
+  // project) always keeps taking priority over the built-in default.
   try {
-    const fbCfg = _scFirebaseGetConfig() || SC_DEFAULT_FIREBASE_CONFIG;
+    const fbCfg = _scFirebaseGetConfig();
     const map = { 'fb-apikey':'apiKey', 'fb-authdomain':'authDomain', 'fb-dburl':'databaseURL', 'fb-projectid':'projectId', 'fb-appid':'appId' };
     Object.entries(map).forEach(([id, key]) => { const el = document.getElementById(id); if (el) el.value = fbCfg[key] || ''; });
     _scFirebaseUpdateStatusBadge();
+  } catch(e) {}
+
+  // Restore TURN (call reliability) config into the form — same
+  // default-with-override pattern as Firebase just above.
+  try {
+    const turnCfg = _scTurnGetConfig();
+    const hostEl = document.getElementById('turn-host'); if (hostEl) hostEl.value = turnCfg.host || '';
+    const userEl = document.getElementById('turn-username'); if (userEl) userEl.value = turnCfg.username || '';
+    const credEl = document.getElementById('turn-credential'); if (credEl) credEl.value = turnCfg.credential || '';
+    _scTurnUpdateStatusBadge();
+  } catch(e) {}
+
+  // Camera device picker — reflect whether a specific device has been
+  // locked in, and populate the dropdown automatically (no need to make
+  // someone click "Refresh List" just to see what's available).
+  try {
+    const camBadge = document.getElementById('camera-status-badge');
+    if (camBadge) {
+      const preferred = _scGetPreferredCameraId();
+      camBadge.textContent = preferred ? '✓ Camera set' : 'Using system default';
+      camBadge.style.color = preferred ? 'var(--green)' : 'var(--text3)';
+    }
+    if (typeof _scRefreshCameraList === 'function') _scRefreshCameraList(true);
   } catch(e) {}
 }
 
@@ -27135,9 +27353,11 @@ function saveUserProfile(){
 // Known limitation, stated plainly rather than hidden: WebRTC here uses a
 // public STUN server only, no TURN relay. That covers many real-world
 // network pairs, but two networks that both do strict/symmetric NAT
-// (common on locked-down hospital firewalls) can fail to connect a call —
-// there's no fallback for that today. A TURN service would close that gap
-// as a follow-up if it turns out to matter in practice.
+// (common on locked-down hospital firewalls) can fail to connect a call.
+// Closed by _scGetIceServers() below, which adds a real TURN relay
+// (Metered.ca's free tier) on top of STUN — see that function's comment
+// for why a self-hosted TURN server couldn't live on Railway (no public
+// UDP support there) and a hosted TURN provider was used instead.
 
 let _scFbApp = null, _scFbDb = null;
 let _scPresenceCache = {};       // { safeKey: {online, name, role, facility, email, lastSeen} }
@@ -27148,6 +27368,119 @@ let _scIncomingCallsRef = null;  // the currently-listened-to incomingCalls/<key
 let _scMessageNotifyRef = null;  // same idea, for messageNotify/<key>
 const SC_STUN_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
 
+// Metered.ca free-tier TURN relay (20GB/month, account "daqs") — added
+// specifically to close the "strict NAT / locked-down hospital firewall"
+// gap STUN alone can't cover. A self-hosted TURN server (coturn) was
+// considered on Railway first, but Railway's public networking only
+// proxies a single TCP port with no UDP support at all — and a TURN
+// relay's whole job is handing a client's media off to the OTHER party
+// over UDP, which needs the server itself reachable on UDP from the
+// internet. That's not something Railway's model supports, so a hosted
+// TURN provider was used instead of something that would silently not
+// work. This uses a STATIC long-term credential, not a fetched one —
+// Metered's dynamic short-lived-credentials REST API turned out to be a
+// paid-plan-only feature (confirmed live: it returned a real "upgrade
+// your plan" error, not a bug on this end); the Free tier's actual
+// mechanism is generating one fixed username/password pair from the
+// dashboard, which is what these are. Public-config-not-secret, same as
+// the Firebase config below: this credential only grants TURN relay
+// quota, nothing about patient data, so baking it in is fine.
+const SC_DEFAULT_TURN_CONFIG = {
+  host: 'standard.relay.metered.ca',
+  username: '3831d36e3786556cd2bbe98a',
+  credential: 'QzBD5SQ7xiz8VWC+'
+};
+
+function _scTurnGetConfig(){
+  try {
+    const stored = JSON.parse(localStorage.getItem('sc_turn_config_v1') || 'null');
+    return (stored && stored.host && stored.username && stored.credential) ? stored : SC_DEFAULT_TURN_CONFIG;
+  } catch(e) { return SC_DEFAULT_TURN_CONFIG; }
+}
+
+// Builds the same set of URL/transport variants Metered's own dashboard
+// generates for a credential pair (plain STUN, TURN/UDP, TURN/TCP on 80,
+// and TURN/TCP+TLS on 443 — that last one is the important one for
+// networks that block everything except outbound HTTPS-looking traffic)
+// plus the existing Google STUN server as a second independent fallback.
+function _scGetIceServers(){
+  const cfg = _scTurnGetConfig();
+  if (!cfg?.host || !cfg?.username || !cfg?.credential) return SC_STUN_SERVERS;
+  const { host, username, credential } = cfg;
+  return [
+    ...SC_STUN_SERVERS,
+    { urls: `stun:${host}:80` },
+    { urls: `turn:${host}:80`, username, credential },
+    { urls: `turn:${host}:80?transport=tcp`, username, credential },
+    { urls: `turn:${host}:443`, username, credential },
+    { urls: `turns:${host}:443?transport=tcp`, username, credential }
+  ];
+}
+
+function _scTurnUpdateStatusBadge(){
+  const badge = document.getElementById('turn-status-badge');
+  if (!badge) return;
+  const cfg = _scTurnGetConfig();
+  if (!cfg?.host || !cfg?.username || !cfg?.credential) { badge.textContent = 'Not configured'; badge.style.color = 'var(--text3)'; return; }
+  badge.textContent = '✓ Configured';
+  badge.style.color = 'var(--green)';
+}
+
+function saveTurnConfig(){
+  const host = document.getElementById('turn-host')?.value.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const username = document.getElementById('turn-username')?.value.trim();
+  const credential = document.getElementById('turn-credential')?.value.trim();
+  if (!host || !username || !credential) { showToast('Server, Username and Credential are all required.', true, '⚠ Missing Fields'); return; }
+  try { localStorage.setItem('sc_turn_config_v1', JSON.stringify({ host, username, credential })); } catch(e) {}
+  _scTurnUpdateStatusBadge();
+  showToast('TURN relay saved — calls will use it automatically from now on.', false, '✓ Saved');
+}
+
+// A REAL connectivity check, not just "is something saved" — opens an
+// actual throwaway RTCPeerConnection against the configured servers and
+// waits to see whether it genuinely gets back a 'relay'-type ICE
+// candidate (proof the TURN server authenticated the credential and
+// allocated a relay), the same thing a real call would need to happen to
+// benefit from this at all.
+async function testTurnConnection(){
+  const badge = document.getElementById('turn-status-badge');
+  if (badge) { badge.textContent = 'Testing…'; badge.style.color = 'var(--amber)'; }
+  const iceServers = _scGetIceServers();
+  const turnServers = iceServers.filter(s => String(s.urls).startsWith('turn'));
+  if (!turnServers.length) {
+    showToast('No TURN server configured yet.', true, '⚠ Not Configured');
+    if (badge) { badge.textContent = 'Not configured'; badge.style.color = 'var(--text3)'; }
+    return;
+  }
+  let pc;
+  try {
+    pc = new RTCPeerConnection({ iceServers });
+    pc.createDataChannel('turn-test');
+    const gotRelay = await new Promise(resolve => {
+      let settled = false;
+      const timer = setTimeout(() => { if (!settled) { settled = true; resolve(false); } }, 8000);
+      pc.onicecandidate = e => {
+        if (settled) return;
+        if (e.candidate && /typ relay/.test(e.candidate.candidate)) { settled = true; clearTimeout(timer); resolve(true); }
+        else if (!e.candidate) { /* gathering finished with no relay candidate — let the timeout resolve false */ }
+      };
+      pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => { if (!settled) { settled = true; clearTimeout(timer); resolve(false); } });
+    });
+    if (gotRelay) {
+      showToast('TURN relay reachable — a real relay candidate was allocated.', false, '✓ Connected');
+      if (badge) { badge.textContent = '✓ Configured'; badge.style.color = 'var(--green)'; }
+    } else {
+      showToast('Could not get a relay candidate — check the Server/Username/Credential. Calls will still work via STUN alone.', true, '⚠ Not Reachable');
+      if (badge) { badge.textContent = '⚠ Unreachable'; badge.style.color = 'var(--amber)'; }
+    }
+  } catch(e) {
+    showToast('TURN test failed to run in this browser.', true, '⚠ Error');
+    if (badge) { badge.textContent = '⚠ Unreachable'; badge.style.color = 'var(--amber)'; }
+  } finally {
+    try { pc?.close(); } catch(e) {}
+  }
+}
+
 // The smartcareAI Firebase project's config — a real project's Realtime
 // Database URL/keys, dedicated to this app and kept deliberately separate
 // from the unrelated DAQS Learn Firebase project. Firebase web configs are
@@ -27155,10 +27488,15 @@ const SC_STUN_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
 // for Firebase, not a leak) — what actually protects the data is the
 // published security rules + Anonymous Auth requirement, not hiding this
 // object. Used only to PRE-FILL the Settings form (see initSettings()) so
-// staff don't have to type/paste it — it deliberately does NOT make
-// _scFirebaseGetConfig() return truthy on its own; Team Communication
-// only actually activates once someone clicks "Save & Connect", same as
-// before.
+// staff don't have to type/paste it. This USED to require clicking "Save
+// & Connect" once per browser/device before Team Communication would
+// activate at all, deliberately, while the database was still sitting in
+// open "test mode" — that's no longer the case (Firebase Anonymous Auth
+// is on and real RTDB security rules are published, see the comment on
+// _scFirebaseAuthReady() below), so there's no longer a reason to make
+// every single device do a manual one-time activation step. It's public
+// by design either way — a Firebase web config showing up in page source
+// isn't a leak, the security boundary is Auth + rules, not obscurity.
 const SC_DEFAULT_FIREBASE_CONFIG = {
   apiKey: 'AIzaSyD_67tQEUX5_BJ3JX10AVFvs3Jsu7RDwzY',
   authDomain: 'smartcareai-f5fc0.firebaseapp.com',
@@ -27167,8 +27505,17 @@ const SC_DEFAULT_FIREBASE_CONFIG = {
   appId: '1:46194280139:web:8e552ffe7f7b74f9e6bd4e'
 };
 
+// Falls back to the built-in default the instant nothing's been saved
+// yet — so Team Communication just works on a fresh browser/device with
+// zero setup, rather than everyone needing to visit Settings and click
+// Save & Connect once. A custom config saved via Settings (e.g. if this
+// deployment is ever pointed at a different Firebase project) still
+// always wins over the default.
 function _scFirebaseGetConfig(){
-  try { return JSON.parse(localStorage.getItem('sc_fb_config_v1') || 'null'); } catch(e) { return null; }
+  try {
+    const stored = JSON.parse(localStorage.getItem('sc_fb_config_v1') || 'null');
+    return stored || SC_DEFAULT_FIREBASE_CONFIG;
+  } catch(e) { return SC_DEFAULT_FIREBASE_CONFIG; }
 }
 
 // RTDB keys can't contain . # $ [ ] / — email addresses need sanitising
@@ -27555,24 +27902,221 @@ function _scStopRingtone(){
   if (_scRingtoneTimer) { clearInterval(_scRingtoneTimer); _scRingtoneTimer = null; }
 }
 
+// Whether the CURRENT/last call involves video — drives whether the
+// camera-toggle button and the video elements are shown at all. Reset to
+// false whenever the widget goes fully hidden, so a later audio-only call
+// doesn't inherit a stale "show the camera button" state.
+let _scCallIsVideo = false;
+let _scCallMinimized = false;
+let _scCallFullscreen = false;
+
 function _scSetCallUI(state, name){
-  const modal = document.getElementById('team-call-modal');
+  const widget = document.getElementById('team-call-widget');
   const nameEl = document.getElementById('team-call-name');
   const statusEl = document.getElementById('team-call-status');
   const avatarEl = document.getElementById('team-call-avatar');
+  const miniAvatarEl = document.getElementById('team-call-mini-avatar');
+  const miniStatusEl = document.getElementById('team-call-mini-status');
   const outgoing = document.getElementById('team-call-actions-outgoing');
   const incoming = document.getElementById('team-call-actions-incoming');
   const active = document.getElementById('team-call-actions-active');
-  if (!modal) return;
-  if (state === 'hidden') { modal.style.display = 'none'; _scStopRingtone(); return; }
-  modal.style.display = 'flex';
+  if (!widget) return;
+  if (state === 'hidden') {
+    widget.style.display = 'none';
+    _scStopRingtone();
+    _scCallIsVideo = false;
+    document.getElementById('team-call-volume-panel').style.display = 'none';
+    if (_scCallFullscreen) { _scCallFullscreen = false; widget.classList.remove('tc-fullscreen'); _scUpdateExpandBtnIcon(); }
+    _scRestoreTeamCall(); // always land back on the expanded view for the next call
+    return;
+  }
+  widget.style.display = 'block';
+  const initials = _scCallAvatarInitials(name);
   if (nameEl) nameEl.textContent = name || 'Colleague';
-  if (avatarEl) avatarEl.textContent = _scCallAvatarInitials(name);
+  if (avatarEl) avatarEl.textContent = initials;
+  if (miniAvatarEl) miniAvatarEl.textContent = initials;
   [outgoing, incoming, active].forEach(el => { if (el) el.style.display = 'none'; });
-  if (state === 'calling') { statusEl.textContent = 'Calling…'; if (outgoing) outgoing.style.display = 'flex'; _scStartRingtone('outgoing'); }
-  else if (state === 'incoming') { statusEl.textContent = 'Incoming call…'; if (incoming) incoming.style.display = 'flex'; _scStartRingtone('incoming'); }
-  else if (state === 'active') { statusEl.textContent = 'In call'; if (active) active.style.display = 'flex'; _scStopRingtone(); }
-  else if (state === 'declined') { statusEl.textContent = 'Call declined'; if (outgoing) outgoing.style.display = 'flex'; _scStopRingtone(); }
+  let statusText = '';
+  if (state === 'calling') { statusText = 'Calling…'; if (outgoing) outgoing.style.display = 'flex'; _scStartRingtone('outgoing'); }
+  else if (state === 'incoming') { statusText = 'Incoming call…'; if (incoming) incoming.style.display = 'flex'; _scStartRingtone('incoming'); }
+  else if (state === 'active') {
+    statusText = 'In call';
+    if (active) active.style.display = 'flex';
+    _scStopRingtone();
+    const videoBtn = document.getElementById('team-call-video-btn');
+    if (videoBtn) videoBtn.style.display = _scCallIsVideo ? 'flex' : 'none';
+  }
+  else if (state === 'declined') { statusText = 'Call declined'; if (outgoing) outgoing.style.display = 'flex'; _scStopRingtone(); }
+  if (statusEl) statusEl.textContent = statusText;
+  if (miniStatusEl) miniStatusEl.textContent = statusText;
+}
+
+// ── Floating widget: drag anywhere, minimize to a small pill, or expand to full screen ──
+function _scMinimizeTeamCall(){
+  // Minimized + full-screen at once doesn't make sense — drop out of
+  // full screen first so the pill always restores to the normal compact
+  // card, not a lingering full-screen state.
+  if (_scCallFullscreen) _scToggleTeamCallFullscreen();
+  document.getElementById('team-call-expanded').style.display = 'none';
+  document.getElementById('team-call-minimized').style.display = 'flex';
+  _scCallMinimized = true;
+}
+function _scRestoreTeamCall(){
+  document.getElementById('team-call-expanded').style.display = 'block';
+  document.getElementById('team-call-minimized').style.display = 'none';
+  _scCallMinimized = false;
+}
+
+function _scUpdateExpandBtnIcon(){
+  const btn = document.getElementById('team-call-expand-btn');
+  if (!btn) return;
+  btn.textContent = _scCallFullscreen ? '⤢' : '⛶';
+  btn.title = _scCallFullscreen ? 'Exit full screen' : 'Full screen';
+}
+
+// Optional "focus mode" — the default floating/draggable widget is the
+// whole point of this feature (keep working during a call), so this is
+// opt-in, not a replacement for it. Toggled by the ⛶ button in the
+// widget's header; see the .tc-fullscreen CSS rules for the actual
+// layout changes, which override this widget's extensive inline sizing.
+function _scToggleTeamCallFullscreen(){
+  const widget = document.getElementById('team-call-widget');
+  if (!widget) return;
+  _scCallFullscreen = !_scCallFullscreen;
+  widget.classList.toggle('tc-fullscreen', _scCallFullscreen);
+  _scUpdateExpandBtnIcon();
+}
+
+// Runs once at page load (harmless no-op the rest of the time, since the
+// widget stays display:none until a call actually starts). Handles both
+// the drag handle (expanded view) and the minimized pill as drag
+// surfaces, and — since the pill is also meant to be clickable to
+// restore — distinguishes an actual drag from a plain click by movement
+// distance rather than relying on a separate inline onclick that a drag
+// would otherwise also trigger.
+function _scInitTeamCallDrag(){
+  const widget = document.getElementById('team-call-widget');
+  const handle = document.getElementById('team-call-drag-handle');
+  const mini = document.getElementById('team-call-minimized');
+  if (!widget || !handle || !mini) return;
+  let dragging = false, dragTarget = null, moved = false;
+  let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+  function begin(target, e){
+    if (_scCallFullscreen) return; // a full-viewport widget isn't meaningfully draggable
+    const point = e.touches ? e.touches[0] : e;
+    dragging = true; dragTarget = target; moved = false;
+    const rect = widget.getBoundingClientRect();
+    startX = point.clientX; startY = point.clientY;
+    startLeft = rect.left; startTop = rect.top;
+    widget.style.right = 'auto';
+    widget.style.left = startLeft + 'px';
+    widget.style.top = startTop + 'px';
+    if (e.cancelable) e.preventDefault();
+  }
+  function move(e){
+    if (!dragging) return;
+    const point = e.touches ? e.touches[0] : e;
+    const dx = point.clientX - startX, dy = point.clientY - startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+    const maxLeft = window.innerWidth - widget.offsetWidth - 4;
+    const maxTop = window.innerHeight - widget.offsetHeight - 4;
+    widget.style.left = Math.max(4, Math.min(startLeft + dx, maxLeft)) + 'px';
+    widget.style.top = Math.max(4, Math.min(startTop + dy, maxTop)) + 'px';
+  }
+  function end(){
+    if (!dragging) return;
+    dragging = false;
+    if (dragTarget === 'mini' && !moved) _scRestoreTeamCall();
+    dragTarget = null;
+  }
+
+  handle.addEventListener('mousedown', e => begin('handle', e));
+  mini.addEventListener('mousedown', e => begin('mini', e));
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', end);
+  handle.addEventListener('touchstart', e => begin('handle', e), { passive: false });
+  mini.addEventListener('touchstart', e => begin('mini', e), { passive: false });
+  document.addEventListener('touchmove', move, { passive: false });
+  document.addEventListener('touchend', end);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _scInitTeamCallDrag);
+else _scInitTeamCallDrag();
+
+// ── In-call controls: mute, camera, volume, output device ──
+function _scToggleTeamCallMute(){
+  const track = _scTeamCallState?.localStream?.getAudioTracks()[0];
+  if (!track) return;
+  track.enabled = !track.enabled;
+  const btn = document.getElementById('team-call-mute-btn');
+  if (!btn) return;
+  btn.textContent = track.enabled ? '🎤' : '🔇';
+  btn.style.background = track.enabled ? 'var(--bg4)' : 'var(--crit)';
+  btn.style.color = track.enabled ? 'var(--text2)' : '#fff';
+  btn.title = track.enabled ? 'Mute' : 'Unmute';
+}
+
+function _scToggleTeamCallVideo(){
+  const track = _scTeamCallState?.localStream?.getVideoTracks()[0];
+  if (!track) return;
+  track.enabled = !track.enabled;
+  const btn = document.getElementById('team-call-video-btn');
+  if (btn) {
+    btn.textContent = track.enabled ? '📹' : '📷';
+    btn.style.background = track.enabled ? 'var(--bg4)' : 'var(--crit)';
+    btn.style.color = track.enabled ? 'var(--text2)' : '#fff';
+    btn.title = track.enabled ? 'Turn camera off' : 'Turn camera on';
+  }
+  const localVideoEl = document.getElementById('team-call-local-video');
+  if (localVideoEl) localVideoEl.style.display = track.enabled ? 'block' : 'none';
+}
+
+function _scToggleVolumePanel(){
+  const panel = document.getElementById('team-call-volume-panel');
+  if (!panel) return;
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? 'block' : 'none';
+  if (opening) _scPopulateSpeakerPicker();
+}
+
+function _scSetTeamCallVolume(value){
+  const vol = Math.max(0, Math.min(100, Number(value) || 0)) / 100;
+  const el = document.getElementById('team-call-remote-video');
+  if (el) el.volume = vol;
+}
+
+// Speaker/output-device switching relies on HTMLMediaElement.setSinkId(),
+// which is genuinely not available in every browser (notably Safari has
+// never shipped it) — there is no way to force "loudspeaker mode" on a
+// phone the way a native app can via OS-level audio routing APIs; this is
+// a real platform ceiling, not something worked around here. Where it IS
+// supported, this lets someone pick between enumerated output devices
+// (e.g. a desktop with headphones AND speakers connected).
+async function _scPopulateSpeakerPicker(){
+  const select = document.getElementById('team-call-speaker-picker');
+  const wrap = document.getElementById('team-call-speaker-picker-wrap');
+  const note = document.getElementById('team-call-speaker-unsupported-note');
+  const el = document.getElementById('team-call-remote-video');
+  const supported = el && typeof el.setSinkId === 'function' && navigator.mediaDevices?.enumerateDevices;
+  if (!supported) { if (wrap) wrap.style.display = 'none'; if (note) note.style.display = 'block'; return; }
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const outputs = devices.filter(d => d.kind === 'audiooutput');
+    if (!outputs.length) { if (wrap) wrap.style.display = 'none'; if (note) note.style.display = 'block'; return; }
+    if (select) select.innerHTML = outputs.map((d, i) => `<option value="${_scAttrSafe(d.deviceId)}">${_scEsc(d.label || ('Speaker ' + (i + 1)))}</option>`).join('');
+    if (wrap) wrap.style.display = 'block';
+    if (note) note.style.display = 'none';
+  } catch(e) {
+    if (wrap) wrap.style.display = 'none';
+    if (note) note.style.display = 'block';
+  }
+}
+
+function _scSetTeamCallOutputDevice(deviceId){
+  const el = document.getElementById('team-call-remote-video');
+  if (el && typeof el.setSinkId === 'function') {
+    el.setSinkId(deviceId).catch(() => showToast('Could not switch output device.', true, '⚠ Speaker'));
+  }
 }
 
 async function _scListenForIncomingCalls(){
@@ -27659,7 +28203,158 @@ function _scWriteCallLog(entry){
 // side gives up and logs it as no-answer, same as a real phone.
 const SC_CALL_NO_ANSWER_MS = 45000;
 
-async function startTeamCall(peerEmail, peerName){
+// Shared by both call sides: shows the remote party's stream in the
+// widget's video element (which plays audio-only streams fine too — a
+// <video> with no incoming video track just stays hidden and the audio
+// plays regardless), and shows/hides the small local self-preview.
+function _scAttachRemoteStream(stream){
+  const el = document.getElementById('team-call-remote-video');
+  if (!el || !stream) return;
+  el.srcObject = stream;
+  el.style.display = stream.getVideoTracks().length > 0 ? 'block' : 'none';
+}
+function _scAttachLocalPreview(stream){
+  const el = document.getElementById('team-call-local-video');
+  if (!el) return;
+  if (stream && stream.getVideoTracks().length > 0) { el.srcObject = stream; el.style.display = 'block'; }
+  else { el.srcObject = null; el.style.display = 'none'; }
+}
+
+// ── Camera device picker (Settings > Camera Device) ──
+// Some PCs register more than one "camera" — including phone-as-webcam
+// features like Windows' Phone Link, which was confirmed live to get
+// selected ahead of the real webcam and then hang on its own native
+// pairing dialog when a plain `video:true` request lets the OS pick.
+// Rather than depend on whatever the platform's default happens to be,
+// this lets someone explicitly pick — by live preview, since device
+// labels are often blank/ambiguous before permission has ever been
+// granted — which physical device to always use, and every call request
+// after that names it directly via `deviceId`.
+function _scGetPreferredCameraId(){
+  try { return localStorage.getItem('sc_camera_device_id') || ''; } catch(e) { return ''; }
+}
+
+let _scCameraPreviewStream = null;
+
+// autoPreview=true (the normal case — initial Settings load, or an
+// explicit "Refresh List" click) auto-previews the selected device once
+// the list is (re)built. Pass false when this is being called ONLY to
+// pick up a device label that just became available (see
+// _scPreviewCameraDevice below) — auto-previewing there too would call
+// right back into _scPreviewCameraDevice, which itself calls this
+// function again on success, an infinite stop/restart loop that would
+// spin the camera forever (caught live before shipping).
+async function _scRefreshCameraList(autoPreview){
+  const select = document.getElementById('camera-device-select');
+  if (!select) return;
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === 'videoinput');
+    const preferred = _scGetPreferredCameraId();
+    const keepValue = select.value; // preserve whatever's currently chosen across a relabel-only refresh
+    if (!cams.length) { select.innerHTML = '<option value="">No cameras detected</option>'; return; }
+    select.innerHTML = cams.map((d, i) => {
+      const label = d.label || `Camera ${i + 1} (label hidden until previewed)`;
+      const selected = (d.deviceId === preferred || d.deviceId === keepValue) ? 'selected' : '';
+      return `<option value="${_scAttrSafe(d.deviceId)}" ${selected}>${_scEsc(label)}</option>`;
+    }).join('');
+    if (autoPreview && select.value) _scPreviewCameraDevice(select.value);
+  } catch(e) {
+    select.innerHTML = '<option value="">Could not list cameras</option>';
+  }
+}
+
+// Previews one specific device by its deviceId. Guarded with the same
+// timeout-and-abandon pattern as the real call path below — if this is
+// the problematic phone-link device, it'll hang on the native OS dialog
+// rather than reject outright, so a plain try/catch alone wouldn't
+// recover; the timeout is what lets the user move on to try the next
+// device in the list instead of getting stuck.
+async function _scPreviewCameraDevice(deviceId){
+  const video = document.getElementById('camera-preview-video');
+  const hint = document.getElementById('camera-preview-hint');
+  if (_scCameraPreviewStream) { try { _scCameraPreviewStream.getTracks().forEach(t => t.stop()); } catch(e) {} _scCameraPreviewStream = null; }
+  if (!deviceId || !video) return;
+  if (hint) { hint.textContent = 'Loading preview…'; hint.style.color = 'var(--text3)'; }
+  video.style.display = 'none';
+  try {
+    const stream = await Promise.race([
+      navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } } }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000))
+    ]);
+    _scCameraPreviewStream = stream;
+    video.srcObject = stream;
+    video.style.display = 'block';
+    if (hint) { hint.textContent = 'If this shows your actual camera, click "Use This Camera" below.'; hint.style.color = 'var(--text3)'; }
+    _scRefreshCameraList(false); // labels are often only revealed after a successful grant — relabel only, don't re-trigger a preview
+  } catch(e) {
+    if (hint) { hint.textContent = "This device didn't respond (it may be trying to open a phone-pairing dialog in the background — check your taskbar, or just try a different camera from the list above)."; hint.style.color = 'var(--amber)'; }
+  }
+}
+
+function _scSaveCameraChoice(){
+  const select = document.getElementById('camera-device-select');
+  const badge = document.getElementById('camera-status-badge');
+  if (!select?.value) { showToast('Preview a camera first, then save it.', true, '⚠ Nothing Selected'); return; }
+  try { localStorage.setItem('sc_camera_device_id', select.value); } catch(e) {}
+  if (badge) { badge.textContent = '✓ Camera set'; badge.style.color = 'var(--green)'; }
+  showToast('This camera will be used for all future video calls.', false, '✓ Saved');
+}
+
+// Requesting camera+mic together can hang indefinitely on some Windows
+// setups — confirmed live: Windows' "Phone Link" continuity-camera
+// feature can intercept the video request and block on its own native
+// "connect your phone" dialog (a separate OS-level window our page has
+// no way to see or dismiss), so the getUserMedia promise just never
+// settles. Race the video request against a timeout and fall back to
+// audio-only rather than leaving the caller stuck on a frozen
+// "Calling…" forever. If the video request eventually DOES resolve
+// after we've already moved on, its tracks are stopped immediately so
+// it doesn't leave an unused camera light on in the background. When a
+// specific camera has been saved via Settings > Camera Device, it's
+// requested by deviceId directly — bypassing whatever device the
+// platform would otherwise pick as "default" (the actual root cause of
+// the hang in the first place, not just something this timeout papers
+// over).
+// One race-against-timeout attempt at grabbing audio+video with the given
+// video constraint. Distinguishes a fast rejection (device busy/not
+// found — worth a quick retry, see below) from a genuine timeout (still
+// hung on something like the Phone Link dialog — retrying that would
+// just hang again, so it isn't).
+function _scTryGetCallMedia(videoConstraint){
+  let settled = false;
+  const gum = navigator.mediaDevices.getUserMedia({ audio: true, video: videoConstraint })
+    .then(stream => {
+      if (settled) { try { stream.getTracks().forEach(t => t.stop()); } catch(e) {} return { stream: null, timedOut: false }; }
+      settled = true;
+      return { stream, timedOut: false };
+    })
+    .catch(() => { settled = true; return { stream: null, timedOut: false }; });
+  const timeout = new Promise(resolve => setTimeout(() => { if (!settled) resolve({ stream: null, timedOut: true }); }, 8000));
+  return Promise.race([gum, timeout]);
+}
+
+async function _scRequestCallMedia(wantVideo){
+  if (!wantVideo) return { stream: await navigator.mediaDevices.getUserMedia({ audio: true }), video: false };
+  const preferredCam = _scGetPreferredCameraId();
+  const videoConstraint = preferredCam ? { deviceId: { exact: preferredCam } } : true;
+
+  let result = await _scTryGetCallMedia(videoConstraint);
+  if (!result.stream && !result.timedOut) {
+    // A fast rejection, not a hang — e.g. the device was still releasing
+    // from a just-closed Settings preview. That specific case is
+    // transient, so one quick retry is worth it before giving up to
+    // audio-only; a genuine timeout skips this entirely since retrying a
+    // stuck native dialog would just hang again for no benefit.
+    await new Promise(r => setTimeout(r, 500));
+    result = await _scTryGetCallMedia(videoConstraint);
+  }
+  if (result.stream) return { stream: result.stream, video: true };
+  // Timed out (camera request still stuck) or genuinely failed twice — audio-only.
+  return { stream: await navigator.mediaDevices.getUserMedia({ audio: true }), video: false };
+}
+
+async function startTeamCall(peerEmail, peerName, video){
   const db = _scFirebaseInit();
   if (!db) { showToast('Configure Firebase in Settings to use in-app calling.', true, '⚠ Not Configured'); return; }
   const session = getCurrentSessionUser();
@@ -27667,11 +28362,27 @@ async function startTeamCall(peerEmail, peerName){
   if (_scTeamCallState || _scPendingIncomingCall) { showToast('Already on a call.', true, '⚠ Busy'); return; }
   await _scFirebaseAuthReady();
 
-  let localStream;
-  try { localStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-  catch(e) { showToast('Microphone access is needed to make a call.', true, '⚠ Mic Blocked'); return; }
+  let localStream, gotVideo;
+  try {
+    const media = await _scRequestCallMedia(!!video);
+    localStream = media.stream; gotVideo = media.video;
+  } catch(e) { showToast('Microphone access is needed to make a call.', true, '⚠ Mic Blocked'); return; }
+  if (video && !gotVideo) showToast("Couldn't reach your camera — continuing as an audio call.", true, '⚠ Camera Unavailable');
+  video = gotVideo;
+  _scCallIsVideo = !!video;
+  _scAttachLocalPreview(localStream);
 
-  const pc = new RTCPeerConnection({ iceServers: SC_STUN_SERVERS });
+  // Show "Calling…" the instant the mic/camera is granted, not after the
+  // Firebase signaling writes below resolve — those are real network
+  // round-trips (to the actual internet-hosted RTDB, not just a local
+  // cache write) and making the caller wait on them before seeing any
+  // feedback that their call is even happening defeats the point of a
+  // widget meant to keep them working; the state object with callId/pc
+  // etc. still gets assigned once everything below is actually ready.
+  _scSetCallUI('calling', peerName);
+
+  const iceServers = await _scGetIceServers();
+  const pc = new RTCPeerConnection({ iceServers });
   localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
   const callRef = db.ref('calls').push();
@@ -27679,7 +28390,7 @@ async function startTeamCall(peerEmail, peerName){
   const calleeKey = _scFirebaseSafeKey(peerEmail);
 
   pc.onicecandidate = e => { if (e.candidate) callRef.child('callerCandidates').push(e.candidate.toJSON()); };
-  pc.ontrack = e => { const audioEl = document.getElementById('team-call-remote-audio'); if (audioEl) audioEl.srcObject = e.streams[0]; };
+  pc.ontrack = e => _scAttachRemoteStream(e.streams[0]);
 
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
@@ -27735,7 +28446,7 @@ async function startTeamCall(peerEmail, peerName){
   }, SC_CALL_NO_ANSWER_MS);
 
   _scTeamCallState = { callId, peerEmail, peerName, role: 'caller', pc, localStream, callRef, statusHandler, candRef: callRef.child('calleeCandidates'), candHandler, calleeKey, startedAt, connectedAt: null, endStatus: null, noAnswerTimer };
-  _scSetCallUI('calling', peerName);
+  // (UI already switched to "calling" right after mic/camera access, above.)
 }
 
 async function acceptTeamCall(){
@@ -27744,9 +28455,15 @@ async function acceptTeamCall(){
   const session = getCurrentSessionUser();
   if (!db || !pending || !session?.email) return;
 
-  let localStream;
-  try { localStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-  catch(e) { showToast('Microphone access is needed to answer.', true, '⚠ Mic Blocked'); declineTeamCall(); return; }
+  const wantsVideo = !!(pending.offer?.sdp && pending.offer.sdp.includes('m=video'));
+  let localStream, gotVideo;
+  try {
+    const media = await _scRequestCallMedia(wantsVideo);
+    localStream = media.stream; gotVideo = media.video;
+  } catch(e) { showToast('Microphone access is needed to answer.', true, '⚠ Mic Blocked'); declineTeamCall(); return; }
+  if (wantsVideo && !gotVideo) showToast("Couldn't reach your camera — continuing as an audio call.", true, '⚠ Camera Unavailable');
+  _scCallIsVideo = gotVideo;
+  _scAttachLocalPreview(localStream);
 
   // Clear the pending-incoming-call flag now, synchronously, before any of
   // the awaited calls below — otherwise _scListenForIncomingCalls's own
@@ -27760,12 +28477,13 @@ async function acceptTeamCall(){
   // above) has already returned by this point.
   _scPendingIncomingCall = null;
 
-  const pc = new RTCPeerConnection({ iceServers: SC_STUN_SERVERS });
+  const iceServers = await _scGetIceServers();
+  const pc = new RTCPeerConnection({ iceServers });
   localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
   const callRef = db.ref('calls/' + pending.callId);
 
   pc.onicecandidate = e => { if (e.candidate) callRef.child('calleeCandidates').push(e.candidate.toJSON()); };
-  pc.ontrack = e => { const audioEl = document.getElementById('team-call-remote-audio'); if (audioEl) audioEl.srcObject = e.streams[0]; };
+  pc.ontrack = e => _scAttachRemoteStream(e.streams[0]);
 
   await pc.setRemoteDescription(new RTCSessionDescription(pending.offer));
   const answer = await pc.createAnswer();
@@ -27829,8 +28547,10 @@ function hangUpTeamCall(){
     const status = state.endStatus || (state.connectedAt ? 'completed' : 'no-answer');
     _scWriteCallLog({ peerEmail: state.peerEmail, peerName: state.peerName, direction: state.role === 'caller' ? 'outgoing' : 'incoming', status, startedAt: state.startedAt, durationSec });
   }
-  const audioEl = document.getElementById('team-call-remote-audio');
-  if (audioEl) audioEl.srcObject = null;
+  const remoteVideoEl = document.getElementById('team-call-remote-video');
+  if (remoteVideoEl) { remoteVideoEl.srcObject = null; remoteVideoEl.style.display = 'none'; }
+  const localVideoEl = document.getElementById('team-call-local-video');
+  if (localVideoEl) { localVideoEl.srcObject = null; localVideoEl.style.display = 'none'; }
   _scTeamCallState = null;
   _scSetCallUI('hidden');
 }
@@ -27957,7 +28677,8 @@ function renderStaffDirectory(){
     const presence = _scPresenceCache[_scFirebaseSafeKey(u.email || '')];
     const inApp = fbReady ? `
          <button onclick="openTeamChat('${emailJS}','${nameJS}')" title="Message in SmartCare AI" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--cyan);background:rgba(34,211,238,.1);color:var(--cyan);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">💬 Message</button>
-         <button onclick="startTeamCall('${emailJS}','${nameJS}')" title="${presence?.online ? 'Call in SmartCare AI' : 'Offline — will still try to ring them'}" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--purple,#7c3aed);background:rgba(124,58,237,.1);color:var(--purple,#7c3aed);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">📱 In-App Call</button>`
+         <button onclick="startTeamCall('${emailJS}','${nameJS}')" title="${presence?.online ? 'Call in SmartCare AI' : 'Offline — will still try to ring them'}" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--purple,#7c3aed);background:rgba(124,58,237,.1);color:var(--purple,#7c3aed);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">📱 In-App Call</button>
+         <button onclick="startTeamCall('${emailJS}','${nameJS}',true)" title="Video call in SmartCare AI" style="padding:7px 12px;border-radius:8px;border:1.5px solid var(--purple,#7c3aed);background:rgba(124,58,237,.1);color:var(--purple,#7c3aed);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">📹 Video</button>`
       : '';
     const dot = fbReady
       ? `<span title="${presence?.online ? 'Online' : 'Offline'}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${presence?.online ? 'var(--green)' : '#9ca3af'};position:absolute;bottom:-1px;right:-1px;border:2px solid var(--bg4)"></span>`
@@ -28532,9 +29253,11 @@ function enterSystem(){
   try { if (typeof updateScopeBanner === 'function') updateScopeBanner(); } catch (e) {}
   try { if (typeof updateAuthUI === 'function') updateAuthUI(); } catch (e) {}
   try { if (typeof startInactivityTracking === 'function') startInactivityTracking(); } catch (e) {}
-  // Team Communication (Firebase) — presence + incoming-call listening only
-  // start when a real project's config is already saved; silently no-ops
-  // otherwise via _scFirebaseInit()'s own guard, so this is safe to call
+  // Team Communication (Firebase) — starts automatically using the
+  // built-in default config (see SC_DEFAULT_FIREBASE_CONFIG) unless a
+  // custom one was saved, so this needs no manual setup at all; still
+  // silently no-ops via _scFirebaseInit()'s own guard on any deployment
+  // where Firebase truly isn't reachable, so it's safe to call
   // unconditionally on every entry path.
   try {
     if (_scFirebaseGetConfig()) { _scStartPresence(); _scListenForIncomingCalls(); _scListenForMessageNotifications(); }
