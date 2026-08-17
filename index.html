@@ -1605,6 +1605,18 @@ body,.sidebar,.topbar,.card,.mc,.ni,.tbl td,.tbl th,.fi,.fsel,.btn{transition:ba
      topbar copy of them — keeping the more compact/non-duplicated
      theme toggle and alert bell visible.  */
   .tb-right .topnav-chip,.tb-right .tb-clock{display:none}
+
+  /* ═══ STAGE 3 ═══ .tbl text is 9.5-11.5px app-wide with zero mobile
+     override anywhere — a single shared-class bump reaches all 21 .tbl
+     tables at once, no HTML edits needed. */
+  .tbl th{font-size:11px}
+  .tbl td{font-size:13px}
+
+  /* Staff Directory action-button group (up to 5 buttons: Call/SMS/
+     Message/In-App Call/Video) can otherwise land as a ragged
+     partial-width cluster next to leftover space from the info column —
+     force it to always claim the full row width once wrapped. */
+  .sc-staff-actions{width:100%;justify-content:flex-start}
 }
 @media (max-width:480px){
   .mGrid,.mGrid4{grid-template-columns:1fr}
@@ -28729,7 +28741,7 @@ function renderStaffDirectory(){
         <div style="font-size:14px;font-weight:700;color:var(--text)">${_scEsc(u.name || 'Unknown')}</div>
         <div style="font-size:12px;color:var(--text3)">${_scEsc(u.role || '')}${u.facility ? ' · ' + _scEsc(u.facility) : ''}</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${contact}${inApp}</div>
+      <div class="sc-staff-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${contact}${inApp}</div>
     </div>`;
   }).join('');
 }
