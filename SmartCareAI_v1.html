@@ -9700,6 +9700,40 @@ function _scDismissPreview(boxId) {
   }
 }
 
+// Clears every remaining queued preview (NOK message + agent-info alike
+// share one queue) and dismisses whichever card is currently showing —
+// for when several have piled up and dismissing them one-by-one, each
+// only revealing the next, isn't worth the attention right now. These
+// are all still logged/recorded wherever the underlying alert itself
+// lives; this only clears the on-screen preview queue, not the alert.
+function _scDismissAllPreviews() {
+  window.__scPreviewQueue = [];
+  const activeId = window.__scPreviewActiveBoxId;
+  if (activeId) _scDismissPreview(activeId);
+}
+
+// The "Close All" button's count can't just be computed once at render
+// time — a card can be sitting on screen for up to 30s (its auto-hide
+// window), and more alerts routinely queue up DURING that window, which
+// is exactly the pile-up scenario this button exists for. A one-time
+// snapshot would silently miss those and never show the button at all.
+// Polls every second and stops itself once the card is gone (dismissed,
+// either manually or via auto-hide) — cheap, and self-cleaning.
+function _scWirePreviewCloseAllLive(boxId) {
+  const update = () => {
+    const box = document.getElementById(boxId);
+    if (!box) { clearInterval(timer); return; }
+    const slot = box.querySelector('[data-close-all-slot]');
+    if (!slot) return;
+    const queuedCount = (window.__scPreviewQueue || []).length;
+    slot.innerHTML = queuedCount > 0
+      ? `<button onclick="_scDismissAllPreviews()" title="Dismiss this and every other queued preview at once" style="padding:4px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);font-size:11px;cursor:pointer">Close All (${queuedCount + 1})</button>`
+      : '';
+  };
+  update();
+  const timer = setInterval(update, 1000);
+}
+
 function _scArmPreviewAutoHide(boxId, ms = 60000) {
   if (!window.__scPreviewTimers) window.__scPreviewTimers = {};
   const timers = window.__scPreviewTimers;
@@ -9844,6 +9878,7 @@ function _scRenderNOKMessagePreviewOnScreen(pid, message, meta = {}) {
       <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
         <span style="font-size:10px;color:var(--text3);padding:2px 6px;border:1px dashed var(--border2);border-radius:6px">Drag</span>
         <button onclick="navigator.clipboard?.writeText(document.getElementById('${textId}')?.innerText||'')" style="padding:4px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);font-size:11px;cursor:pointer">Copy</button>
+        <span data-close-all-slot></span>
         <button onclick="_scDismissPreview('${boxId}')" style="padding:4px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);font-size:11px;cursor:pointer">Close</button>
       </div>
     </div>
@@ -9857,6 +9892,7 @@ function _scRenderNOKMessagePreviewOnScreen(pid, message, meta = {}) {
   window.__scPreviewActiveBoxId = boxId;
   _scMakeFloatingBoxDraggable(box);
   _scArmPreviewAutoHide(boxId, _SC_PREVIEW_DISPLAY_MS);
+  _scWirePreviewCloseAllLive(boxId);
 }
 
 function showAgentInfoPreviewOnScreen(agentName, message, meta = {}) {
@@ -9884,6 +9920,7 @@ function _scRenderAgentInfoPreviewOnScreen(agentName, message, meta = {}) {
       <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
         <span style="font-size:10px;color:var(--text3);padding:2px 6px;border:1px dashed var(--border2);border-radius:6px">Drag</span>
         <button onclick="navigator.clipboard?.writeText(document.getElementById('${textId}')?.innerText||'')" style="padding:4px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);font-size:11px;cursor:pointer">Copy</button>
+        <span data-close-all-slot></span>
         <button onclick="_scDismissPreview('${boxId}')" style="padding:4px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);font-size:11px;cursor:pointer">Close</button>
       </div>
     </div>
@@ -9897,6 +9934,7 @@ function _scRenderAgentInfoPreviewOnScreen(agentName, message, meta = {}) {
   window.__scPreviewActiveBoxId = boxId;
   _scMakeFloatingBoxDraggable(box);
   _scArmPreviewAutoHide(boxId, _SC_PREVIEW_DISPLAY_MS);
+  _scWirePreviewCloseAllLive(boxId);
 }
 
 function viewPatientHistory(pid){
