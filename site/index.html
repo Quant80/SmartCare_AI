@@ -27224,7 +27224,17 @@ function _getKnownAccountsForRoleChecks(){
 }
 
 function _hasAnyAdminAccount(){
-  return _getKnownAccountsForRoleChecks().some(a => _isAdminRole(a.role));
+  if (_getKnownAccountsForRoleChecks().some(a => _isAdminRole(a.role))) return true;
+  // Partial, best-effort cross-device check — synchronous read of whatever
+  // staffDirectory has synced so far in THIS tab (see
+  // _scStartStaffDirectorySync()). A device that checks before the first
+  // snapshot arrives (slow network, or checked the instant the listener
+  // attached) can still bootstrap-promote in that narrow window — same
+  // class of gap as today's purely-local check missing a colleague's
+  // device that's simply offline right now. This narrows the common case
+  // without claiming to close it entirely.
+  try { return Object.values(_scStaffDirectoryCache || {}).some(a => _isAdminRole(a.role)); }
+  catch(e) { return false; }
 }
 
 function _canAssignRole(requestedRole){
@@ -27418,6 +27428,7 @@ function saveUserProfile(){
   }
   acct.phone = document.getElementById('prof-mobile')?.value.trim() || '';
   saveAccounts(accounts);
+  if (typeof _scSyncStaffDirectoryEntry === 'function') _scSyncStaffDirectoryEntry();
   showToast('Profile updated', false, '✅ Profile Saved');
 }
 
@@ -27677,6 +27688,7 @@ function saveFirebaseConfig(){
     _scStartPresence();
     _scListenForIncomingCalls();
     _scListenForMessageNotifications();
+    _scStartStaffDirectorySync();
   } else {
     showToast('Saved, but could not connect — check the values and that Realtime Database is enabled on the project.', true, '⚠ Connection Failed');
   }
@@ -27738,6 +27750,62 @@ async function _scStartPresence(){
     _scPresenceCache = snap.val() || {};
     if (document.getElementById('page-staff')?.classList.contains('active')) renderStaffDirectory();
   });
+}
+
+// ── Cross-device staff directory ──────────────────────────────
+// Accounts (createAccount/getAccounts) are 100% localStorage, per-browser
+// only — this app has no account database. Confirmed live: an account
+// created on one device was invisible in the Staff Directory on another,
+// even though calling still worked (call signaling is self-contained,
+// the caller's name/email travel with the call payload itself). This
+// syncs a public-safe slice of each account through Firebase, the same
+// way presence already works, so the Directory itself becomes shared —
+// never syncs the password hash, sign-in itself stays fully local.
+let _scStaffDirectoryCache = {};
+let _scStaffDirectoryListenerActive = false;
+const SC_STAFF_PHOTO_MAX_CHARS = 25000; // ~25KB data-URI string — kept in sync with the matching cap in firebase-rtdb-rules.json's staffDirectory.$uid.photo rule; update both together
+
+// Read-only: attaches the shared-roster listener. Deliberately does NOT
+// require a session (unlike _scStartPresence) — the one place this cache
+// needs to be warm soonest is BEFORE a brand-new visitor even has an
+// account, see openLocalAccountModal()'s hook.
+async function _scStartStaffDirectorySync(){
+  const db = _scFirebaseInit();
+  if (!db) return;
+  await _scFirebaseAuthReady();
+  if (!_scStaffDirectoryListenerActive) {
+    _scStaffDirectoryListenerActive = true;
+    db.ref('staffDirectory').on('value', snap => {
+      _scStaffDirectoryCache = snap.val() || {};
+      if (document.getElementById('page-staff')?.classList.contains('active')) renderStaffDirectory();
+    });
+  }
+  _scSyncStaffDirectoryEntry(); // no-op if there's no session yet
+}
+
+// Write-only: pushes the signed-in user's own current account record.
+// Kept separate from the listener-attach above so profile-edit call
+// sites can re-push without re-attaching an already-active listener.
+async function _scSyncStaffDirectoryEntry(){
+  const db = _scFirebaseInit();
+  const session = getCurrentSessionUser();
+  if (!db || !session || !session.email) return;
+  await _scFirebaseAuthReady();
+  const acct = getAccounts().find(a => (a.email || '').toLowerCase() === session.email.toLowerCase());
+  if (!acct) return;
+  const key = _scFirebaseSafeKey(acct.email);
+  const entry = {
+    name: acct.name || '', role: acct.role || '', facility: acct.facility || '',
+    phone: acct.phone || '', email: acct.email,
+    updatedAt: firebase.database.ServerValue.TIMESTAMP
+  };
+  // Photos have no size cap on the local profile-photo flow (by design —
+  // not touching that here), but staffDirectory is a shared roster
+  // re-pulled by every online device on any change, so anything over the
+  // cap is simply omitted rather than synced — the receiving device
+  // falls back to initials, same as an account with no photo at all.
+  if (acct.photo && typeof acct.photo === 'string' && acct.photo.length <= SC_STAFF_PHOTO_MAX_CHARS) entry.photo = acct.photo;
+  db.ref('staffDirectory/' + key).set(entry).catch(()=>{});
 }
 
 // ── In-app messaging ─────────────────────────────────────────
@@ -28731,7 +28799,22 @@ function renderStaffDirectory(){
   const search = (document.getElementById('staff-dir-search')?.value || '').toLowerCase();
   const facFilter = document.getElementById('staff-dir-facility')?.value || '';
   const me = getCurrentSessionUser() || {};
-  const all = getAccounts().filter(a => !a.suspended && (a.email || '').toLowerCase() !== (me.email || '').toLowerCase());
+  const meEmail = (me.email || '').toLowerCase();
+  const localAll = getAccounts();
+  const localByEmail = new Map();
+  localAll.forEach(a => { if (a.email) localByEmail.set(String(a.email).toLowerCase(), a); });
+  // Cross-device colleagues synced via Firebase (see
+  // _scStartStaffDirectorySync()) — local always wins on a conflicting
+  // email, since this device's own record is what signIn() actually
+  // trusts for identity, so it stays authoritative for display too. Only
+  // entries this device has no local record for at all get pulled in.
+  // Known limitation: these entries never carry a `suspended` field (it's
+  // never synced — real cross-device moderation is a bigger feature than
+  // this pass), so a user suspended on one device still shows as active
+  // on others via their synced entry.
+  const fbOnly = Object.values(_scStaffDirectoryCache || {})
+    .filter(u => u && u.email && !localByEmail.has(String(u.email).toLowerCase()));
+  const all = localAll.concat(fbOnly).filter(a => !a.suspended && (a.email || '').toLowerCase() !== meEmail);
   const filtered = all.filter(u =>
     (!facFilter || u.facility === facFilter) &&
     ((u.name || '').toLowerCase().includes(search) || (u.role || '').toLowerCase().includes(search) || (u.facility || '').toLowerCase().includes(search))
@@ -28838,6 +28921,7 @@ function saveSmartComProfile(){
   saveAccounts(accounts);
   const settingsPhoneEl = document.getElementById('prof-mobile');
   if (settingsPhoneEl) settingsPhoneEl.value = acct.phone; // keep the Settings > User Profile field in sync, same underlying data
+  if (typeof _scSyncStaffDirectoryEntry === 'function') _scSyncStaffDirectoryEntry();
   showToast('Profile updated', false, '✅ Profile Saved');
   if (document.getElementById('page-staff')?.classList.contains('active')) renderStaffDirectory();
 }
@@ -28891,6 +28975,15 @@ function openLocalAccountModal(mode){
   if(!ov || !mc || !ms) return;
   ov.style.display = 'flex';
   const showCreate = mode !== 'signin';
+  // Warm the cross-device admin-bootstrap check (_hasAnyAdminAccount) as
+  // early as possible for the Create Account path specifically — this is
+  // a fresh visitor's very first interaction, well before enterSystem()
+  // would otherwise start it, and the listener needs a real network
+  // round-trip before it's useful. Still a race, not a guarantee (see
+  // _hasAnyAdminAccount()'s own comment) — this just gives it the
+  // longest practical head start, roughly however long the visitor
+  // spends filling in the form before submitting.
+  if (showCreate && typeof _scStartStaffDirectorySync === 'function') { try { _scStartStaffDirectorySync(); } catch(e) {} }
   mc.style.display = showCreate ? 'flex' : 'none';
   ms.style.display = showCreate ? 'none' : 'flex';
   const errEl = document.getElementById('auth-error');
@@ -29343,7 +29436,7 @@ function enterSystem(){
   // where Firebase truly isn't reachable, so it's safe to call
   // unconditionally on every entry path.
   try {
-    if (_scFirebaseGetConfig()) { _scStartPresence(); _scListenForIncomingCalls(); _scListenForMessageNotifications(); }
+    if (_scFirebaseGetConfig()) { _scStartPresence(); _scListenForIncomingCalls(); _scListenForMessageNotifications(); _scStartStaffDirectorySync(); }
   } catch (e) {}
   const lp = document.getElementById('landing-page');
   const app = document.getElementById('main-app');
