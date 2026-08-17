@@ -9727,7 +9727,7 @@ function _scWirePreviewCloseAllLive(boxId) {
     if (!slot) return;
     const queuedCount = (window.__scPreviewQueue || []).length;
     slot.innerHTML = queuedCount > 0
-      ? `<button onclick="_scDismissAllPreviews()" title="Dismiss this and every other queued preview at once" style="padding:4px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);font-size:11px;cursor:pointer">Close All (${queuedCount + 1})</button>`
+      ? `<button onclick="_scDismissAllPreviews()" title="Dismiss this and every other queued preview at once" style="padding:4px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0">Close All (${queuedCount + 1})</button>`
       : '';
   };
   update();
