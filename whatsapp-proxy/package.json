@@ -1,0 +1,14 @@
+{
+  "name": "smartcare-whatsapp-proxy",
+  "version": "1.0.0",
+  "description": "Production WhatsApp (SentWA) delivery proxy for SmartCare AI — relays outbound WhatsApp sends since the browser can't call SentWA's API directly (CORS). No SentWA credentials live here; they're sent per-request by the client.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --use-system-ca server.js"
+  },
+  "engines": {
+    "node": "24.x"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

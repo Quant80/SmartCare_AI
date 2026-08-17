@@ -5870,13 +5870,13 @@ Waiting for data…</pre>
           <div class="fgrid">
             <div class="fg"><label class="fl">sentWA Instance ID</label><input class="fi" type="text" id="sentwa-instance" placeholder="609ACF283XXXX" autocomplete="off" oninput="_sentwaStatusCheck()"></div>
             <div class="fg"><label class="fl">sentWA Access Token</label><input class="fi" type="text" id="sentwa-token" placeholder="e10adc3949..." autocomplete="off" oninput="_sentwaStatusCheck()"></div>
-            <div class="fg"><label class="fl">sentWA Proxy URL (for CORS)</label><input class="fi" type="text" id="sentwa-proxy" placeholder="http://localhost:8787/api/sentwa/send" autocomplete="off"></div>
+            <div class="fg"><label class="fl">sentWA Proxy URL (optional override)</label><input class="fi" type="text" id="sentwa-proxy" placeholder="Leave blank to use the built-in production proxy" autocomplete="off"></div>
           </div>
           <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
             <button type="button" class="btn btn-p btn-sm" onclick="saveSentWAConfig()">💾 Save sentWA</button>
             <button type="button" class="btn btn-g btn-sm" id="sentwa-test-btn" onclick="testSentWA()">📤 Test Send</button>
           </div>
-          <div style="font-size:10px;color:var(--text3);margin-top:6px">When sentWA is configured it is used for all NOK WhatsApp messages. Falls back to Twilio if not set. If browser CORS blocks direct API calls, set Proxy URL to your local relay endpoint.</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:6px">When sentWA is configured it is used for all NOK WhatsApp messages. Falls back to Twilio if not set. Sending goes through a real, always-on relay by default (needed since the browser can't call sentWA's API directly) — only set a Proxy URL here if you specifically want to point at your own relay instead (e.g. a local dev server).</div>
 
           <!-- Twilio (fallback) -->
           <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin:16px 0 8px;display:flex;align-items:center;gap:6px">
@@ -19374,35 +19374,30 @@ async function _scSendPatientWAPdf(type, patientId, extra = {}){
 // independently-drifting copy of it.
 async function _scSendWADocumentTo(phone, base64, fileName, caption, creds){
   const configuredProxy = String(creds.proxyUrl || '').trim();
-  const docProxyCandidates = configuredProxy
-    ? [configuredProxy.replace(/\/send$/, '/send-document')]
-    : ['http://localhost:8787/api/sentwa/send-document', 'http://127.0.0.1:8787/api/sentwa/send-document'];
+  const docProxyUrl = configuredProxy
+    ? configuredProxy.replace(/\/send$/, '/send-document')
+    : SC_DEFAULT_WHATSAPP_PROXY.replace(/\/send$/, '/send-document');
 
-  let lastErr = '';
-  for (const proxyUrl of docProxyCandidates) {
-    // Hard client-side ceiling so a genuinely hung proxy/network can never
-    // leave the caller waiting silently forever — 25s covers the proxy's
-    // own ~12s upload race plus the SentWA call with headroom.
-    const controller = new AbortController();
-    const abortTimer = setTimeout(() => controller.abort(), 25000);
-    try {
-      const r = await fetch(proxyUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ number: phone, pdfBase64: base64, fileName, caption, instance_id: creds.instance, access_token: creds.token }),
-        signal: controller.signal
-      });
-      const json = await r.json().catch(() => null);
-      if (json?.ok) return { ok: true };
-      lastErr = json?.error || json?.sentwa?.message || `HTTP ${r.status}`;
-    } catch (e) {
-      lastErr = e?.name === 'AbortError' ? 'Timed out waiting for a response (25s)' : (e?.message || 'proxy request failed');
-      if (configuredProxy) break;
-    } finally {
-      clearTimeout(abortTimer);
-    }
+  // Hard client-side ceiling so a genuinely hung proxy/network can never
+  // leave the caller waiting silently forever — 25s covers the proxy's
+  // own ~12s upload race plus the SentWA call with headroom.
+  const controller = new AbortController();
+  const abortTimer = setTimeout(() => controller.abort(), 25000);
+  try {
+    const r = await fetch(docProxyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number: phone, pdfBase64: base64, fileName, caption, instance_id: creds.instance, access_token: creds.token }),
+      signal: controller.signal
+    });
+    const json = await r.json().catch(() => null);
+    if (json?.ok) return { ok: true };
+    return { ok: false, error: json?.error || json?.sentwa?.message || `HTTP ${r.status}` };
+  } catch (e) {
+    return { ok: false, error: e?.name === 'AbortError' ? 'Timed out waiting for a response (25s)' : (e?.message || 'proxy request failed') };
+  } finally {
+    clearTimeout(abortTimer);
   }
-  return { ok: false, error: lastErr };
 }
 
 // Sends the Patient ID Card to BOTH the patient's own WhatsApp number and
@@ -23627,6 +23622,17 @@ function formatAPIError(e, model){
 // SETTINGS — SAVE & TEST KEYS
 // ═══════════════════════════════════════════════════
 /* ── sentWA Integration ──────────────────────────────────────────────────── */
+// Production default — a real, always-on proxy (whatsapp-proxy/ in the
+// repo root, deployed on Railway), used whenever nobody's configured a
+// custom Proxy URL in Settings. Without this, WhatsApp sending only ever
+// worked for whoever happened to have the local dev proxy
+// (sentwa-proxy/server.js) running on their own machine — confirmed
+// live that real users on the production site got "Failed to fetch"
+// trying to reach a localhost:8787 that only ever existed on the
+// developer's PC. Same auto-activate-with-override pattern as the
+// Firebase/TURN defaults elsewhere in this app.
+const SC_DEFAULT_WHATSAPP_PROXY = 'https://smartcare-whatsapp-proxy-production.up.railway.app/api/sentwa/send';
+
 function _sentwaGetCreds(){
   try{
     const fromLocal = localStorage.getItem('sc_sentwa_v1');
@@ -23710,9 +23716,7 @@ async function _sentWASendDetailed(phone, message){
 
   // Permanent CORS-safe mode: always use a proxy endpoint (never direct browser calls to sentWA).
   const configuredProxy = String(creds.proxyUrl || '').trim();
-  const proxyCandidates = configuredProxy
-    ? [configuredProxy]
-    : ['http://localhost:8787/api/sentwa/send', 'http://127.0.0.1:8787/api/sentwa/send'];
+  const proxyCandidates = configuredProxy ? [configuredProxy] : [SC_DEFAULT_WHATSAPP_PROXY];
 
   let lastProxyErr = '';
   for (const proxyUrl of proxyCandidates) {
@@ -23748,15 +23752,15 @@ async function _sentWASendDetailed(phone, message){
     } catch(e) {
       clearTimeout(timeout);
       lastProxyErr = e?.message || 'proxy request failed';
-      // Try next local candidate only when proxy URL is not explicitly configured by user.
-      if (configuredProxy) break;
     }
   }
 
   return {
     ok:false,
     reason:'proxy_unreachable',
-    detail: lastProxyErr || 'Proxy is not reachable. Start sentwa-proxy/server.js on port 8787.'
+    detail: lastProxyErr || (configuredProxy
+      ? 'Configured proxy is not reachable — check the URL in Settings, or clear it to use the built-in default.'
+      : 'The default WhatsApp proxy is not reachable right now — this is unexpected, try again shortly.')
   };
 }
 async function testSentWA(){
