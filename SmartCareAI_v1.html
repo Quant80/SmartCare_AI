@@ -23633,17 +23633,41 @@ function formatAPIError(e, model){
 // Firebase/TURN defaults elsewhere in this app.
 const SC_DEFAULT_WHATSAPP_PROXY = 'https://smartcare-whatsapp-proxy-production.up.railway.app/api/sentwa/send';
 
+// Anything saved here from before the production proxy existed (when
+// this field's own placeholder literally showed a localhost:8787 URL,
+// and — for anyone actively developing locally — was a genuinely
+// correct value to save at the time) is now stale on the live site.
+// Confirmed live: exactly this happened — a real user's browser still
+// had it saved, silently overriding the new working default with a
+// URL that only ever worked on their own machine. There's no way to
+// tell "deliberately still wants this" from "leftover from before" in
+// general, but these two SPECIFIC values were never a legitimate
+// *production* choice either way, so treating them as unset is safe.
+const SC_STALE_WHATSAPP_PROXY_VALUES = ['http://localhost:8787/api/sentwa/send', 'http://127.0.0.1:8787/api/sentwa/send'];
+// Re-persists the cleaned value back to wherever it came from, so this
+// is a one-time fix per browser rather than re-sanitizing on every
+// single read forever.
+function _sentwaSanitizeCreds(creds, persistTo){
+  if (!creds || !SC_STALE_WHATSAPP_PROXY_VALUES.includes(String(creds.proxyUrl || '').trim())) return creds;
+  const cleaned = { ...creds, proxyUrl: '' };
+  try {
+    if (persistTo === 'local') localStorage.setItem('sc_sentwa_v1', JSON.stringify(cleaned));
+    else if (persistTo === 'session') sessionStorage.setItem('sc_sentwa_v1', JSON.stringify(cleaned));
+    else if (persistTo === 'memory') window._scSentWAMemory = cleaned;
+  } catch(e) {}
+  return cleaned;
+}
 function _sentwaGetCreds(){
   try{
     const fromLocal = localStorage.getItem('sc_sentwa_v1');
-    if(fromLocal) return JSON.parse(fromLocal);
+    if(fromLocal) return _sentwaSanitizeCreds(JSON.parse(fromLocal), 'local');
   }catch(e){}
   try{
     const fromSession = sessionStorage.getItem('sc_sentwa_v1');
-    if(fromSession) return JSON.parse(fromSession);
+    if(fromSession) return _sentwaSanitizeCreds(JSON.parse(fromSession), 'session');
   }catch(e){}
   try{
-    return window._scSentWAMemory || {};
+    return _sentwaSanitizeCreds(window._scSentWAMemory || {}, 'memory');
   }catch(e){
     return {};
   }
